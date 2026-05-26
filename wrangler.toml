@@ -5,4 +5,4 @@ compatibility_date = "2025-05-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "sun-panel-db"
-database_id = "your-database-id-here"
+database_id = "__D1_DATABASE_ID__"
