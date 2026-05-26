@@ -1,4 +1,4 @@
-import type { GenericAbortSignal } from 'axios'
+import type { AxiosResponse, GenericAbortSignal } from 'axios'
 import request from './axios'
 import { useAuthStore } from '@/store/modules/auth'
 import { router } from '@/router'

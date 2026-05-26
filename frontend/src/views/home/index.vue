@@ -11,7 +11,7 @@ import { PanelStateNetworkModeEnum } from '@/enums'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
-  items?: Panel.ItemInfo[]
+  items: Panel.ItemInfo[]
   sortStatus?: boolean
 }
 
@@ -26,12 +26,19 @@ const loading = ref(true)
 
 // 编辑弹窗状态
 const editModalShow = ref(false)
-const editingItem = ref<Panel.ItemInfo | null>(null)
+const editingItem = ref<Panel.ItemInfo>({
+  title: '',
+  url: '',
+  openMethod: 1,
+  icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
+  itemIconGroupId: undefined,
+})
 const editingGroupId = ref<number>()
 
 // 分组管理弹窗
 const groupModalShow = ref(false)
 const editingGroup = ref<Panel.ItemIconGroup>({ title: '' })
+const editGroupModalVisible = ref(false)
 
 // 设置弹窗
 const settingModalShow = ref(false)
@@ -128,7 +135,7 @@ function openAddItem(groupId: number) {
     lanUrl: '',
     description: '',
     openMethod: 1,
-    icon: null,
+    icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
     itemIconGroupId: groupId,
   }
   editingGroupId.value = groupId
@@ -183,12 +190,12 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
 // ========== 分组管理 ==========
 function openAddGroup() {
   editingGroup.value = { title: '' }
-  groupModalShow.value = true
+  editGroupModalVisible.value = true
 }
 
 function openEditGroup(group: ItemGroup) {
   editingGroup.value = { id: group.id, title: group.title, icon: group.icon }
-  groupModalShow.value = true
+  editGroupModalVisible.value = true
 }
 
 async function handleSaveGroup() {
@@ -202,7 +209,7 @@ async function handleSaveGroup() {
     const res = await saveGroup(g)
     if (res.code === 0) {
       message.success('保存成功')
-      groupModalShow.value = false
+      editGroupModalVisible.value = false
       await loadData()
     } else {
       message.error(res.msg || '保存失败')
@@ -501,7 +508,7 @@ function handleLogout() {
     </NModal>
 
     <!-- ========== 分组名称编辑弹窗 ========== -->
-    <NModal v-model:show="!!editingGroup.title || editingGroup.id" title="编辑分组" preset="card" class="w-[400px]">
+    <NModal v-model:show="editGroupModalVisible" title="编辑分组" preset="card" class="w-[400px]">
       <div v-if="editingGroup" class="flex flex-col gap-4">
         <div>
           <label class="block text-sm mb-1">分组名称 *</label>
@@ -512,7 +519,7 @@ function handleLogout() {
           />
         </div>
         <div class="flex justify-end gap-2">
-          <NButton @click="editingGroup = { title: '' }">取消</NButton>
+          <NButton @click="editGroupModalVisible = false">取消</NButton>
           <NButton type="primary" @click="handleSaveGroup">保存</NButton>
         </div>
       </div>
