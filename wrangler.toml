@@ -1,0 +1,11 @@
+name = "sun-panel"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sun-panel-db"
+database_id = "your-database-id-here"
+
+[site]
+bucket = "./frontend/dist"
