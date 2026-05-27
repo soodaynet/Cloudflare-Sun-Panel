@@ -290,13 +290,15 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <!-- 壁纸层 - filter blur 直接作用于背景图 -->
+  <!-- 壁纸层 - filter blur 直接作用于背景图，GPU 加速 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
     backgroundImage: `url(${panelState.panelConfig.backgroundImageSrc})`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
+    transform: 'translateZ(0)',
+    willChange: 'transform',
   }" />
   <!-- 遮罩层 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
@@ -310,7 +312,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- 顶部：Logo + 访客标识 -->
     <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
       <div class="flex items-center gap-3">
-        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" />
+        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" />
         <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
@@ -355,7 +357,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
                 @click="openUrl(item)">
                 <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" />
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -384,7 +386,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                   <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
                     @click="openUrl(item)">
                     <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" />
+                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
                       <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                         :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                         {{ item.icon?.text || item.title?.charAt(0) || '?' }}

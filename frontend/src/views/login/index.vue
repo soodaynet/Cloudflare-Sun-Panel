@@ -23,6 +23,8 @@ const loginPageStyle = computed(() => {
       backgroundImage: `url(${loginBgImage.value})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
+      transform: 'translateZ(0)',
+      willChange: 'transform',
     }
   }
   return {}
