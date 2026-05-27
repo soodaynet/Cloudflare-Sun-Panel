@@ -72,6 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_item_icons_group_id ON item_icons(item_icon_group
 CREATE INDEX IF NOT EXISTS idx_item_icons_user_id ON item_icons(user_id);
 CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id);
 
--- 默认管理员 (密码: admin123)
-INSERT OR IGNORE INTO users (id, username, password, name, role, status) 
-VALUES (1, 'admin@sun.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Admin', 1, 1);
+-- 默认管理员 (密码: admin123)，仅在 users 表为空时插入
+INSERT INTO users (id, username, password, name, role, status)
+SELECT 1, 'admin@sun.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Admin', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM users);

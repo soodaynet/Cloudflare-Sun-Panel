@@ -86,13 +86,20 @@ async function initDatabase(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_item_icons_group_id ON item_icons(item_icon_group_id)`,
     `CREATE INDEX IF NOT EXISTS idx_item_icons_user_id ON item_icons(user_id)`,
     `CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id)`,
-    // 默认管理员 (密码: admin123)
-    `INSERT OR IGNORE INTO users (id, username, password, name, role, status)
-     VALUES (1, 'admin@sun.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Admin', 1, 1)`,
   ];
 
-  // D1 batch 最多支持 100 条语句，这里只有 11 条，安全
+  // D1 batch 最多支持 100 条语句，这里只有 10 条，安全
   await db.batch(schemaSQL.map(sql => db.prepare(sql)));
+
+  // 仅在 users 表完全为空时才插入默认管理员
+  const userCount = await db.prepare('SELECT COUNT(*) as count FROM users').first() as { count: number } | null;
+  if (!userCount || userCount.count === 0) {
+    await db.prepare(
+      `INSERT OR IGNORE INTO users (id, username, password, name, role, status)
+       VALUES (1, 'admin@sun.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Admin', 1, 1)`
+    ).run();
+  }
+
   console.log('[DB] Database schema initialized successfully');
 }
 
