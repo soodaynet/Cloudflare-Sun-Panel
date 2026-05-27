@@ -34,9 +34,10 @@ onMounted(async () => {
     if (res.code === 0) {
       if (res.data?.panel_public_user_id || res.data?.default_guest_mode === '1') {
         hasPublicMode.value = true
+        // 公开模式可用且未登录 → 自动进入访客模式（仅首次，避免手动进入登录页时又被弹回）
+        const wasCached = localStorage.getItem('sun-panel-public-mode') !== null
         localStorage.setItem('sun-panel-public-mode', '1')
-        // 公开模式可用且未登录 → 自动进入访客模式
-        if (!localStorage.getItem('sun-panel-token')) {
+        if (!localStorage.getItem('sun-panel-token') && !wasCached) {
           authStore.setGuestMode(null)
           router.push('/')
           return
