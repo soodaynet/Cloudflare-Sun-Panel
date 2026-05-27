@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
 import { authMiddleware, adminMiddleware, publicModeMiddleware, getAuthUser } from '../middleware/auth';
-import { hashPassword } from '../utils/password';
+import { hashPassword, verifyPassword } from '../utils/password';
 import type { ApiResponse, UserConfigRequest, UserConfigRow, UserRow, UserInfo, RegisterRequest } from '../models/types';
 
 const usersApp = new Hono<{ Bindings: { DB: D1Database } }>();
@@ -134,8 +134,6 @@ usersApp.post('/user/updatePassword', authMiddleware, async (c) => {
     return c.json({ code: 400, msg: '用户不存在', data: null } satisfies ApiResponse);
   }
 
-  // 验证旧密码
-  const { verifyPassword } = await import('../utils/password');
   const valid = await verifyPassword(oldPassword, row.password);
   if (!valid) {
     return c.json({ code: 400, msg: '原密码错误', data: null } satisfies ApiResponse);

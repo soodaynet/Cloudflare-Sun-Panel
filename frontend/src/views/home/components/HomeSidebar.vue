@@ -99,10 +99,6 @@ onUnmounted(() => {
   </div>
 </template>
 
-<script lang="ts">
-import { computed } from 'vue'
-</script>
-
 <style scoped>
 /* ===== 桌面端侧边栏 ===== */
 .sidebar-root {

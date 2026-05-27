@@ -3,8 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { NButton, NLayout, NLayoutContent, NLayoutSider, NModal, NSwitch, useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
-import { saveSiteSettings } from '@/api/index'
-import { setUserConfig } from '@/api/index'
+import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getGroupList, getItemsByGroup, addItems } from '@/api/index'
 import UsersManage from '@/components/apps/Users/index.vue'
 import { createExportData, downloadJSON, validateImportData, readFileAsText, type ExportGroup, type ExportData } from '@/utils/importExport'
 
@@ -116,7 +115,6 @@ function openEditGroup(group: any) {
 
 async function handleSaveGroup() {
   try {
-    const { saveGroup } = await import('@/api/index')
     const res = await saveGroup(editingGroup.value)
     if (res.code === 0) { message.success('保存成功'); editGroupModalVisible.value = false; props.onSaved() }
     else message.error(res.msg || '保存失败')
@@ -126,7 +124,6 @@ async function handleSaveGroup() {
 async function handleDeleteGroup(group: any) {
   if (!group.id) return
   try {
-    const { deleteGroups } = await import('@/api/index')
     const res = await deleteGroups([group.id])
     if (res.code === 0) { message.success('删除成功'); props.onSaved() }
   } catch { message.error('网络错误') }
@@ -144,7 +141,6 @@ const fileInputRef = ref<HTMLInputElement>()
 async function handleExport() {
   importExportLoading.value = true
   try {
-    const { getGroupList, getItemsByGroup } = await import('@/api/index')
     const res = await getGroupList<Panel.ItemIconGroup[]>()
     if (res.code === 0) {
       const groups: ExportGroup[] = []
@@ -196,7 +192,6 @@ async function handleImportFile(e: Event) {
 }
 
 async function importData(data: ExportData) {
-  const { saveGroup, addItems } = await import('@/api/index')
   for (const g of data.icons) {
     const groupRes = await saveGroup<Panel.ItemIconGroup>({ title: g.title, sort: g.sort })
     if (groupRes.code === 0 && groupRes.data?.id) {

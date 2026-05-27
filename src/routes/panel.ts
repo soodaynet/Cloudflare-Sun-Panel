@@ -7,6 +7,7 @@ const panelApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
 panelApp.use('*', publicModeMiddleware);
 
+/** 图标行转前端格式 */
 function formatIcon(row: ItemIconRow) {
   return {
     id: row.id,
@@ -23,6 +24,13 @@ function formatIcon(row: ItemIconRow) {
   };
 }
 
+const ICON_INSERT_SQL = 'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+
+/** 构建图标 bind 参数数组 */
+function iconBindParams(item: { icon?: unknown; title: string; url: string; description?: string; openMethod?: number; sort?: number; itemIconGroupId: number }, userId: number) {
+  return [JSON.stringify(item.icon || {}), item.title, item.url, item.description || '', item.openMethod || 0, item.sort || 0, item.itemIconGroupId, userId];
+}
+
 /**
  * 批量添加图标
  * POST /api/panel/itemIcon/addMultiple
@@ -36,23 +44,8 @@ panelApp.post('/itemIcon/addMultiple', async (c) => {
     return c.json({ code: 400, msg: '数据不能为空', data: null } satisfies ApiResponse);
   }
 
-  const stmt = db.prepare(
-    'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  );
-
-  const inserts = items.map(item =>
-    stmt.bind(
-      JSON.stringify(item.icon || {}),
-      item.title,
-      item.url,
-      item.description || '',
-      item.openMethod || 0,
-      item.sort || 0,
-      item.itemIconGroupId,
-      user!.userId
-    )
-  );
-
+  const stmt = db.prepare(ICON_INSERT_SQL);
+  const inserts = items.map(item => stmt.bind(...iconBindParams(item, user!.userId) as [unknown, ...unknown[]]));
   await db.batch(inserts);
 
   return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
@@ -91,18 +84,7 @@ panelApp.post('/itemIcon/edit', async (c) => {
     const row = await db.prepare('SELECT * FROM item_icons WHERE id = ?').bind(body.id).first();
     return c.json({ code: 0, msg: 'ok', data: formatIcon(row as unknown as ItemIconRow) } satisfies ApiResponse);
   } else {
-    const result = await db.prepare(
-      'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(
-      JSON.stringify(body.icon || {}),
-      body.title,
-      body.url,
-      body.description || '',
-      body.openMethod || 0,
-      body.sort || 0,
-      body.itemIconGroupId,
-      user!.userId
-    ).run();
+    const result = await db.prepare(ICON_INSERT_SQL).bind(...iconBindParams(body, user!.userId) as [unknown, ...unknown[]]).run();
 
     const row = await db.prepare('SELECT * FROM item_icons WHERE id = ?').bind(result.meta.last_row_id).first();
     return c.json({ code: 0, msg: 'ok', data: formatIcon(row as unknown as ItemIconRow) } satisfies ApiResponse);
