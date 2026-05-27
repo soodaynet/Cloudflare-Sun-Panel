@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { NBackTop, NButton, NButtonGroup, NModal, NSpin, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NModal, NSpin, useMessage } from 'naive-ui'
 import { onMounted, ref, computed } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { useRouter } from 'vue-router'
 import { useAuthStore, usePanelState } from '@/store'
 import { getGroupList, saveGroupSort } from '@/api/index'
 import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
@@ -17,7 +16,6 @@ interface ItemGroup extends Panel.ItemIconGroup {
   sortStatus?: boolean
 }
 
-const router = useRouter()
 const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
@@ -252,8 +250,8 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 <template>
   <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col scroll-container" :style="backgroundStyle">
     <!-- 背景遮罩层 -->
-    <div v-if="panelState.panelConfig.backgroundImageSrc" class="absolute inset-0 bg-black/50 pointer-events-none"
-      :style="{ backdropFilter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`, opacity: panelState.panelConfig.backgroundMaskNumber ?? 0.3 }" />
+    <div v-if="panelState.panelConfig.backgroundImageSrc" class="absolute inset-0 pointer-events-none"
+      :style="{ backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})` }" />
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
@@ -316,20 +314,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
         </NButton>
       </div>
     </NBackTop>
-
-    <!-- ========== 右下角浮动按钮（参照原项目） ========== -->
-    <div class="fixed right-2.5 bottom-[50px] shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg overflow-hidden">
-      <NButtonGroup vertical>
-        <!-- 已登录：应用启动器按钮 -->
-        <NButton v-if="!authStore.isVisitMode" color="#2a2a2a6b" @click="starterShow = !starterShow">
-          <template #icon><span class="text-white text-lg">⚙</span></template>
-        </NButton>
-        <!-- 访客模式：跳转登录按钮 -->
-        <NButton v-if="authStore.isVisitMode" color="#2a2a2a6b" title="登录" @click="router.push('/login')">
-          <template #icon><span class="text-white text-lg">👤</span></template>
-        </NButton>
-      </NButtonGroup>
-    </div>
 
     <!-- ========== AppStarter 应用启动器 ========== -->
     <HomeAppStarter
