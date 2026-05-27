@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import { NButton, NButtonGroup, NLayout, NLayoutContent, NLayoutSider, NModal, NPopover, NSwitch, useMessage } from 'naive-ui'
+import { computed, ref, onMounted, watch } from 'vue'
+import { NButton, NLayout, NLayoutContent, NLayoutSider, NModal, NSwitch, useMessage } from 'naive-ui'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
 import { saveSiteSettings } from '@/api/index'
 import { setUserConfig } from '@/api/index'
@@ -64,7 +64,10 @@ function handleResize() {
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   handleResize()
+  syncSiteConfig()
 })
+
+watch(() => props.siteConfig, () => syncSiteConfig(), { deep: true })
 
 // ====== 风格设置 ======
 async function handleSaveStyleSettings() {
