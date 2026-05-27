@@ -284,7 +284,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2">
-              <h3 class="text-white text-lg font-medium flex-1">{{ group.title }}</h3>
+              <h3 class="text-white text-lg font-medium">{{ group.title }}</h3>
               <NButton v-if="!authStore.isVisitMode" size="tiny" :type="editModeGroupId === group.id ? 'warning' : 'default'" @click="toggleEditMode(group.id!)">
                 {{ editModeGroupId === group.id ? '完成' : '编辑' }}
               </NButton>

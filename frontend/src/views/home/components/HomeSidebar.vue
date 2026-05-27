@@ -48,10 +48,9 @@ function scrollToGroup(index: number) {
   const groups = container.querySelectorAll('.group-section')
   const target = groups[index]
   if (target) {
-    const containerRect = container.getBoundingClientRect()
-    const targetRect = target.getBoundingClientRect()
-    const offset = targetRect.top - containerRect.top + container.scrollTop - scrollOffset
-    container.scrollTo({ top: offset, behavior: 'smooth' })
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // 微调偏移避免被顶部遮挡
+    window.scrollBy({ top: -scrollOffset, behavior: 'smooth' })
   }
   mobileMenuOpen.value = false
 }
