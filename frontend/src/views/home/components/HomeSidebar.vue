@@ -43,14 +43,11 @@ const navItems = computed(() => {
 })
 
 function scrollToGroup(index: number) {
-  const container = document.querySelector('.scroll-container')
-  if (!container) return
-  const groups = container.querySelectorAll('.group-section')
+  const groups = document.querySelectorAll('.group-section')
   const target = groups[index]
   if (target) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    // 微调偏移避免被顶部遮挡
-    window.scrollBy({ top: -scrollOffset, behavior: 'smooth' })
+    const top = target.getBoundingClientRect().top + window.scrollY - scrollOffset
+    window.scrollTo({ top, behavior: 'smooth' })
   }
   mobileMenuOpen.value = false
 }

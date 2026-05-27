@@ -283,12 +283,24 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       <NSpin :show="loading">
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
-            <div class="flex items-center gap-2 mb-3 px-2">
+            <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
               <h3 class="text-white text-lg font-medium">{{ group.title }}</h3>
-              <NButton v-if="!authStore.isVisitMode" size="tiny" :type="editModeGroupId === group.id ? 'warning' : 'default'" @click="toggleEditMode(group.id!)">
-                {{ editModeGroupId === group.id ? '完成' : '编辑' }}
-              </NButton>
-              <NButton v-if="!authStore.isVisitMode" size="tiny" @click="openAddItem(group.id!)">+ 添加</NButton>
+              <div class="group-title-btns opacity-0 transition-opacity duration-200 flex items-center gap-1">
+                <NTooltip v-if="!authStore.isVisitMode" trigger="hover" placement="top">
+                  <template #trigger>
+                    <NButton size="tiny" :type="editModeGroupId === group.id ? 'warning' : 'default'" @click="toggleEditMode(group.id!)" class="!px-2 !min-w-0">
+                      {{ editModeGroupId === group.id ? '✓' : '✎' }}
+                    </NButton>
+                  </template>
+                  {{ editModeGroupId === group.id ? '完成' : '编辑' }}
+                </NTooltip>
+                <NTooltip v-if="!authStore.isVisitMode" trigger="hover" placement="top">
+                  <template #trigger>
+                    <NButton size="tiny" @click="openAddItem(group.id!)" class="!px-2 !min-w-0">+</NButton>
+                  </template>
+                  添加
+                </NTooltip>
+              </div>
             </div>
             <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-3" @end="saveItemSortOrder(group)">
               <div v-for="(item, ii) in group.items" :key="item.id || ii"
@@ -303,8 +315,18 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 </div>
                 <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
                 <div class="absolute top-1 right-1 flex gap-1">
-                  <NButton size="tiny" @click.stop="openEditItem(item)">编辑</NButton>
-                  <NButton size="tiny" type="error" @click.stop="handleDeleteItem(item)">删除</NButton>
+                  <NTooltip trigger="hover" placement="top">
+                    <template #trigger>
+                      <NButton size="tiny" @click.stop="openEditItem(item)" class="!px-2 !min-w-0">✎</NButton>
+                    </template>
+                    编辑
+                  </NTooltip>
+                  <NTooltip trigger="hover" placement="top">
+                    <template #trigger>
+                      <NButton size="tiny" type="error" @click.stop="handleDeleteItem(item)" class="!px-2 !min-w-0">✕</NButton>
+                    </template>
+                    删除
+                  </NTooltip>
                 </div>
               </div>
             </VueDraggable>
@@ -380,4 +402,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </template>
 
 <style scoped>
+.group-section:hover .group-title-btns {
+  opacity: 1;
+}
 </style>
