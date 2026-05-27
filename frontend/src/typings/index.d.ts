@@ -108,6 +108,5 @@ declare namespace Panel {
     footer_html?: string
     logo_text?: string
     logo_image_src?: string
-    default_guest_mode?: string
   }
 }

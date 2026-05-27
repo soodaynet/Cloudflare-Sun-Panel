@@ -104,10 +104,9 @@ async function loadSiteConfig() {
         footer_html: res.data?.footer_html || '',
         logo_text: res.data?.logo_text || '',
         logo_image_src: res.data?.logo_image_src || '',
-        default_guest_mode: res.data?.default_guest_mode || '',
       }
       document.title = siteConfig.value.site_title || 'Sun-Panel'
-      if (res.data?.default_guest_mode === '1' && !authStore.token && !authStore.isVisitMode) {
+      if ((res.data?.panel_public_user_id || res.data?.default_guest_mode === '1') && !authStore.token && !authStore.isVisitMode) {
         authStore.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
       }
     }
@@ -239,7 +238,6 @@ async function handleSaveGlobalSettings() {
       footer_html: siteConfig.value.footer_html || '',
       logo_text: siteConfig.value.logo_text || '',
       logo_image_src: siteConfig.value.logo_image_src || '',
-      default_guest_mode: siteConfig.value.default_guest_mode || '0',
     })
     if (res.code === 0) { message.success('全局设置已保存'); globalSettingModalShow.value = false }
     else message.error(res.msg || '保存失败')
@@ -441,11 +439,6 @@ function handleLogout() {
           <input v-model="siteConfig.logo_image_src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
         <div><label class="block text-sm mb-1">自定义页脚 (支持 HTML)</label>
           <textarea v-model="siteConfig.footer_html" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>© 2024 Sun-Panel</p>" /></div>
-        <div class="flex items-center gap-2">
-          <label class="text-sm">默认访客模式</label>
-          <NSwitch v-model:value="siteConfig.default_guest_mode" checked-value="1" unchecked-value="0" />
-          <span class="text-xs text-gray-500 ml-2">开启后未登录用户直接进入访客模式</span>
-        </div>
         <div class="flex justify-end gap-2">
           <NButton @click="globalSettingModalShow = false">取消</NButton>
           <NButton type="primary" @click="handleSaveGlobalSettings">保存</NButton>
