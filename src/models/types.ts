@@ -20,6 +20,7 @@ export interface ItemIconGroupRow {
   title: string;
   description: string;
   sort: number;
+  public_visible: number;
   user_id: number;
   created_at: string;
   updated_at: string;
@@ -86,6 +87,7 @@ export interface ItemIconGroupRequest {
   title: string;
   description?: string;
   sort?: number;
+  publicVisible?: number;
 }
 
 export interface ItemIconRequest {

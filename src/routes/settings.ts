@@ -6,10 +6,10 @@ import type { ApiResponse, SystemSettingRow } from '../models/types';
 const settingsApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
 /**
- * 获取系统设置 (通过 configName)
+ * 获取系统设置 (通过 configName) - 公开可访问
  * POST /api/system/setting/get
  */
-settingsApp.post('/system/setting/get', authMiddleware, async (c) => {
+settingsApp.post('/system/setting/get', async (c) => {
   const db = c.env.DB;
   const { configName } = await c.req.json<{ configName: string }>();
 
@@ -54,7 +54,31 @@ settingsApp.post('/system/setting/set', authMiddleware, adminMiddleware, async (
 });
 
 /**
- * 获取关于信息 (公开)
+ * 批量保存系统设置 (管理员)
+ * POST /api/system/settings/saveAll
+ */
+settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, async (c) => {
+  const db = c.env.DB;
+  const body = await c.req.json<Record<string, string>>();
+
+  if (!body || Object.keys(body).length === 0) {
+    return c.json({ code: 400, msg: '数据不能为空', data: null } satisfies ApiResponse);
+  }
+
+  for (const [configName, configValue] of Object.entries(body)) {
+    const existing = await db.prepare('SELECT id FROM system_settings WHERE config_name = ?').bind(configName).first();
+    if (existing) {
+      await db.prepare("UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = ?").bind(configValue ?? '', configName).run();
+    } else {
+      await db.prepare('INSERT INTO system_settings (config_name, config_value) VALUES (?, ?)').bind(configName, configValue ?? '').run();
+    }
+  }
+
+  return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
+});
+
+/**
+ * 获取所有设置 (公开)
  * POST /api/about
  */
 settingsApp.post('/about', async (c) => {

@@ -52,6 +52,7 @@ declare namespace Panel {
     title: string
     description?: string
     sort?: number
+    publicVisible?: number
     userId?: number
     createTime?: string
     updateTime?: string
@@ -99,5 +100,14 @@ declare namespace Panel {
   interface ItemIconSortRequest {
     sortItems: Common.SortItemRequest[]
     itemIconGroupId: number
+  }
+
+  interface SiteConfig {
+    site_title?: string
+    login_bg_image?: string
+    footer_html?: string
+    logo_text?: string
+    logo_image_src?: string
+    default_guest_mode?: string
   }
 }

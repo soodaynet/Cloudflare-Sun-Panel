@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS item_icon_groups (
     title TEXT NOT NULL DEFAULT '',
     description TEXT DEFAULT '',
     sort INTEGER DEFAULT 0,
+    public_visible INTEGER DEFAULT 1,     -- 1:访客可见 0:访客不可见
     user_id INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
 import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
+import type { AuthUser } from '../middleware/auth';
 import type { ApiResponse, ItemIconGroupRequest, ItemIconGroupRow } from '../models/types';
 
 const groupsApp = new Hono<{ Bindings: { DB: D1Database } }>();
@@ -15,6 +16,7 @@ function formatGroup(row: ItemIconGroupRow) {
     title: row.title,
     description: row.description,
     sort: row.sort,
+    publicVisible: row.public_visible,
     userId: row.user_id,
     createTime: row.created_at,
     updateTime: row.updated_at,
@@ -54,12 +56,13 @@ groupsApp.post('/itemIconGroup/edit', async (c) => {
   if (body.id) {
     // 编辑
     await db.prepare(
-      'UPDATE item_icon_groups SET icon = ?, title = ?, description = ?, sort = ?, updated_at = datetime(\'now\') WHERE id = ? AND user_id = ?'
+      'UPDATE item_icon_groups SET icon = ?, title = ?, description = ?, sort = ?, public_visible = ?, updated_at = datetime(\'now\') WHERE id = ? AND user_id = ?'
     ).bind(
       body.icon || '',
       body.title,
       body.description || '',
       body.sort || 0,
+      body.publicVisible ?? 1,
       body.id,
       user!.userId
     ).run();
@@ -69,12 +72,13 @@ groupsApp.post('/itemIconGroup/edit', async (c) => {
   } else {
     // 新增
     const result = await db.prepare(
-      'INSERT INTO item_icon_groups (icon, title, description, sort, user_id) VALUES (?, ?, ?, ?, ?)'
+      'INSERT INTO item_icon_groups (icon, title, description, sort, public_visible, user_id) VALUES (?, ?, ?, ?, ?, ?)'
     ).bind(
       body.icon || '',
       body.title,
       body.description || '',
       body.sort || 0,
+      body.publicVisible ?? 1,
       user!.userId
     ).run();
 

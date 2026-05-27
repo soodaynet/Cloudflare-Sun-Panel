@@ -32,7 +32,8 @@ export const router = createRouter({
   scrollBehavior: () => ({ left: 0, top: 0 }),
 })
 
-// 路由守卫
+// 路由守卫：默认允许访问首页
+// 如果后端未配置公开模式且用户无 token，API 会返回 401 并被 axios 拦截器重定向到登录页
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('sun-panel-token')
   const visitMode = Number(localStorage.getItem('sun-panel-visit-mode')) || VisitMode.VISIT_MODE_LOGIN
@@ -47,12 +48,7 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // 既没有 token 也不是访客模式，跳转到登录页
-  if (!token && visitMode !== VisitMode.VISIT_MODE_PUBLIC) {
-    next({ name: 'login' })
-    return
-  }
-
+  // 默认放行所有页面，让后端 API 鉴权
   next()
 })
 

@@ -107,3 +107,8 @@ export function setSystemSetting<T>(configName: string, configValue: string) {
 export function getAbout<T>() {
   return post<T>({ url: '/about' })
 }
+
+// ========== 站点全局设置 API ==========
+export function saveSiteSettings<T>(settings: Record<string, string>) {
+  return post<T>({ url: '/system/settings/saveAll', data: settings })
+}
