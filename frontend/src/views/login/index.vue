@@ -35,7 +35,10 @@ onMounted(async () => {
       if (res.data?.panel_public_user_id || res.data?.default_guest_mode === '1') {
         hasPublicMode.value = true
       }
-      if (res.data?.site_title) siteTitle.value = res.data.site_title
+      if (res.data?.site_title) {
+        siteTitle.value = res.data.site_title
+        document.title = res.data.site_title
+      }
       if (res.data?.login_bg_image) loginBgImage.value = res.data.login_bg_image
     }
   } catch { /* ignore */ }

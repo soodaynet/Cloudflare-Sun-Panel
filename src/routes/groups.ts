@@ -49,6 +49,11 @@ groupsApp.post('/itemIconGroup/edit', async (c) => {
   const user = getAuthUser(c);
   const body = await c.req.json<ItemIconGroupRequest>();
 
+  // 访客模式不允许修改
+  if (user!.visitMode === 1) {
+    return c.json({ code: 403, msg: '访客模式下不允许修改', data: null } satisfies ApiResponse);
+  }
+
   if (!body.title) {
     return c.json({ code: 400, msg: '标题不能为空', data: null } satisfies ApiResponse);
   }

@@ -110,6 +110,8 @@ async function loadSiteConfig() {
         logo_image_src: res.data?.logo_image_src || '',
         default_guest_mode: res.data?.default_guest_mode || '',
       }
+      // 设置浏览器标签页标题
+      document.title = siteConfig.value.site_title || 'Sun-Panel'
       // 如果设置了默认访客模式，且当前没有 token 和 visitMode，自动设为访客
       if (res.data?.default_guest_mode === '1' && !authStore.token && !authStore.isVisitMode) {
         authStore.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
@@ -191,7 +193,7 @@ function openAddGroup() {
 }
 
 function openEditGroup(group: ItemGroup) {
-  editingGroup.value = { id: group.id, title: group.title, icon: group.icon, publicVisible: group.publicVisible }
+  editingGroup.value = { id: group.id, title: group.title, icon: group.icon, publicVisible: group.publicVisible ?? 1 }
   editGroupModalVisible.value = true
 }
 
@@ -356,6 +358,7 @@ async function handleGuestLogin() {
         <div><label class="block text-sm mb-1">网址 *</label><input v-model="editingItem.url" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://" /></div>
         <div><label class="block text-sm mb-1">描述</label><input v-model="editingItem.description" class="w-full border rounded px-3 py-2 text-sm" placeholder="描述信息" /></div>
         <div><label class="block text-sm mb-1">图标文字</label><input v-model="editingItem.icon.text" class="w-full border rounded px-3 py-2 text-sm" placeholder="图标显示文字" /></div>
+        <div><label class="block text-sm mb-1">图标图片 URL</label><input v-model="editingItem.icon.src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标图片URL，留空使用文字图标" /></div>
         <div><label class="block text-sm mb-1">图标背景色</label><input v-model="editingItem.icon.backgroundColor" class="w-full border rounded px-3 py-2 text-sm" placeholder="#4a90d9" /></div>
         <div>
           <label class="block text-sm mb-1">打开方式</label>
@@ -435,11 +438,11 @@ async function handleGuestLogin() {
     <!-- ========== 全局站点设置弹窗 ========== -->
     <NModal v-model:show="globalSettingModalShow" title="站点设置" preset="card" class="w-[500px]">
       <div class="flex flex-col gap-4">
-        <div><label class="block text-sm mb-1">站点标题</label>
+        <div><label class="block text-sm mb-1">站点标题 (浏览器标签页)</label>
           <input v-model="siteConfig.site_title" class="w-full border rounded px-3 py-2 text-sm" placeholder="站点标题" /></div>
         <div><label class="block text-sm mb-1">登录页背景图片</label>
           <input v-model="siteConfig.login_bg_image" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
-        <div><label class="block text-sm mb-1">Logo 文字 (覆盖风格设置)</label>
+        <div><label class="block text-sm mb-1">页头 Logo 文字</label>
           <input v-model="siteConfig.logo_text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Sun-Panel" /></div>
         <div><label class="block text-sm mb-1">Logo 图片 URL</label>
           <input v-model="siteConfig.logo_image_src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>

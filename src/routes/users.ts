@@ -12,7 +12,7 @@ const usersApp = new Hono<{ Bindings: { DB: D1Database } }>();
  * 获取用户配置
  * POST /api/panel/userConfig/get
  */
-usersApp.post('/userConfig/get', authMiddleware, async (c) => {
+usersApp.post('/userConfig/get', publicModeMiddleware, async (c) => {
   const db = c.env.DB;
   const user = getAuthUser(c);
 
@@ -39,10 +39,15 @@ usersApp.post('/userConfig/get', authMiddleware, async (c) => {
  * 保存用户配置
  * POST /api/panel/userConfig/set
  */
-usersApp.post('/userConfig/set', authMiddleware, async (c) => {
+usersApp.post('/userConfig/set', publicModeMiddleware, async (c) => {
   const db = c.env.DB;
   const user = getAuthUser(c);
   const body = await c.req.json<UserConfigRequest>();
+
+  // 访客模式不允许修改配置
+  if (user!.visitMode === 1) {
+    return c.json({ code: 403, msg: '访客模式下不允许修改配置', data: null } satisfies ApiResponse);
+  }
 
   const panelJson = JSON.stringify(body.panel || {});
   const searchEngineJson = JSON.stringify(body.searchEngine || {});
