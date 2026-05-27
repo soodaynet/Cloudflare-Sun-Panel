@@ -248,10 +248,20 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <div ref="scrollContainerRef" class="min-h-screen relative bg-gray-900 transition-all flex flex-col scroll-container" :style="backgroundStyle">
-    <!-- 背景遮罩层 -->
-    <div v-if="panelState.panelConfig.backgroundImageSrc" class="absolute inset-0 pointer-events-none"
-      :style="{ backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})` }" />
+  <!-- 壁纸层 - filter blur 直接作用于背景图 -->
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+    filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
+    backgroundImage: `url(${panelState.panelConfig.backgroundImageSrc})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+  }" />
+  <!-- 遮罩层 -->
+  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+    backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
+  }" />
+
+  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }">
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
