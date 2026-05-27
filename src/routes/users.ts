@@ -70,10 +70,11 @@ usersApp.post('/userConfig/set', publicModeMiddleware, async (c) => {
 // ========== 当前用户信息 ==========
 
 /**
- * 获取当前登录用户信息
+ * 获取当前认证信息（含访客模式）- 参照原项目 PublicModeInterceptor
  * POST /api/user/getAuthInfo
+ * 返回 { user, visitMode }，其中 visitMode: 0=登录模式, 1=访客/公开模式
  */
-usersApp.post('/user/getAuthInfo', authMiddleware, async (c) => {
+usersApp.post('/user/getAuthInfo', publicModeMiddleware, async (c) => {
   const db = c.env.DB;
   const user = getAuthUser(c);
 
@@ -94,7 +95,10 @@ usersApp.post('/user/getAuthInfo', authMiddleware, async (c) => {
     created_at: row.created_at,
   };
 
-  return c.json({ code: 0, msg: 'ok', data: info } satisfies ApiResponse);
+  return c.json({
+    code: 0, msg: 'ok',
+    data: { user: info, visitMode: user!.visitMode },
+  } satisfies ApiResponse);
 });
 
 /**

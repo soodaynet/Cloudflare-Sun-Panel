@@ -7,7 +7,7 @@ import { useAuthStore, usePanelState } from '@/store'
 import { getGroupList, saveGroupSort } from '@/api/index'
 import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getUserConfig } from '@/api/index'
-import { getAbout } from '@/api/index'
+import { getAbout, getAuthInfo } from '@/api/index'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 
@@ -116,6 +116,22 @@ function updateFavicon(url: string) {
 }
 
 // ====== 数据加载 ======
+
+/** 同步本地用户信息与认证状态 - 参照原项目 updateLocalUserInfo */
+interface AuthInfoResponse {
+  user: User.Info
+  visitMode: number
+}
+async function updateLocalUserInfo() {
+  try {
+    const res = await getAuthInfo<AuthInfoResponse>()
+    if (res.code === 0 && res.data) {
+      authStore.setUserInfo(res.data.user)
+      authStore.setVisitMode(res.data.visitMode)
+    }
+  } catch { /* ignore */ }
+}
+
 async function loadSiteConfig() {
   try {
     const res = await getAbout<Record<string, string>>()
@@ -132,9 +148,6 @@ async function loadSiteConfig() {
       siteConfigLoaded.value = true
       document.title = siteConfig.value.site_title || 'Sun-Panel'
       updateFavicon(siteConfig.value.favicon_url || '')
-      if ((res.data?.panel_public_user_id || res.data?.default_guest_mode === '1') && !authStore.token && !authStore.isVisitMode) {
-        authStore.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
-      }
     }
   } catch { /* ignore */ }
 }
@@ -167,11 +180,11 @@ async function loadPanelConfig() {
 }
 
 function refreshAll() {
-  Promise.all([loadData(), loadPanelConfig(), loadSiteConfig()])
+  Promise.all([updateLocalUserInfo(), loadData(), loadPanelConfig(), loadSiteConfig()])
 }
 
 onMounted(() => {
-  Promise.all([loadSiteConfig(), loadData(), loadPanelConfig()])
+  Promise.all([updateLocalUserInfo(), loadSiteConfig(), loadData(), loadPanelConfig()])
 })
 
 // ====== 图标编辑 ======
