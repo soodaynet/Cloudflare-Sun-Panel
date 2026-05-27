@@ -280,8 +280,6 @@ async function importData(data: ExportData) {
           <div v-if="activeApp === 'Style'" class="flex flex-col gap-4">
             <div><label class="block text-sm mb-1 font-medium">壁纸地址</label>
               <input :value="panelConfig.backgroundImageSrc" @input="(e: any) => panelConfig.backgroundImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
-            <div><label class="block text-sm mb-1 font-medium">模糊度: {{ panelConfig.backgroundBlur || 0 }}</label>
-              <input :value="panelConfig.backgroundBlur" @input="(e: any) => panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
               <input :value="panelConfig.backgroundMaskNumber" @input="(e: any) => panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">最大宽度</label>
