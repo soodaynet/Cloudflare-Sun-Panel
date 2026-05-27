@@ -260,7 +260,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 
   <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }">
     <!-- 侧边栏分组导航 -->
-    <HomeSidebar :groups="visibleGroups" />
+    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <!-- 顶部：Logo + 访客标识 -->
     <div class="relative z-10 flex justify-between items-center p-4">
@@ -278,7 +278,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       <NSpin :show="loading">
         <VueDraggable v-model="groups" :animation="200" handle=".group-drag-handle" :disabled="authStore.isVisitMode" @end="saveGroupSortOrder">
           <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
-            <div class="mb-6 group-section">
+            <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
               <div class="flex items-center gap-2 mb-3 px-2">
                 <span v-if="!authStore.isVisitMode" class="group-drag-handle cursor-move text-gray-400 text-sm">::</span>
                 <h3 class="text-white text-lg font-medium flex-1">{{ group.title }}</h3>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/store'
 
 interface GroupNavItem {
   title: string
@@ -9,6 +11,13 @@ interface GroupNavItem {
 const props = defineProps<{
   groups: Array<{ title?: string; id?: number }>
 }>()
+
+const emit = defineEmits<{
+  (e: 'open-settings'): void
+}>()
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const expanded = ref(false)
 const isMobile = ref(false)
@@ -47,6 +56,20 @@ function scrollToGroup(index: number) {
   mobileMenuOpen.value = false
 }
 
+function handleLogin() {
+  router.push('/login')
+}
+
+function handleSettings() {
+  emit('open-settings')
+  expanded.value = false
+}
+
+function handleLogout() {
+  authStore.removeToken()
+  window.location.reload()
+}
+
 onMounted(() => {
   checkMobile()
   window.addEventListener('resize', handleResize)
@@ -72,6 +95,29 @@ onUnmounted(() => {
           <div class="nav-slip" />
           <span class="nav-title">{{ item.title }}</span>
         </div>
+
+        <!-- 分隔线 -->
+        <div class="sidebar-divider" />
+
+        <!-- 底部操作按钮 -->
+        <div class="sidebar-actions">
+          <template v-if="!authStore.isVisitMode">
+            <div class="nav-item sidebar-action-item" @click="handleSettings">
+              <div class="nav-slip" />
+              <span class="nav-title">设 置</span>
+            </div>
+            <div class="nav-item sidebar-action-item" @click="handleLogout">
+              <div class="nav-slip" />
+              <span class="nav-title">退出登录</span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="nav-item sidebar-action-item" @click="handleLogin">
+              <div class="nav-slip" />
+              <span class="nav-title">登 录</span>
+            </div>
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -95,6 +141,15 @@ onUnmounted(() => {
       >
         {{ item.title }}
       </div>
+      <!-- 移动端操作按钮 -->
+      <div class="mobile-divider" />
+      <template v-if="!authStore.isVisitMode">
+        <div class="mobile-nav-item mobile-action-item" @click="handleSettings">设 置</div>
+        <div class="mobile-nav-item mobile-action-item" @click="handleLogout">退出登录</div>
+      </template>
+      <template v-else>
+        <div class="mobile-nav-item mobile-action-item" @click="handleLogin">登 录</div>
+      </template>
     </div>
   </div>
 </template>
@@ -179,6 +234,22 @@ onUnmounted(() => {
   font-size: 20px;
 }
 
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 8px 0;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
+.sidebar-bar.expanded .sidebar-divider {
+  opacity: 1;
+}
+
+.sidebar-action-item .nav-slip {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
 /* ===== 移动端 ===== */
 .mobile-btn {
   position: fixed;
@@ -228,5 +299,16 @@ onUnmounted(() => {
 
 .mobile-nav-item:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 4px 8px;
+}
+
+.mobile-action-item {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
 }
 </style>
