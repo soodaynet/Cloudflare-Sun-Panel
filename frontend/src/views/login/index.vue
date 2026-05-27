@@ -89,7 +89,7 @@ async function handleSkipLogin() {
     class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600"
     :style="loginPageStyle"
   >
-    <NCard class="w-96 shadow-xl" :bordered="false">
+    <NCard class="w-96 shadow-xl login-card" :bordered="false">
       <template #header>
         <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}
@@ -113,3 +113,40 @@ async function handleSkipLogin() {
     </NCard>
   </div>
 </template>
+
+<style scoped>
+.login-card {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+:deep(.login-card .n-card-header) {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+:deep(.login-card .n-form-item-label) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+:deep(.login-card .n-input) {
+  --n-color: rgba(255, 255, 255, 0.12) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.2) !important;
+  --n-text-color: #fff !important;
+  --n-placeholder-color: rgba(255, 255, 255, 0.5) !important;
+  --n-border: rgba(255, 255, 255, 0.25) !important;
+  --n-border-focus: rgba(255, 255, 255, 0.5) !important;
+  --n-border-hover: rgba(255, 255, 255, 0.35) !important;
+}
+
+:deep(.login-card .n-divider) {
+  --n-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+:deep(.login-card .n-card-footer) {
+  padding-top: 0;
+}
+</style>
