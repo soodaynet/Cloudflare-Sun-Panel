@@ -1,6 +1,12 @@
 /**
  * 导入导出工具函数
  * 文件格式: .sun-panel.json
+ *
+ * 支持两种导出文件来源：
+ *   1. 原始版本 — 作者原版 Sun-Panel v1.8.1 导出
+ *      (appName="Sun-Panel-Config", 无 type 字段, 有 appVersion/md5)
+ *   2. Cloudflare Worker 版本 — 本项目的导出
+ *      (appName="Sun-Panel", type="sun-panel-export")
  */
 export interface ExportGroup {
   title: string
@@ -27,7 +33,7 @@ export interface ExportData {
   icons: ExportGroup[]
 }
 
-/** 已知有效的 Sun-Panel 导出 appName 列表（兼容不同版本） */
+/** 已知有效的 Sun-Panel 导出 appName（原始版本 + Cloudflare Worker 版本） */
 const VALID_APP_NAMES = ['Sun-Panel', 'Sun-Panel-Config']
 
 const CURRENT_VERSION = 1
@@ -66,7 +72,7 @@ export function downloadJSON(data: ExportData): void {
   URL.revokeObjectURL(link.href)
 }
 
-/** 验证导入文件（兼容旧版 Sun-Panel 导出格式） */
+/** 验证导入文件（支持原始版本与 Cloudflare Worker 版本） */
 export function validateImportData(json: string): { valid: boolean; data?: ExportData; error?: string } {
   try {
     const data = JSON.parse(json)
@@ -79,7 +85,7 @@ export function validateImportData(json: string): { valid: boolean; data?: Expor
     const hasValidType = data.type === 'sun-panel-export'
     const hasValidAppName = VALID_APP_NAMES.includes(data.appName)
 
-    // 新格式校验：同时满足 type + appName
+    // Cloudflare Worker 版本校验：同时满足 type + appName
     if (hasValidType && hasValidAppName && hasIcons) {
       if (data.version > CURRENT_VERSION) {
         return { valid: false, error: `配置文件版本 (v${data.version}) 高于当前支持版本 (v${CURRENT_VERSION})` }
@@ -87,7 +93,7 @@ export function validateImportData(json: string): { valid: boolean; data?: Expor
       return { valid: true, data }
     }
 
-    // 旧格式兼容（Sun-Panel v1.8.1 等）：无 type 字段但有 appName + icons
+    // 原始版本兼容（作者原版 Sun-Panel v1.8.1）：无 type 字段但有 appName + icons
     if (!data.type && hasValidAppName && hasIcons) {
       if (data.version > CURRENT_VERSION) {
         return { valid: false, error: `配置文件版本 (v${data.version}) 高于当前支持版本 (v${CURRENT_VERSION})` }

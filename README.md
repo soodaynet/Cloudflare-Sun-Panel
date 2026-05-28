@@ -19,6 +19,7 @@
 - [环境变量说明](#环境变量说明)
 - [项目目录结构](#项目目录结构)
 - [API 接口概览](#api-接口概览)
+- [数据导入导出](#数据导入导出)
 - [常见问题排查](#常见问题排查)
 - [回滚策略](#回滚策略)
 - [验证部署成功](#验证部署成功)
@@ -392,6 +393,42 @@ sun-panel/
 
 ---
 
+## 数据导入导出
+
+项目支持 `.sun-panel.json` 文件的导入和导出，用于备份和迁移图标数据。**支持两种格式来源**的导入文件：
+
+### 支持的文件来源
+
+| 来源 | 文件命名示例 | `appName` | `type` 字段 | 附加字段 |
+|------|-------------|-----------|------------|---------|
+| **原始版本** — 作者原版 Sun-Panel v1.8.1 导出 | `SunPanel-Data202604121307.sun-panel.json` | `"Sun-Panel-Config"` | **无** | `appVersion`, `md5`, `cardStyle`, `lanUrl`, `cardType`, `backgroundColor`, `expandParam` |
+| **Cloudflare Worker 版本** — 本项目导出 | `SunPanel-Data-202605280131.sun-panel.json` | `"Sun-Panel"` | `"sun-panel-export"` | —（精简格式） |
+
+### 关键差异说明
+
+- **原始版本**文件是 Sun-Panel 原作者发布的 v1.8.1 官方版本所导出的格式，包含较丰富的字段（如 `cardStyle`、`expandParam` 等），但缺少 `type` 标识字段。
+- **Cloudflare Worker 版本**是本项目适配 Cloudflare Workers 平台后生成的精简格式，带有 `type: "sun-panel-export"` 字段便于识别。
+- 导入功能已实现双路径校验逻辑：优先匹配 `type` 字段识别 Cloudflare Worker 版本，若无 `type` 字段则回退到 `appName` 匹配识别原始版本。两份文件均可正常导入。
+
+### 使用方式
+
+**导出数据：**
+
+1. 登录管理面板
+2. 点击右上角菜单 →「导出配置」
+3. 系统将下载当前所有分组和图标的 `.sun-panel.json` 文件
+
+**导入数据：**
+
+1. 登录管理面板
+2. 点击右上角菜单 →「导入配置」
+3. 选择之前导出的 `.sun-panel.json` 文件
+4. 系统将自动解析并创建对应的分组和图标（会保留现有数据，不会覆盖）
+
+> **注意**：导入时原始版本文件中的部分字段（如 `lanUrl`、`cardStyle`、`expandParam` 等）因当前 Worker 版本不支持对应的 UI 特性，会被安全忽略，不影响图标 URL、标题等核心数据的导入。
+
+---
+
 ## 常见问题排查
 
 ### 1. 前端 API 请求 404
@@ -574,4 +611,4 @@ curl -X POST https://<your-worker>.workers.dev/about \
 
 本项目基于以下优秀项目构建，特别感谢：
 
-- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) 
+- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 原作者提供的优秀导航面板项目（v1.8.1），本项目为其 Cloudflare Workers 平台的适配版本。 
