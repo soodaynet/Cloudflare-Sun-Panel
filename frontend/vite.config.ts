@@ -26,12 +26,22 @@ export default defineConfig({
     assetsDir: 'assets',
     target: 'es2022',
     cssCodeSplit: false,
+    cssMinify: 'lightningcss',
+    minify: 'esbuild',
+    sourcemap: false,
+    assetsInlineLimit: 4096,
+    modulePreload: {
+      polyfill: true,
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           'naive-ui': ['naive-ui'],
           'vue-vendor': ['vue', 'vue-router', 'pinia'],
         },
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
       },
     },
   },

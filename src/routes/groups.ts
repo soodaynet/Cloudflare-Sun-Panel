@@ -37,6 +37,7 @@ groupsApp.post('/itemIconGroup/getList', async (c) => {
 
   const list = rows.results.map(row => formatGroup(row as unknown as ItemIconGroupRow));
 
+  c.header('Cache-Control', 'public, max-age=60');
   return c.json({ code: 0, msg: 'ok', data: list } satisfies ApiResponse);
 });
 

@@ -32,6 +32,64 @@ function iconBindParams(item: { icon?: unknown; title: string; url: string; desc
 }
 
 /**
+ * 统一获取全部数据（分组 + 所有图标 + 用户配置）
+ * POST /api/panel/getAllData
+ * 将原有的 N+1 次请求合并为 1 次，减少 Workers 调用次数
+ */
+panelApp.post('/getAllData', async (c) => {
+  const db = c.env.DB;
+  const user = getAuthUser(c);
+  const userId = user!.userId;
+
+  const groupRows = await db.prepare(
+    'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC'
+  ).bind(userId).all();
+
+  const groups = groupRows.results as unknown as Array<{
+    id: number; icon: string; title: string; description: string;
+    sort: number; public_visible: number; user_id: number;
+    created_at: string; updated_at: string;
+  }>;
+
+  const groupIds = groups.map(g => g.id);
+  if (groupIds.length === 0) {
+    const configRow = await db.prepare('SELECT panel_json FROM user_configs WHERE user_id = ?').bind(userId).first() as { panel_json: string } | null;
+    c.header('Cache-Control', 'public, max-age=30');
+    return c.json({
+      code: 0, msg: 'ok',
+      data: { groups: [], itemsMap: {}, panelConfig: configRow?.panel_json ? JSON.parse(configRow.panel_json) : {} }
+    } satisfies ApiResponse);
+  }
+
+  const placeholders = groupIds.map(() => '?').join(',');
+  const iconRows = await db.prepare(
+    `SELECT * FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`
+  ).bind(...groupIds, userId).all();
+
+  const itemsMap: Record<number, ReturnType<typeof formatIcon>[]> = {};
+  (iconRows.results as unknown as ItemIconRow[]).forEach(row => {
+    const gid = row.item_icon_group_id;
+    if (!itemsMap[gid]) itemsMap[gid] = [];
+    itemsMap[gid].push(formatIcon(row));
+  });
+
+  const configRow = await db.prepare('SELECT panel_json FROM user_configs WHERE user_id = ?').bind(userId).first() as { panel_json: string } | null;
+
+  const result = {
+    groups: groups.map(g => ({
+      id: g.id, icon: g.icon, title: g.title, description: g.description,
+      sort: g.sort, publicVisible: g.public_visible, userId: g.user_id,
+      createTime: g.created_at, updateTime: g.updated_at,
+    })),
+    itemsMap,
+    panelConfig: configRow?.panel_json ? JSON.parse(configRow.panel_json) : {},
+  };
+
+  c.header('Cache-Control', 'public, max-age=30');
+  return c.json({ code: 0, msg: 'ok', data: result } satisfies ApiResponse);
+});
+
+/**
  * 批量添加图标
  * POST /api/panel/itemIcon/addMultiple
  */

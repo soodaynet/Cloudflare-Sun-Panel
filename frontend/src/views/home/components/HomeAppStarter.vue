@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { NButton, NLayout, NLayoutContent, NLayoutSider, NModal, NSwitch, useMessage } from 'naive-ui'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
-import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getGroupList, getItemsByGroup, addItems, saveGroupSort } from '@/api/index'
+import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getAllData, addItems, saveGroupSort } from '@/api/index'
 import UsersManage from '@/components/apps/Users/index.vue'
 import { createExportData, downloadJSON, validateImportData, readFileAsText, type ExportGroup, type ExportData } from '@/utils/importExport'
 
@@ -153,27 +153,25 @@ const fileInputRef = ref<HTMLInputElement>()
 async function handleExport() {
   importExportLoading.value = true
   try {
-    const res = await getGroupList<Panel.ItemIconGroup[]>()
-    if (res.code === 0) {
-      const groupList = res.data || []
-      // 并行获取所有分组的图标
-      const itemsResults = await Promise.all(
-        groupList.map(g => g.id ? getItemsByGroup<Panel.ItemInfo[]>(g.id) : null)
-      )
-      const groups: ExportGroup[] = []
-      groupList.forEach((g, i) => {
-        const group: ExportGroup = { title: g.title || '', sort: g.sort || 0, children: [] }
-        const itemRes = itemsResults[i]
-        if (itemRes && itemRes.code === 0) {
-          for (const item of (itemRes.data || [])) {
-            group.children.push({
-              title: item.title, sort: item.sort || 0, icon: item.icon,
-              url: item.url, description: item.description || '', openMethod: item.openMethod || 1,
-            })
-          }
-        }
-        groups.push(group)
-      })
+    const res = await getAllData<{
+      groups: Panel.ItemIconGroup[]
+      itemsMap: Record<number, Panel.ItemInfo[]>
+    }>()
+    if (res.code === 0 && res.data) {
+      const groupList = res.data.groups || []
+      const itemsMap = res.data.itemsMap || {}
+      const groups: ExportGroup[] = groupList.map(g => ({
+        title: g.title || '',
+        sort: g.sort || 0,
+        children: (g.id && itemsMap[g.id] ? itemsMap[g.id].map(item => ({
+          title: item.title,
+          sort: item.sort || 0,
+          icon: item.icon,
+          url: item.url,
+          description: item.description || '',
+          openMethod: item.openMethod || 1,
+        })) : []),
+      }))
       const data = createExportData(groups)
       downloadJSON(data)
       message.success('导出成功')

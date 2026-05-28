@@ -3,10 +3,11 @@ import { NBackTop, NButton, NModal, NSpin, NTooltip, useMessage } from 'naive-ui
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getGroupList } from '@/api/index'
+import { getGroupList, getAllData } from '@/api/index'
 import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getUserConfig } from '@/api/index'
 import { getAbout, getAuthInfo } from '@/api/index'
+import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 
@@ -196,44 +197,42 @@ async function loadSiteConfig() {
   } catch { /* ignore */ }
 }
 
+/** 统一加载分组 + 图标 + 面板配置（一次 API 调用替代 N+1 次） */
 async function loadData() {
   loading.value = true
   try {
-    const res = await getGroupList<Panel.ItemIconGroup[]>()
-    if (res.code === 0) {
-      const list = (res.data || []) as ItemGroup[]
-      groups.value = list.map(g => ({ ...g, hoverStatus: false, sortStatus: false, items: [] }))
-      // 并行获取所有分组的图标
-      await Promise.all(
-        groups.value.map(async (g) => {
-          if (g.id) {
-            const itemRes = await getItemsByGroup<Panel.ItemInfo[]>(g.id)
-            if (itemRes.code === 0) g.items = itemRes.data || []
-          }
-        })
-      )
+    const res = await cachedRequest('panel:allData', () => getAllData<{
+      groups: Panel.ItemIconGroup[]
+      itemsMap: Record<number, Panel.ItemInfo[]>
+      panelConfig: Panel.panelConfig
+    }>())
+
+    if (res.code === 0 && res.data) {
+      const { groups: rawGroups, itemsMap, panelConfig } = res.data
+
+      groups.value = (rawGroups || []).map(g => ({
+        ...g, hoverStatus: false, sortStatus: false,
+        items: (g.id && itemsMap[g.id]) ? itemsMap[g.id] : [],
+      })) as ItemGroup[]
+
+      if (panelConfig && Object.keys(panelConfig).length > 0) {
+        panelState.updatePanelConfigFromCloud(panelConfig)
+      }
     }
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
 
-async function loadPanelConfig() {
-  try {
-    const res = await getUserConfig<Panel.userConfig>()
-    if (res.code === 0 && res.data?.panel) panelState.updatePanelConfigFromCloud(res.data.panel)
-  } catch { /* ignore */ }
-}
-
 function refreshAll() {
+  invalidateCacheByPrefix('panel:')
   updateLocalUserInfo().then(() => {
-    Promise.all([loadData(), loadPanelConfig(), loadSiteConfig()])
+    Promise.all([loadData(), loadSiteConfig()])
   })
 }
 
 onMounted(async () => {
-  await updateLocalUserInfo() // 优先同步认证状态，避免渲染时显示错误的角色
-  loadSiteConfig() // siteConfig 有本地缓存兜底，无需 await
+  await updateLocalUserInfo()
+  loadSiteConfig()
   loadData()
-  loadPanelConfig()
   startAnnouncementTimer()
 })
 
@@ -356,8 +355,17 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
               <div v-for="(item, ii) in group.items" :key="item.id || ii"
                 class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
                 @click="openUrl(item)">
-                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
+                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1"
+                    :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                  <img v-if="item.icon?.src"
+                    :src="item.icon.src"
+                    class="w-full h-full object-cover"
+                    :alt="item.title"
+                    loading="lazy"
+                    decoding="async"
+                    style="opacity:0;transition:opacity 0.3s ease"
+                    onload="this.style.opacity='1'"
+                  />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -385,12 +393,20 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 <template #trigger>
                   <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
                     @click="openUrl(item)">
-                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
-                      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
-                        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1"
+                      :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                      <img v-if="item.icon?.src"
+                        :src="item.icon.src"
+                        class="w-full h-full object-cover"
+                        :alt="item.title"
+                        loading="lazy"
+                        decoding="async"
+                        style="opacity:0;transition:opacity 0.3s ease"
+                        onload="this.style.opacity='1'"
+                      />
+                      <span v-else class="text-white font-bold text-lg">
                         {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-                      </div>
+                      </span>
                     </div>
                     <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
                   </div>

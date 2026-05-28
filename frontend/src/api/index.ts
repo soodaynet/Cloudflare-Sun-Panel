@@ -14,6 +14,11 @@ export function getGroupList<T>() {
   return post<T>({ url: '/panel/itemIconGroup/getList' })
 }
 
+/** 统一获取全部数据（分组 + 所有图标 + 用户配置），一次请求替代 N+1 次 */
+export function getAllData<T>() {
+  return post<T>({ url: '/panel/getAllData' })
+}
+
 export function saveGroup<T>(req: Panel.ItemIconGroup) {
   return post<T>({ url: '/panel/itemIconGroup/edit', data: req })
 }
