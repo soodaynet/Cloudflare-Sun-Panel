@@ -612,4 +612,4 @@ curl -X POST https://<your-worker>.workers.dev/about \
 
 本项目基于以下优秀项目构建，特别感谢：
 
-- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 原作者提供的优秀导航面板项目，本项目为其 Cloudflare Workers 平台的适配版本。 
+- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 提供的优秀导航面板项目，本项目为其开源的 Cloudflare Workers 平台的适配版本。 
