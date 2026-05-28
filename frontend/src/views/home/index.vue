@@ -3,9 +3,8 @@ import { NBackTop, NButton, NModal, NSpin, NTooltip, useMessage } from 'naive-ui
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getGroupList, getAllData } from '@/api/index'
-import { getItemsByGroup, addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
-import { getUserConfig } from '@/api/index'
+import { getAllData } from '@/api/index'
+import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getAbout, getAuthInfo } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
@@ -258,7 +257,7 @@ async function handleSaveItem() {
   if (!item?.title) { message.warning('请输入标题'); return }
   try {
     const res = item.id ? await editItem<Panel.ItemInfo>(item) : await addItems<Panel.ItemInfo[]>([item])
-    if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; await loadData() }
+    if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadData() }
     else message.error(res.msg || '保存失败')
   } catch { message.error('网络错误') }
 }
@@ -267,7 +266,7 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
   if (!item.id) return
   try {
     const res = await deleteItems([item.id])
-    if (res.code === 0) { message.success('删除成功'); await loadData() }
+    if (res.code === 0) { message.success('删除成功'); invalidateCacheByPrefix('panel:'); await loadData() }
     else message.error(res.msg || '删除失败')
   } catch { message.error('网络错误') }
 }
@@ -355,17 +354,8 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
               <div v-for="(item, ii) in group.items" :key="item.id || ii"
                 class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
                 @click="openUrl(item)">
-                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1"
-                    :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                  <img v-if="item.icon?.src"
-                    :src="item.icon.src"
-                    class="w-full h-full object-cover"
-                    :alt="item.title"
-                    loading="lazy"
-                    decoding="async"
-                    style="opacity:0;transition:opacity 0.3s ease"
-                    onload="this.style.opacity='1';this.parentElement.style.backgroundColor='transparent'"
-                  />
+                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -393,20 +383,12 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 <template #trigger>
                   <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
                     @click="openUrl(item)">
-                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1"
-                      :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                      <img v-if="item.icon?.src"
-                        :src="item.icon.src"
-                        class="w-full h-full object-cover"
-                        :alt="item.title"
-                        loading="lazy"
-                        decoding="async"
-                        style="opacity:0;transition:opacity 0.3s ease"
-                        onload="this.style.opacity='1';this.parentElement.style.backgroundColor='transparent'"
-                      />
-                      <span v-else class="text-white font-bold text-lg">
+                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
+                      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                         {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-                      </span>
+                      </div>
                     </div>
                     <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
                   </div>
