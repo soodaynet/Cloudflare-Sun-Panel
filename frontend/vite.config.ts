@@ -26,7 +26,6 @@ export default defineConfig({
     assetsDir: 'assets',
     target: 'es2022',
     cssCodeSplit: false,
-    cssMinify: 'lightningcss',
     minify: 'esbuild',
     sourcemap: false,
     assetsInlineLimit: 4096,
