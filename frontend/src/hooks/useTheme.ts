@@ -1,16 +1,26 @@
 import { darkTheme } from 'naive-ui'
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/store'
 
 export function useTheme() {
   const appStore = useAppStore()
+  const systemDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  let mediaQuery: MediaQueryList | null = null
+
+  onMounted(() => {
+    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handler = (e: MediaQueryListEvent) => { systemDark.value = e.matches }
+    mediaQuery.addEventListener('change', handler)
+  })
+
+  onUnmounted(() => {
+    if (mediaQuery) mediaQuery.removeEventListener('change', () => {})
+  })
 
   const theme = computed(() => {
     if (appStore.theme === 'dark') return darkTheme
-    if (appStore.theme === 'auto') {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches)
-        return darkTheme
-    }
+    if (appStore.theme === 'auto' && systemDark.value) return darkTheme
     return undefined
   })
 

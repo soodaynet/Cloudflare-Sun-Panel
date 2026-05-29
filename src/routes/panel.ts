@@ -11,17 +11,48 @@ function isHttpUrl(url: string): boolean {
   return /^(https?:\/\/|\/\/)/i.test(url);
 }
 
-async function getFaviconUrl(urlStr: string): Promise<string | null> {
+function isValidUrl(urlStr: string): boolean {
   try {
-    const resp = await fetch(urlStr, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+    const url = new URL(urlStr)
+    if (!['http:', 'https:'].includes(url.protocol)) return false
+    const hostname = url.hostname.toLowerCase()
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') return false
+    if (hostname.startsWith('10.') ||
+        hostname.startsWith('172.') && hostname.split('.')[1] >= '16' && hostname.split('.')[1] <= '31' ||
+        hostname.startsWith('192.168.')) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
+const FETCH_TIMEOUT_MS = 8000
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal })
+    return response
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+async function getFaviconUrl(urlStr: string): Promise<string | null> {
+  if (!isValidUrl(urlStr)) return null
+
+  try {
+    const domain = new URL(urlStr)
+    const resp = await fetchWithTimeout(urlStr, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       redirect: 'follow',
-    });
+    })
 
     if (!resp.ok) {
-      const resp2 = await fetch(`https://${new URL(urlStr).hostname}/favicon.ico`, { method: 'HEAD' });
-      if (resp2.ok) return `https://${new URL(urlStr).hostname}/favicon.ico`;
-      return null;
+      const resp2 = await fetchWithTimeout(`https://${domain.hostname}/favicon.ico`, { method: 'HEAD' })
+      if (resp2.ok) return `https://${domain.hostname}/favicon.ico`
+      return null
     }
 
     const html = await resp.text();
@@ -47,10 +78,9 @@ async function getFaviconUrl(urlStr: string): Promise<string | null> {
       return fullUrl;
     }
 
-    const domain = new URL(urlStr);
-    const defaultFavicon = `${domain.protocol}//${domain.hostname}/favicon.ico`;
-    const checkResp = await fetch(defaultFavicon, { method: 'HEAD' });
-    if (checkResp.ok) return defaultFavicon;
+    const defaultFavicon = `${domain.protocol}//${domain.hostname}/favicon.ico`
+    const checkResp = await fetchWithTimeout(defaultFavicon, { method: 'HEAD' })
+    if (checkResp.ok) return defaultFavicon
 
     return null;
   } catch {

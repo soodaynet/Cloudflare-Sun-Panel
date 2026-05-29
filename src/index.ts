@@ -16,14 +16,17 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 // ========== 数据库自动初始化 ==========
 let dbInitPromise: Promise<void> | null = null;
+let dbInitialized = false;
 
 async function initDatabase(db: D1Database): Promise<void> {
-  // 检查 users 表是否存在
   const tableCheck = await db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
   ).first();
 
-  if (tableCheck) return; // 已初始化，跳过
+  if (tableCheck) {
+    dbInitialized = true;
+    return;
+  }
 
   const schemaSQL = [
     `CREATE TABLE IF NOT EXISTS users (
@@ -88,10 +91,8 @@ async function initDatabase(db: D1Database): Promise<void> {
     `CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id)`,
   ];
 
-  // D1 batch 最多支持 100 条语句，这里只有 10 条，安全
   await db.batch(schemaSQL.map(sql => db.prepare(sql)));
 
-  // 仅在 users 表完全为空时才插入默认管理员
   const userCount = await db.prepare('SELECT COUNT(*) as count FROM users').first() as { count: number } | null;
   if (!userCount || userCount.count === 0) {
     await db.prepare(
@@ -100,18 +101,21 @@ async function initDatabase(db: D1Database): Promise<void> {
     ).run();
   }
 
+  dbInitialized = true;
   console.log('[DB] Database schema initialized successfully');
 }
 
-// 自动初始化中间件：首次请求时初始化数据库
 app.use('*', async (c, next) => {
-  if (!dbInitPromise) {
-    dbInitPromise = initDatabase(c.env.DB).catch((err) => {
-      console.error('[DB] Init failed:', err);
-      dbInitPromise = null; // 失败后重置，允许重试
-    });
+  if (!dbInitialized) {
+    if (!dbInitPromise) {
+      dbInitPromise = initDatabase(c.env.DB).catch((err) => {
+        console.error('[DB] Init failed:', err);
+        dbInitPromise = null;
+        throw err;
+      });
+    }
+    await dbInitPromise;
   }
-  await dbInitPromise;
   await next();
 });
 

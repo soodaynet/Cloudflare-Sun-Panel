@@ -195,8 +195,8 @@ async function handleImportFile(e: Event) {
     await importData(result.data)
     message.success('导入成功，请刷新页面查看')
     props.onSaved()
-  } catch (err: any) {
-    message.error(err?.message || '导入失败')
+  } catch (err) {
+    message.error(err instanceof Error ? err.message : '导入失败')
   }
   finally {
     importExportLoading.value = false
@@ -205,6 +205,7 @@ async function handleImportFile(e: Event) {
 }
 
 async function importData(data: ExportData) {
+  const batchSize = 50
   for (const g of data.icons) {
     const groupRes = await saveGroup<Panel.ItemIconGroup>({ title: g.title, sort: g.sort })
     if (groupRes.code === 0 && groupRes.data?.id) {
@@ -212,8 +213,6 @@ async function importData(data: ExportData) {
       const items: Panel.ItemInfo[] = g.children.map(item => ({
         ...item, itemIconGroupId: groupId, openMethod: item.openMethod || 2,
       }))
-      // 分批添加（每批50个）
-      const batchSize = 50
       for (let i = 0; i < items.length; i += batchSize) {
         const batch = items.slice(i, i + batchSize)
         await addItems(batch)

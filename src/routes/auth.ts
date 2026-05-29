@@ -6,6 +6,11 @@ import type { LoginRequest, RegisterRequest, ApiResponse, UserInfo, UserRow } fr
 
 const authApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
+function getErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  return '服务器错误'
+}
+
 /**
  * 登录
  * POST /api/login
@@ -35,7 +40,6 @@ authApp.post('/login', async (c) => {
 
     const token = await signToken({ userId: user.id, username: user.username, role: user.role });
 
-    // 更新 token 到数据库
     await db.prepare('UPDATE users SET token = ? WHERE id = ?').bind(token, user.id).run();
 
     const userInfo: UserInfo = {
@@ -50,8 +54,8 @@ authApp.post('/login', async (c) => {
     };
 
     return c.json({ code: 0, msg: 'ok', data: { token, userInfo } } satisfies ApiResponse);
-  } catch (e: any) {
-    return c.json({ code: 500, msg: e?.message || '服务器错误', data: null } satisfies ApiResponse);
+  } catch (e: unknown) {
+    return c.json({ code: 500, msg: getErrorMessage(e), data: null } satisfies ApiResponse);
   }
 });
 
@@ -68,7 +72,6 @@ authApp.post('/register', async (c) => {
       return c.json({ code: 400, msg: '用户名和密码不能为空', data: null } satisfies ApiResponse);
     }
 
-    // 检查用户名是否已存在
     const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bind(body.username).first();
     if (existing) {
       return c.json({ code: 400, msg: '该用户名已被注册', data: null } satisfies ApiResponse);
@@ -86,7 +89,6 @@ authApp.post('/register', async (c) => {
 
     await db.prepare('UPDATE users SET token = ? WHERE id = ?').bind(token, userId).run();
 
-    // 创建默认用户配置
     await db.prepare('INSERT INTO user_configs (user_id) VALUES (?)').bind(userId).run();
 
     const userInfo: UserInfo = {
@@ -101,8 +103,8 @@ authApp.post('/register', async (c) => {
     };
 
     return c.json({ code: 0, msg: 'ok', data: { token, userInfo } } satisfies ApiResponse);
-  } catch (e: any) {
-    return c.json({ code: 500, msg: e?.message || '服务器错误', data: null } satisfies ApiResponse);
+  } catch (e: unknown) {
+    return c.json({ code: 500, msg: getErrorMessage(e), data: null } satisfies ApiResponse);
   }
 });
 
