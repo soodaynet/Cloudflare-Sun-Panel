@@ -210,7 +210,7 @@ async function importData(data: ExportData) {
     if (groupRes.code === 0 && groupRes.data?.id) {
       const groupId = groupRes.data.id
       const items: Panel.ItemInfo[] = g.children.map(item => ({
-        ...item, itemIconGroupId: groupId,
+        ...item, itemIconGroupId: groupId, openMethod: item.openMethod || 2,
       }))
       // 分批添加（每批50个）
       const batchSize = 50

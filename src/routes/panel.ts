@@ -7,6 +7,57 @@ const panelApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
 panelApp.use('*', publicModeMiddleware);
 
+function isHttpUrl(url: string): boolean {
+  return /^(https?:\/\/|\/\/)/i.test(url);
+}
+
+async function getFaviconUrl(urlStr: string): Promise<string | null> {
+  try {
+    const resp = await fetch(urlStr, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      redirect: 'follow',
+    });
+
+    if (!resp.ok) {
+      const resp2 = await fetch(`https://${new URL(urlStr).hostname}/favicon.ico`, { method: 'HEAD' });
+      if (resp2.ok) return `https://${new URL(urlStr).hostname}/favicon.ico`;
+      return null;
+    }
+
+    const html = await resp.text();
+    const linkRegex = /<link[^>]+rel=["']([^"']*\bicon\b[^"']*)["'][^>]*href=["']([^"']+)["'][^>]*>/gi;
+    const hrefRegex = /<link[^>]+href=["']([^"']+)["'][^>]*rel=["']([^"']*\bicon\b[^"']*)["'][^>]*>/gi;
+
+    let match;
+    const icons: string[] = [];
+
+    for (const re of [linkRegex, hrefRegex]) {
+      while ((match = re.exec(html)) !== null) {
+        const href = re === linkRegex ? match[2] : match[1];
+        if (href.match(/\.(ico|png|svg|jpg|jpeg|gif|webp)/i) || match[1]?.includes('icon')) {
+          icons.push(href);
+        }
+      }
+    }
+
+    for (const v of icons) {
+      if (isHttpUrl(v)) return v;
+      const urlInfo = new URL(urlStr);
+      const fullUrl = `${urlInfo.protocol}//${urlInfo.host}/${v.replace(/^\//, '')}`;
+      return fullUrl;
+    }
+
+    const domain = new URL(urlStr);
+    const defaultFavicon = `${domain.protocol}//${domain.hostname}/favicon.ico`;
+    const checkResp = await fetch(defaultFavicon, { method: 'HEAD' });
+    if (checkResp.ok) return defaultFavicon;
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /** 图标行转前端格式 */
 function formatIcon(row: ItemIconRow) {
   return {
@@ -206,6 +257,26 @@ panelApp.post('/itemIcon/saveSort', async (c) => {
   await db.batch(batch);
 
   return c.json({ code: 0, msg: 'ok', data: null } satisfies ApiResponse);
+});
+
+/**
+ * 获取网站 favicon 图标 URL
+ * POST /api/panel/itemIcon/getSiteFavicon
+ */
+panelApp.post('/itemIcon/getSiteFavicon', async (c) => {
+  const { url } = await c.req.json<{ url: string }>();
+
+  if (!url) {
+    return c.json({ code: 400, msg: 'url 不能为空', data: null } satisfies ApiResponse);
+  }
+
+  const iconUrl = await getFaviconUrl(url);
+
+  if (!iconUrl) {
+    return c.json({ code: 1, msg: '获取图标失败', data: null } satisfies ApiResponse);
+  }
+
+  return c.json({ code: 0, msg: 'ok', data: { iconUrl } } satisfies ApiResponse);
 });
 
 export default panelApp;

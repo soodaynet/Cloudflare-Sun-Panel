@@ -5,7 +5,7 @@ import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { getAllData } from '@/api/index'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
-import { getAbout, getAuthInfo } from '@/api/index'
+import { getAbout, getAuthInfo, getSiteFavicon } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
@@ -47,11 +47,12 @@ if (siteConfig.value.favicon_url) {
 // 编辑弹窗
 const editModalShow = ref(false)
 const editingItem = ref<Panel.ItemInfo>({
-  title: '', url: '', openMethod: 1,
+  title: '', url: '', openMethod: 2,
   icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
   itemIconGroupId: undefined,
 })
 const editingGroupId = ref<number>()
+const getIconLoading = ref(false)
 
 // 分组编辑模式（控制每个分组内是否可排序/编辑/删除）
 const editModeGroupId = ref<number | null>(null)
@@ -225,7 +226,7 @@ onMounted(async () => {
 // ====== 图标编辑 ======
 function openAddItem(groupId: number) {
   editingItem.value = {
-    title: '', url: '', description: '', openMethod: 1,
+    title: '', url: '', description: '', openMethod: 2,
     icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
     itemIconGroupId: groupId,
   }
@@ -247,6 +248,24 @@ async function handleSaveItem() {
     if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadData() }
     else message.error(res.msg || '保存失败')
   } catch { message.error('网络错误') }
+}
+
+async function getIconByUrl() {
+  if (!editingItem.value.url) return
+  getIconLoading.value = true
+  try {
+    const res = await getSiteFavicon<{ iconUrl: string }>(editingItem.value.url)
+    if (res.code === 0 && res.data) {
+      editingItem.value.icon!.src = res.data.iconUrl
+      message.success('图标获取成功')
+    } else {
+      message.error(res.msg || '获取图标失败')
+    }
+  } catch {
+    message.error('网络错误')
+  } finally {
+    getIconLoading.value = false
+  }
 }
 
 async function handleDeleteItem(item: Panel.ItemInfo) {
@@ -413,7 +432,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[500px]">
       <div v-if="editingItem" class="flex flex-col gap-4">
         <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
-        <div><label class="block text-sm mb-1">网址 *</label><input v-model="editingItem.url" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://" /></div>
+        <div>
+          <label class="block text-sm mb-1">网址 *</label>
+          <div class="flex gap-2">
+            <input v-model="editingItem.url" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="https://" />
+            <NButton :disabled="!editingItem.url" :loading="getIconLoading" @click="getIconByUrl">获取图标</NButton>
+          </div>
+        </div>
         <div><label class="block text-sm mb-1">描述</label><input v-model="editingItem.description" class="w-full border rounded px-3 py-2 text-sm" placeholder="描述信息" /></div>
         <div><label class="block text-sm mb-1">图标文字</label><input v-model="editingItem.icon!.text" class="w-full border rounded px-3 py-2 text-sm" placeholder="图标显示文字" /></div>
         <div><label class="block text-sm mb-1">图标图片 URL</label><input v-model="editingItem.icon!.src" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标图片URL，留空使用文字图标" /></div>

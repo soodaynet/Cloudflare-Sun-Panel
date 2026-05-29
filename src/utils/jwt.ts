@@ -53,8 +53,8 @@ export async function signToken(payload: Record<string, unknown>): Promise<strin
     exp: now + 7 * 24 * 60 * 60, // 7天过期
   };
 
-  const headerB64 = base64UrlEncode(encoder.encode(JSON.stringify(header)));
-  const payloadB64 = base64UrlEncode(encoder.encode(JSON.stringify(fullPayload)));
+  const headerB64 = base64UrlEncode(encoder.encode(JSON.stringify(header)).buffer as ArrayBuffer);
+  const payloadB64 = base64UrlEncode(encoder.encode(JSON.stringify(fullPayload)).buffer as ArrayBuffer);
   const signingInput = `${headerB64}.${payloadB64}`;
 
   const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(signingInput));
