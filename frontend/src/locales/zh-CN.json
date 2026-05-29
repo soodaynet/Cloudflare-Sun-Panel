@@ -100,6 +100,14 @@
         "dark": "深色",
         "auto": "跟随系统"
       }
+    },
+    "announceSettings": {
+      "appName": "公告设置",
+      "content": "公告内容",
+      "duration": "停留时间",
+      "blur": "背景模糊度",
+      "maskOpacity": "遮罩不透明度",
+      "syncNote": "图标悬浮和侧边栏展开将使用相同的模糊度和不透明度"
     }
   }
 }

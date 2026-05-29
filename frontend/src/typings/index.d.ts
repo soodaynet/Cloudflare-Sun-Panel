@@ -87,6 +87,8 @@ declare namespace Panel {
     footerHtml?: string
     announcement?: string
     announcementDuration?: number
+    announcementBlur?: number
+    announcementMaskOpacity?: number
     systemMonitorShow?: boolean
     systemMonitorShowTitle?: boolean
     systemMonitorPublicVisitModeShow?: boolean

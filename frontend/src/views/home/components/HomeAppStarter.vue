@@ -49,6 +49,7 @@ const apps = computed<App[]>(() => {
   const list: App[] = [
     { name: '我的信息', key: 'UserInfo', icon: '👤' },
     { name: '风格设置', key: 'Style', icon: '🎨' },
+    { name: '公告设置', key: 'Announce', icon: '📢' },
     { name: '分组管理', key: 'GroupManage', icon: '📁' },
     { name: '导入导出', key: 'ImportExport', icon: '📦' },
   ]
@@ -299,10 +300,6 @@ async function importData(data: ExportData) {
               <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL，显示在页面左上角" /></div>
             <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
               <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
-            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">公告内容</label>
-              <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="2" placeholder="公告文字，留空不显示" /></div>
-            <div><label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
-              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
               <input :value="panelConfig.maxWidth" @input="(e: any) => panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div><label class="block text-sm mb-1 font-medium">上边距</label>
@@ -311,6 +308,26 @@ async function importData(data: ExportData) {
               <input :value="panelConfig.marginBottom" @input="(e: any) => panelConfig.marginBottom = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton @click="resetSettings">重置</NButton>
+              <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
+            </div>
+          </div>
+
+          <!-- ====== 公告设置 ====== -->
+          <div v-if="activeApp === 'Announce'" class="flex flex-col gap-4">
+            <div><label class="block text-sm mb-1 font-medium">公告内容</label>
+              <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="公告文字，留空不显示" /></div>
+            <div><label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
+              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 text-sm" /></div>
+            <div class="border-t pt-3">
+              <label class="block text-sm mb-1 font-medium">背景模糊度: {{ panelConfig.announcementBlur ?? 12 }}</label>
+              <input :value="panelConfig.announcementBlur" @input="(e: any) => panelConfig.announcementBlur = Number(e.target.value)" type="range" min="0" max="40" class="w-full" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.announcementMaskOpacity ?? 0.15 }}</label>
+              <input :value="panelConfig.announcementMaskOpacity" @input="(e: any) => panelConfig.announcementMaskOpacity = Number(e.target.value)" type="range" min="0" max="1" step="0.05" class="w-full" />
+            </div>
+            <p class="text-xs text-gray-400">图标悬浮和侧边栏展开将使用相同的模糊度和不透明度</p>
+            <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
             </div>
           </div>

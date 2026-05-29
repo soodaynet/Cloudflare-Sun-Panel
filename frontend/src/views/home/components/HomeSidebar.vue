@@ -177,7 +177,9 @@ onUnmounted(() => {
 
 .sidebar-bar.expanded {
   width: 200px;
-  background-color: rgba(42, 42, 42, 0.9);
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
 }
 

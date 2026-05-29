@@ -125,6 +125,11 @@ const containerStyle = computed(() => {
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
 
+const glassVars = computed(() => ({
+  '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
+  '--ann-opacity': panelState.panelConfig.announcementMaskOpacity ?? 0.15,
+}))
+
 const visibleGroups = computed(() => {
   if (!authStore.isVisitMode) return groups.value
   return groups.value.filter(g => g.publicVisible !== 0)
@@ -324,7 +329,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
-  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }">
+  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }" :style="glassVars">
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
@@ -340,7 +345,10 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- 公告 -->
     <Transition name="announce-fade">
       <div v-if="announcementVisible && announcementText" class="fixed top-4 right-4 z-30 pointer-events-none">
-        <div class="flex items-start gap-3 max-w-sm pointer-events-auto bg-white/15 backdrop-blur-lg text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
+        <div class="flex items-start gap-3 max-w-sm pointer-events-auto glass-panel text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
+
+
+
           <span class="flex-1">{{ announcementText }}</span>
           <button @click="dismissAnnouncement" class="text-white/60 hover:text-white flex-shrink-0 text-lg leading-none">&times;</button>
         </div>
@@ -373,7 +381,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
             </div>
             <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-3" @end="saveItemSortOrder(group)">
               <div v-for="(item, ii) in group.items" :key="item.id || ii"
-                class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
+                class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                 @click="openUrl(item)">
                 <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
                   <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
@@ -402,7 +410,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
             <div v-else class="flex flex-wrap gap-3">
               <NTooltip v-for="(item, ii) in group.items" :key="item.id || ii" trigger="hover" :disabled="!item.description" placement="bottom">
                 <template #trigger>
-                  <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:bg-white/10 hover:scale-105 relative bg-white/5"
+                  <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                     @click="openUrl(item)">
                     <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
                       <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
@@ -514,5 +522,21 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 .announce-fade-enter-from,
 .announce-fade-leave-to {
   opacity: 0;
+}
+
+.glass-panel {
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
+}
+
+.glass-hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.glass-hover:hover {
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
 }
 </style>

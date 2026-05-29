@@ -100,6 +100,14 @@
         "dark": "Dark",
         "auto": "System"
       }
+    },
+    "announceSettings": {
+      "appName": "Announce Settings",
+      "content": "Content",
+      "duration": "Duration",
+      "blur": "Background Blur",
+      "maskOpacity": "Mask Opacity",
+      "syncNote": "Icon hover and sidebar expanded use the same blur and opacity"
     }
   }
 }

@@ -28,6 +28,8 @@ const defaultPanelConfig: Panel.panelConfig = {
   footerHtml: '',
   announcement: '',
   announcementDuration: 5,
+  announcementBlur: 12,
+  announcementMaskOpacity: 0.15,
   systemMonitorShow: false,
   systemMonitorShowTitle: true,
   systemMonitorPublicVisitModeShow: false,
