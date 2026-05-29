@@ -35,18 +35,10 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/naive-ui')) {
-            return 'naive-ui'
-          }
-          if (id.includes('node_modules/vue-draggable-plus')) {
-            return 'draggable'
-          }
-          if (id.includes('node_modules/vue') || id.includes('node_modules/@vue') ||
-              id.includes('node_modules/vue-router') || id.includes('node_modules/pinia') ||
-              id.includes('node_modules/vue-i18n')) {
-            return 'vue-vendor'
-          }
+        manualChunks: {
+          'naive-ui': ['naive-ui'],
+          'draggable': ['vue-draggable-plus'],
+          'vue-vendor': ['vue', 'vue-router', 'pinia', 'vue-i18n'],
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
