@@ -29,7 +29,27 @@ npm-debug.log*
 .wrangler/
 .dev.vars
 
+# Vite
+.vite/
+*.vite-*
+
+# TypeScript
+*.tsbuildinfo
+
 # Misc
 *.tmp
 .cache/
 .npm-cache/
+
+# Turbopack / Next.js (future expansion)
+.next/
+.turbo/
+
+# Test
+coverage/
+.nyc_output/
+
+# Certificates
+*.pem
+*.crt
+*.key.local
