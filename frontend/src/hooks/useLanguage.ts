@@ -10,5 +10,10 @@ export function useLanguage() {
     return zhCN
   })
 
-  return { language }
+  const dateLocale = computed(() => {
+    if (appStore.language === 'en-US') return dateEnUS
+    return dateZhCN
+  })
+
+  return { language, dateLocale }
 }

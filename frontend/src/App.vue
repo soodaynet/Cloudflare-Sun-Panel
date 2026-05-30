@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme, zhCN, dateZhCN } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme } from 'naive-ui'
 import { useTheme } from './hooks/useTheme'
 import { useLanguage } from './hooks/useLanguage'
 
 const { theme, themeOverrides } = useTheme()
-const { language } = useLanguage()
+const { language, dateLocale } = useLanguage()
 </script>
 
 <template>
@@ -13,7 +13,7 @@ const { language } = useLanguage()
     :theme="theme"
     :theme-overrides="themeOverrides"
     :locale="language"
-    :date-locale="dateZhCN"
+    :date-locale="dateLocale"
   >
     <NMessageProvider>
       <NDialogProvider>

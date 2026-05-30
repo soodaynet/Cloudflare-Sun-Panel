@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
@@ -24,7 +24,6 @@ const groups = ref<ItemGroup[]>([])
 const loading = ref(true)
 const SITE_CACHE_KEY = 'sun-panel-site-config'
 
-// 先从 localStorage 恢复站点配置（避免闪烁）
 function loadCachedSiteConfig(): Panel.SiteConfig {
   try {
     const cached = localStorage.getItem(SITE_CACHE_KEY)
@@ -35,7 +34,6 @@ function loadCachedSiteConfig(): Panel.SiteConfig {
 
 const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
 
-// 立即用缓存值设置标题和图标
 if (siteConfig.value.site_title) {
   document.title = siteConfig.value.site_title
 }
@@ -43,7 +41,6 @@ if (siteConfig.value.favicon_url) {
   updateFavicon(siteConfig.value.favicon_url)
 }
 
-// 编辑弹窗
 const editModalShow = ref(false)
 const editingItem = ref<Panel.ItemInfo>({
   title: '', url: '', openMethod: 2,
@@ -53,14 +50,12 @@ const editingItem = ref<Panel.ItemInfo>({
 const editingGroupId = ref<number>()
 const getIconLoading = ref(false)
 
-// 分组编辑模式（控制每个分组内是否可排序/编辑/删除）
 const editModeGroupId = ref<number | null>(null)
 
 function toggleEditMode(groupId: number) {
   editModeGroupId.value = editModeGroupId.value === groupId ? null : groupId
 }
 
-// ====== 公告 ======
 const announcementVisible = ref(false)
 let announcementTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -94,15 +89,12 @@ function dismissAnnouncement() {
   announcementVisible.value = false
 }
 
-// 监视公告配置变化
 watch([announcementText, announcementDuration], () => {
   startAnnouncementTimer()
 })
 
-// AppStarter
 const starterShow = ref(false)
 
-// 弹窗（iframe 内嵌）
 const windowShow = ref(false)
 const windowSrc = ref('')
 const windowTitle = ref('')
@@ -165,7 +157,6 @@ function handWindowIframeIdLoad() {
   windowIframeIsLoad.value = false
 }
 
-// ====== favicon ======
 function updateFavicon(url: string) {
   let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null
   if (!url) {
@@ -179,8 +170,6 @@ function updateFavicon(url: string) {
   }
   link.href = url
 }
-
-// ====== 数据加载 ======
 
 async function loadInitData() {
   loading.value = true
@@ -224,7 +213,6 @@ onMounted(async () => {
   startAnnouncementTimer()
 })
 
-// ====== 图标编辑 ======
 function openAddItem(groupId: number) {
   editingItem.value = {
     title: '', url: '', description: '', openMethod: 2,
@@ -278,13 +266,11 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
   } catch { message.error('网络错误') }
 }
 
-// ====== 排序 ======
 async function saveItemSortOrder(group: ItemGroup) {
   const sortItems = (group.items || []).filter(g => g.id).map((item, i) => ({ id: item.id!, sort: i }))
   try { const res = await saveItemSort({ sortItems, itemIconGroupId: group.id! }); if (res.code === 0) message.success('排序已保存') } catch { /* ignore */ }
 }
 
-// ====== AppStarter 回调 ======
 function handleStarterSaved() { refreshAll() }
 function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   siteConfig.value = config
@@ -295,7 +281,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 </script>
 
 <template>
-  <!-- 壁纸层 - 使用 img 标签确保浏览器以高优先级下载 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
     transform: 'translateZ(0)',
@@ -303,16 +288,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   }">
     <img :src="panelState.panelConfig.backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
   </div>
-  <!-- 遮罩层 -->
   <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
   <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }" :style="glassVars">
-    <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
-    <!-- 顶部：Logo + 访客标识 -->
     <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
       <div class="flex items-center gap-3">
         <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" />
@@ -321,20 +303,15 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </div>
     </div>
 
-    <!-- 公告 -->
     <Transition name="announce-fade">
       <div v-if="announcementVisible && announcementText" class="fixed top-4 right-4 z-30 pointer-events-none">
         <div class="flex items-start gap-3 max-w-sm pointer-events-auto glass-panel text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
-
-
-
           <span class="flex-1">{{ announcementText }}</span>
           <button @click="dismissAnnouncement" class="text-white/60 hover:text-white flex-shrink-0 text-lg leading-none">&times;</button>
         </div>
       </div>
     </Transition>
 
-    <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
       <NSpin :show="loading">
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
@@ -412,7 +389,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </NSpin>
     </div>
 
-    <!-- 自定义页脚 -->
     <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="panelState.panelConfig.footerHtml" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
@@ -423,7 +399,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </div>
     </NBackTop>
 
-    <!-- ========== AppStarter 应用启动器 ========== -->
     <HomeAppStarter
       v-model:visible="starterShow"
       :site-config="siteConfig"
@@ -432,7 +407,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       @update:site-config="handleSiteConfigUpdate"
     />
 
-    <!-- ========== 编辑图标弹窗 ========== -->
     <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[500px]">
       <div v-if="editingItem" class="flex flex-col gap-4">
         <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
@@ -462,7 +436,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </div>
     </NModal>
 
-    <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
     <NModal
       v-model:show="windowShow" :mask-closable="false" preset="card"
       class="max-w-[1000px] h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"

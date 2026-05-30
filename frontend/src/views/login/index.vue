@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { login, getInit } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'

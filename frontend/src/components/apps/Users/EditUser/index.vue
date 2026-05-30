@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useMessage } from 'naive-ui'
 import type { FormInst, FormRules } from 'naive-ui'
-import { NButton, NForm, NFormItem, NInput, NModal, NSelect, useMessage } from 'naive-ui'
 import { createUser, updateUser } from '@/api/index'
 
 interface Props {

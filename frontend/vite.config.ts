@@ -1,10 +1,16 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import Components from 'unplugin-vue-components/vite'
+import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 
 export default defineConfig({
   plugins: [
     vue(),
+    Components({
+      resolvers: [NaiveUiResolver()],
+      dts: 'src/components.d.ts',
+    }),
   ],
   resolve: {
     alias: {
@@ -25,7 +31,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     target: 'es2022',
-    cssCodeSplit: false,
+    cssCodeSplit: true,
     minify: 'esbuild',
     sourcemap: false,
     reportCompressedSize: false,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { NButton, NLayout, NLayoutContent, NLayoutSider, NModal, NSwitch, useMessage } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState, useAppStore } from '@/store'
 import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getAllData, addItems, saveGroupSort } from '@/api/index'
