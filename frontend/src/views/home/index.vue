@@ -22,6 +22,7 @@ const panelState = usePanelState()
 
 const groups = ref<ItemGroup[]>([])
 const loading = ref(true)
+const initDone = ref(false)
 const SITE_CACHE_KEY = 'sun-panel-site-config'
 
 function loadCachedSiteConfig(): Panel.SiteConfig {
@@ -116,10 +117,18 @@ const containerStyle = computed(() => {
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
 
-const logoImageStyle = computed(() => ({
-  maxHeight: '48px',
-  maxWidth: '180px',
+const logoFloatStyle = computed(() => ({
+  top: `${panelState.panelConfig.logoPositionTop ?? 16}px`,
+  left: `${panelState.panelConfig.logoPositionLeft ?? 16}px`,
 }))
+
+const logoImageStyle = computed(() => {
+  const size = panelState.panelConfig.logoSize ?? 48
+  return {
+    maxHeight: `${size}px`,
+    maxWidth: `${size * 3.75}px`,
+  }
+})
 
 const wallpaperStyle = computed(() => {
   const src = panelState.panelConfig.backgroundImageSrc
@@ -216,7 +225,7 @@ async function loadInitData() {
         panelState.updatePanelConfigFromCloud(panelConfig)
       }
     }
-  } catch (e) { console.error(e) } finally { loading.value = false }
+  } catch (e) { console.error(e) } finally { loading.value = false; initDone.value = true }
 }
 
 function refreshAll() {
@@ -313,12 +322,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
-  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }" :style="glassVars">
+  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container" :style="glassVars">
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
-    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc"
-      class="sticky top-0 z-20 flex items-center p-4">
-      <div class="flex items-center gap-3 glass-logo">
+    <div v-if="initDone && (panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc)"
+      class="fixed z-30 glass-logo"
+      :style="logoFloatStyle">
+      <div class="flex items-center gap-3">
         <img
           v-if="panelState.panelConfig.logoImageSrc"
           :src="panelState.panelConfig.logoImageSrc"
@@ -416,7 +426,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </NSpin>
     </div>
 
-    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-sm" v-html="panelState.panelConfig.footerHtml" :style="{ color: 'rgba(255,255,255,0.85)' }" />
+    <div v-if="initDone && panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-sm" v-html="panelState.panelConfig.footerHtml" :style="{ color: 'rgba(255,255,255,0.85)' }" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">

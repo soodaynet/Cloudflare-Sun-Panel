@@ -75,6 +75,9 @@ declare namespace Panel {
     iconTextIconHideTitle?: boolean
     logoText?: string
     logoImageSrc?: string
+    logoPositionTop?: number
+    logoPositionLeft?: number
+    logoSize?: number
     clockShowSecond?: boolean
     clockColor?: string
     searchBoxShow?: boolean

@@ -294,10 +294,16 @@ async function importData(data: ExportData) {
               <input :value="panelConfig.backgroundBlur" @input="(e: any) => panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
               <input :value="panelConfig.backgroundMaskNumber" @input="(e: any) => panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
-            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">页头 Logo 文字</label>
-              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="Sun-Panel" /></div>
-            <div><label class="block text-sm mb-1 font-medium">页头 Logo 图片 URL</label>
+            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 文字</label>
+              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入 Logo 文字" /></div>
+            <div><label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
               <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL，显示在页面左上角" /></div>
+            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 距顶部 (px)</label>
+              <input :value="panelConfig.logoPositionTop" @input="(e: any) => panelConfig.logoPositionTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+            <div><label class="block text-sm mb-1 font-medium">Logo 距左侧 (px)</label>
+              <input :value="panelConfig.logoPositionLeft" @input="(e: any) => panelConfig.logoPositionLeft = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+            <div><label class="block text-sm mb-1 font-medium">Logo 图片高度 (px)</label>
+              <input :value="panelConfig.logoSize" @input="(e: any) => panelConfig.logoSize = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
               <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
             <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
@@ -326,7 +332,7 @@ async function importData(data: ExportData) {
               <label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.announcementMaskOpacity ?? 0.15 }}</label>
               <input :value="panelConfig.announcementMaskOpacity" @input="(e: any) => panelConfig.announcementMaskOpacity = Number(e.target.value)" type="range" min="0" max="1" step="0.05" class="w-full" />
             </div>
-            <p class="text-xs text-gray-400">图标悬浮和侧边栏展开将使用相同的模糊度和不透明度</p>
+            <p class="text-xs text-gray-400">仅用于公告弹窗的模糊度和不透明度</p>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
             </div>
