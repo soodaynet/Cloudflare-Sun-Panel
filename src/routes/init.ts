@@ -24,7 +24,7 @@ initApp.post('/api/init', async (c) => {
     panelSvc.getAllData(user.userId),
   ])
 
-  c.header('Cache-Control', 'public, max-age=30, s-maxage=30')
+  c.header('Cache-Control', 'private, no-cache, no-store, must-revalidate')
   return ok(c, {
     user: userInfo,
     visitMode: user.visitMode,
