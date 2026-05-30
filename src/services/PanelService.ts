@@ -1,0 +1,193 @@
+import type { D1Database } from '@cloudflare/workers-types'
+import type { ItemIconRow, ItemIconGroupRow } from '../models/types'
+
+export class PanelService {
+  constructor(private db: D1Database) {}
+
+  formatIcon(row: ItemIconRow) {
+    return {
+      id: row.id,
+      icon: JSON.parse(row.icon_json || '{}'),
+      title: row.title,
+      url: row.url,
+      description: row.description,
+      openMethod: row.open_method,
+      sort: row.sort,
+      itemIconGroupId: row.item_icon_group_id,
+      userId: row.user_id,
+      createTime: row.created_at,
+      updateTime: row.updated_at,
+    }
+  }
+
+  formatGroup(row: ItemIconGroupRow) {
+    return {
+      id: row.id, icon: row.icon, title: row.title, description: row.description,
+      sort: row.sort, publicVisible: row.public_visible, userId: row.user_id,
+      createTime: row.created_at, updateTime: row.updated_at,
+    }
+  }
+
+  async getAllData(userId: number) {
+    const groupRows = await this.db.prepare(
+      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC'
+    ).bind(userId).all()
+
+    const groups = groupRows.results as unknown as ItemIconGroupRow[]
+
+    const groupIds = groups.map(g => g.id)
+    let itemsMap: Record<number, ReturnType<typeof this.formatIcon>[]> = {}
+
+    if (groupIds.length > 0) {
+      const placeholders = groupIds.map(() => '?').join(',')
+      const iconRows = await this.db.prepare(
+        `SELECT * FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`
+      ).bind(...groupIds, userId).all()
+
+      for (const row of iconRows.results as unknown as ItemIconRow[]) {
+        const gid = row.item_icon_group_id
+        if (!itemsMap[gid]) itemsMap[gid] = []
+        itemsMap[gid].push(this.formatIcon(row))
+      }
+    }
+
+    const configRow = await this.db.prepare(
+      'SELECT panel_json FROM user_configs WHERE user_id = ?'
+    ).bind(userId).first() as { panel_json: string } | null
+
+    return {
+      groups: groups.map(g => this.formatGroup(g)),
+      itemsMap,
+      panelConfig: configRow?.panel_json ? JSON.parse(configRow.panel_json) : {},
+    }
+  }
+
+  async addMultipleIcons(items: Array<{
+    icon?: unknown; title: string; url: string; description?: string;
+    openMethod?: number; sort?: number; itemIconGroupId: number
+  }>, userId: number) {
+    const stmt = this.db.prepare(
+      'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    )
+    const inserts = items.map(item =>
+      stmt.bind(
+        JSON.stringify(item.icon || {}), item.title, item.url,
+        item.description || '', item.openMethod || 0, item.sort || 0,
+        item.itemIconGroupId, userId
+      )
+    )
+    await this.db.batch(inserts)
+  }
+
+  async editIcon(body: {
+    id?: number; icon?: unknown; title: string; url: string;
+    description?: string; openMethod?: number; sort?: number; itemIconGroupId: number
+  }, userId: number) {
+    if (body.id) {
+      await this.db.prepare(
+        `UPDATE item_icons SET icon_json = ?, title = ?, url = ?, description = ?,
+         open_method = ?, sort = ?, item_icon_group_id = ?, updated_at = datetime('now')
+         WHERE id = ? AND user_id = ?`
+      ).bind(
+        JSON.stringify(body.icon || {}), body.title, body.url,
+        body.description || '', body.openMethod || 0, body.sort || 0,
+        body.itemIconGroupId, body.id, userId
+      ).run()
+
+      const row = await this.db.prepare('SELECT * FROM item_icons WHERE id = ?')
+        .bind(body.id).first()
+      return this.formatIcon(row as unknown as ItemIconRow)
+    } else {
+      const result = await this.db.prepare(
+        'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(
+        JSON.stringify(body.icon || {}), body.title, body.url,
+        body.description || '', body.openMethod || 0, body.sort || 0,
+        body.itemIconGroupId, userId
+      ).run()
+
+      const row = await this.db.prepare('SELECT * FROM item_icons WHERE id = ?')
+        .bind(result.meta.last_row_id).first()
+      return this.formatIcon(row as unknown as ItemIconRow)
+    }
+  }
+
+  async getIconsByGroupId(itemIconGroupId: number, userId: number) {
+    const rows = await this.db.prepare(
+      'SELECT * FROM item_icons WHERE item_icon_group_id = ? AND user_id = ? ORDER BY sort ASC, id ASC'
+    ).bind(itemIconGroupId, userId).all()
+
+    return (rows.results as unknown as ItemIconRow[]).map(row => this.formatIcon(row))
+  }
+
+  async deleteIcons(ids: number[], userId: number) {
+    const placeholders = ids.map(() => '?').join(',')
+    await this.db.prepare(
+      `DELETE FROM item_icons WHERE id IN (${placeholders}) AND user_id = ?`
+    ).bind(...ids, userId).run()
+  }
+
+  async saveIconSort(sortItems: Array<{ id: number; sort: number }>, userId: number) {
+    const stmt = this.db.prepare(
+      "UPDATE item_icons SET sort = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+    )
+    const batch = sortItems.map(item => stmt.bind(item.sort, item.id, userId))
+    await this.db.batch(batch)
+  }
+
+  async getGroups(userId: number) {
+    const rows = await this.db.prepare(
+      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC'
+    ).bind(userId).all()
+
+    return (rows.results as unknown as ItemIconGroupRow[]).map(row => this.formatGroup(row))
+  }
+
+  async editGroup(body: {
+    id?: number; icon?: string; title: string; description?: string;
+    sort?: number; publicVisible?: number
+  }, userId: number) {
+    if (body.id) {
+      await this.db.prepare(
+        `UPDATE item_icon_groups SET icon = ?, title = ?, description = ?, sort = ?,
+         public_visible = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`
+      ).bind(
+        body.icon || '', body.title, body.description || '',
+        body.sort || 0, body.publicVisible ?? 1, body.id, userId
+      ).run()
+
+      const row = await this.db.prepare('SELECT * FROM item_icon_groups WHERE id = ?')
+        .bind(body.id).first()
+      return this.formatGroup(row as unknown as ItemIconGroupRow)
+    } else {
+      const result = await this.db.prepare(
+        'INSERT INTO item_icon_groups (icon, title, description, sort, public_visible, user_id) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(
+        body.icon || '', body.title, body.description || '',
+        body.sort || 0, body.publicVisible ?? 1, userId
+      ).run()
+
+      const row = await this.db.prepare('SELECT * FROM item_icon_groups WHERE id = ?')
+        .bind(result.meta.last_row_id).first()
+      return this.formatGroup(row as unknown as ItemIconGroupRow)
+    }
+  }
+
+  async deleteGroups(ids: number[], userId: number) {
+    const placeholders = ids.map(() => '?').join(',')
+    await Promise.all([
+      this.db.prepare(`DELETE FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ?`)
+        .bind(...ids, userId).run(),
+      this.db.prepare(`DELETE FROM item_icon_groups WHERE id IN (${placeholders}) AND user_id = ?`)
+        .bind(...ids, userId).run(),
+    ])
+  }
+
+  async saveGroupSort(sortItems: Array<{ id: number; sort: number }>, userId: number) {
+    const stmt = this.db.prepare(
+      "UPDATE item_icon_groups SET sort = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+    )
+    const batch = sortItems.map(item => stmt.bind(item.sort, item.id, userId))
+    await this.db.batch(batch)
+  }
+}

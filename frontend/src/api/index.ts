@@ -1,5 +1,19 @@
 import { post } from '@/utils/request'
 
+// ========== 统一初始化 API（替代 getAuthInfo + getAbout + getAllData） ==========
+export interface InitData {
+  user: User.Info | null
+  visitMode: number
+  siteConfig: Record<string, string>
+  groups: Panel.ItemIconGroup[]
+  itemsMap: Record<number, Panel.ItemInfo[]>
+  panelConfig: Panel.panelConfig
+}
+
+export function getInit<T = InitData>() {
+  return post<T>({ url: '/api/init' })
+}
+
 // ========== 认证 API ==========
 export function login<T>(username: string, password: string) {
   return post<T>({ url: '/login', data: { username, password } })

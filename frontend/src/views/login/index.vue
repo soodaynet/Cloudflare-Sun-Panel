@@ -2,7 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from 'naive-ui'
-import { login, getAbout } from '@/api/index'
+import { login, getInit } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
 
@@ -32,9 +32,9 @@ const loginPageStyle = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await getAbout<Record<string, string>>()
-    if (res.code === 0) {
-      const hasPublic = !!(res.data?.panel_public_user_id || res.data?.default_guest_mode === '1')
+    const res = await getInit()
+    if (res.code === 0 && res.data) {
+      const hasPublic = !!(res.data.siteConfig?.panel_public_user_id || res.data.siteConfig?.default_guest_mode === '1')
       if (hasPublic) {
         hasPublicMode.value = true
         localStorage.setItem('sun-panel-public-mode', '1')
@@ -49,11 +49,11 @@ onMounted(async () => {
       } else {
         localStorage.setItem('sun-panel-public-mode', '0')
       }
-      if (res.data?.site_title) {
-        siteTitle.value = res.data.site_title
-        document.title = res.data.site_title
+      if (res.data.siteConfig?.site_title) {
+        siteTitle.value = res.data.siteConfig.site_title
+        document.title = res.data.siteConfig.site_title
       }
-      if (res.data?.login_bg_image) loginBgImage.value = res.data.login_bg_image
+      if (res.data.siteConfig?.login_bg_image) loginBgImage.value = res.data.siteConfig.login_bg_image
     }
   } catch { /* ignore */ }
 })

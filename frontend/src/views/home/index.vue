@@ -3,9 +3,9 @@ import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } fro
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getAllData } from '@/api/index'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
-import { getAbout, getAuthInfo, getSiteFavicon } from '@/api/index'
+import { getSiteFavicon } from '@/api/index'
+import { getInit } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
@@ -34,7 +34,6 @@ function loadCachedSiteConfig(): Panel.SiteConfig {
 }
 
 const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
-const siteConfigLoaded = ref(false)
 
 // 立即用缓存值设置标题和图标
 if (siteConfig.value.site_title) {
@@ -183,53 +182,24 @@ function updateFavicon(url: string) {
 
 // ====== 数据加载 ======
 
-/** 同步本地用户信息与认证状态 - 参照原项目 updateLocalUserInfo */
-interface AuthInfoResponse {
-  user: User.Info
-  visitMode: number
-}
-async function updateLocalUserInfo() {
-  try {
-    const res = await getAuthInfo<AuthInfoResponse>()
-    if (res.code === 0 && res.data) {
-      authStore.setUserInfo(res.data.user)
-      authStore.setVisitMode(res.data.visitMode)
-    }
-  } catch { /* ignore */ }
-}
-
-async function loadSiteConfig() {
-  try {
-    const res = await getAbout<Record<string, string>>()
-    if (res.code === 0) {
-      siteConfig.value = {
-        site_title: res.data?.site_title || '',
-        login_bg_image: res.data?.login_bg_image || '',
-        footer_html: res.data?.footer_html || '',
-        logo_text: res.data?.logo_text || '',
-        logo_image_src: res.data?.logo_image_src || '',
-        favicon_url: res.data?.favicon_url || '',
-      }
-      localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConfig.value))
-      siteConfigLoaded.value = true
-      document.title = siteConfig.value.site_title || 'Sun-Panel'
-      updateFavicon(siteConfig.value.favicon_url || '')
-    }
-  } catch { /* ignore */ }
-}
-
-/** 统一加载分组 + 图标 + 面板配置（一次 API 调用替代 N+1 次） */
-async function loadData() {
+async function loadInitData() {
   loading.value = true
   try {
-    const res = await cachedRequest('panel:allData', () => getAllData<{
-      groups: Panel.ItemIconGroup[]
-      itemsMap: Record<number, Panel.ItemInfo[]>
-      panelConfig: Panel.panelConfig
-    }>())
-
+    const res = await cachedRequest('panel:init', () => getInit())
     if (res.code === 0 && res.data) {
-      const { groups: rawGroups, itemsMap, panelConfig } = res.data
+      const { user, visitMode, siteConfig: sc, groups: rawGroups, itemsMap, panelConfig } = res.data
+
+      if (user) {
+        authStore.setUserInfo(user)
+      }
+      authStore.setVisitMode(visitMode)
+
+      if (sc && typeof sc === 'object') {
+        Object.assign(siteConfig.value, sc)
+        localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(sc))
+        document.title = sc.site_title || 'Sun-Panel'
+        updateFavicon(sc.favicon_url || '')
+      }
 
       groups.value = (rawGroups || []).map(g => ({
         ...g, hoverStatus: false, sortStatus: false,
@@ -245,16 +215,12 @@ async function loadData() {
 
 function refreshAll() {
   invalidateCacheByPrefix('panel:')
-  updateLocalUserInfo().then(() => {
-    Promise.all([loadData(), loadSiteConfig()])
-  })
+  loadInitData()
 }
 
 onMounted(async () => {
   syncGlassVars()
-  await updateLocalUserInfo()
-  loadSiteConfig()
-  loadData()
+  loadInitData()
   startAnnouncementTimer()
 })
 
@@ -280,7 +246,7 @@ async function handleSaveItem() {
   if (!item?.title) { message.warning('请输入标题'); return }
   try {
     const res = item.id ? await editItem<Panel.ItemInfo>(item) : await addItems<Panel.ItemInfo[]>([item])
-    if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadData() }
+    if (res.code === 0) { message.success('保存成功'); editModalShow.value = false; invalidateCacheByPrefix('panel:'); await loadInitData() }
     else message.error(res.msg || '保存失败')
   } catch { message.error('网络错误') }
 }
@@ -307,7 +273,7 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
   if (!item.id) return
   try {
     const res = await deleteItems([item.id])
-    if (res.code === 0) { message.success('删除成功'); invalidateCacheByPrefix('panel:'); await loadData() }
+    if (res.code === 0) { message.success('删除成功'); invalidateCacheByPrefix('panel:'); await loadInitData() }
     else message.error(res.msg || '删除失败')
   } catch { message.error('网络错误') }
 }

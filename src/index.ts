@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 import type { D1Database, Fetcher } from '@cloudflare/workers-types';
 import { corsMiddleware } from './middleware/cors';
+import { bodyLimitMiddleware } from './middleware/bodyLimit';
 import authRoutes from './routes/auth';
 import panelRoutes from './routes/panel';
 import groupsRoutes from './routes/groups';
 import usersRoutes from './routes/users';
 import settingsRoutes from './routes/settings';
+import initRoutes from './routes/init';
 
 type Bindings = {
   DB: D1Database;
@@ -13,6 +15,11 @@ type Bindings = {
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+app.onError((err, c) => {
+  console.error('[Error]', err.message, err.stack)
+  return c.json({ code: 500, msg: '服务器内部错误', data: null }, 500)
+})
 
 // ========== 数据库自动初始化 ==========
 let dbInitPromise: Promise<void> | null = null;
@@ -122,12 +129,15 @@ app.use('*', async (c, next) => {
 // CORS 中间件
 app.use('*', corsMiddleware);
 
+app.use('*', bodyLimitMiddleware);
+
 // 健康检查
 app.get('/api/health', (c) => {
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } });
 });
 
 // API 路由（与前端 API 路径匹配）
+app.route('/', initRoutes);          // /api/init
 app.route('/', authRoutes);          // /login, /register
 app.route('/panel', panelRoutes);   // /panel/itemIcon/*
 app.route('/panel', groupsRoutes);  // /panel/itemIconGroup/*
