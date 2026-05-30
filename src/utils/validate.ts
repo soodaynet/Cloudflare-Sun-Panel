@@ -101,7 +101,7 @@ export const userPasswordSchema = z.object({
 
 export const userAdminCreateSchema = z.object({
   username: z.string().min(1).max(100),
-  password: z.string().min(1).max(128),
+  password: z.string().max(128).optional().default(''),
   name: z.string().max(50).optional(),
   role: z.number().int().min(1).max(2).optional(),
   status: z.number().int().min(0).max(1).optional(),
@@ -110,7 +110,7 @@ export const userAdminCreateSchema = z.object({
 export const userAdminUpdateSchema = z.object({
   id: z.number().int().positive(),
   username: z.string().min(1).max(100).optional(),
-  password: z.string().max(128).optional(),
+  password: z.string().max(128).optional().default(''),
   name: z.string().max(50).optional(),
   role: z.number().int().min(1).max(2).optional(),
   status: z.number().int().min(0).max(1).optional(),

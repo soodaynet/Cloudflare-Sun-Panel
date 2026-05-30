@@ -35,13 +35,10 @@ const roleOptions = [
 
 const rules: FormRules = {
   username: [
-    { required: true, trigger: 'blur', message: '请输入用户名', min: 5 },
+    { required: true, trigger: 'blur', message: '请输入用户名', min: 1 },
   ],
   role: {
     required: true, trigger: 'blur', type: 'number', message: '请选择角色',
-  },
-  password: {
-    trigger: 'blur', min: 6, max: 20, message: '密码长度为6-20位',
   },
 }
 
@@ -122,9 +119,8 @@ function handleValidateClick(e: MouseEvent) {
       <NFormItem path="password" label="密码">
         <NInput
           v-model:value="model.password"
-          :maxlength="20"
           type="password"
-          :placeholder="isEdit ? '留空则不修改密码' : '请输入密码'"
+          :placeholder="isEdit ? '留空则不修改密码' : '可留空，后续可设置'"
         />
       </NFormItem>
     </NForm>
