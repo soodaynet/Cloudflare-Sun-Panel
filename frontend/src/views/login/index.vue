@@ -41,6 +41,7 @@ onMounted(async () => {
         localStorage.setItem('sun-panel-public-mode', '1')
         if (!localStorage.getItem('sun-panel-token')) {
           const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
+          sessionStorage.removeItem('sun-panel-skip-redirect')
           if (!skipAutoRedirect) {
             authStore.setGuestMode(null)
             router.push('/')
@@ -90,7 +91,7 @@ async function handleSkipLogin() {
 
 <template>
   <div
-    class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600"
+    class="flex items-center justify-center min-h-screen bg-gray-950"
     :style="loginPageStyle"
   >
     <NCard class="w-96 shadow-xl login-card" :bordered="false">

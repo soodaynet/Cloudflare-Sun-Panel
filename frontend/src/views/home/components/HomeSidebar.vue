@@ -48,6 +48,7 @@ function scrollToGroup(index: number) {
 }
 
 function handleLogin() {
+  sessionStorage.setItem('sun-panel-skip-redirect', '1')
   router.push('/login')
 }
 

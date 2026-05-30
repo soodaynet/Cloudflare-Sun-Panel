@@ -332,7 +332,7 @@ async function importData(data: ExportData) {
               <label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.announcementMaskOpacity ?? 0.15 }}</label>
               <input :value="panelConfig.announcementMaskOpacity" @input="(e: any) => panelConfig.announcementMaskOpacity = Number(e.target.value)" type="range" min="0" max="1" step="0.05" class="w-full" />
             </div>
-            <p class="text-xs text-gray-400">仅用于公告弹窗的模糊度和不透明度</p>
+            <p class="text-xs text-gray-400">控制侧边栏、公告弹窗、Logo 的模糊和透明度效果</p>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
             </div>

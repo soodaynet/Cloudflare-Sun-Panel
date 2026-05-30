@@ -20,6 +20,15 @@ const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 
+if (panelState.panelConfig.backgroundImageSrc) {
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'image'
+  link.href = panelState.panelConfig.backgroundImageSrc
+  link.setAttribute('fetchpriority', 'high')
+  document.head.appendChild(link)
+}
+
 const groups = ref<ItemGroup[]>([])
 const loading = ref(true)
 const initDone = ref(false)
@@ -143,19 +152,19 @@ const wallpaperStyle = computed(() => {
 })
 
 const glassVars = computed(() => ({
-  '--ann-blur': `${panelState.panelConfig.backgroundBlur ?? 0}px`,
-  '--ann-opacity': panelState.panelConfig.backgroundMaskNumber ?? 0.3,
+  '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
+  '--ann-opacity': panelState.panelConfig.announcementMaskOpacity ?? 0.15,
 }))
 
 function syncGlassVars() {
-  const blur = panelState.panelConfig.backgroundBlur ?? 0
-  const opacity = panelState.panelConfig.backgroundMaskNumber ?? 0.3
+  const blur = panelState.panelConfig.announcementBlur ?? 12
+  const opacity = panelState.panelConfig.announcementMaskOpacity ?? 0.15
   document.documentElement.style.setProperty('--ann-blur', `${blur}px`)
   document.documentElement.style.setProperty('--ann-opacity', `${opacity}`)
 }
 
 watch(
-  () => [panelState.panelConfig.backgroundBlur, panelState.panelConfig.backgroundMaskNumber],
+  () => [panelState.panelConfig.announcementBlur, panelState.panelConfig.announcementMaskOpacity],
   () => syncGlassVars()
 )
 
@@ -237,13 +246,6 @@ onMounted(async () => {
   syncGlassVars()
   loadInitData()
   startAnnouncementTimer()
-  if (panelState.panelConfig.backgroundImageSrc) {
-    const link = document.createElement('link')
-    link.rel = 'preload'
-    link.as = 'image'
-    link.href = panelState.panelConfig.backgroundImageSrc
-    document.head.appendChild(link)
-  }
 })
 
 function openAddItem(groupId: number) {
@@ -502,6 +504,11 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 <style scoped>
 .group-section:hover .group-title-btns {
   opacity: 1;
+}
+
+.group-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
 }
 
 .announce-fade-enter-active,
