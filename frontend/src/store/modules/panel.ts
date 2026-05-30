@@ -1,7 +1,5 @@
 import { defineStore } from 'pinia'
 
-const PANEL_KEY = 'sun-panel-state'
-
 export interface PanelState {
   panelConfig: Panel.panelConfig
 }
@@ -39,28 +37,17 @@ const defaultPanelConfig: Panel.panelConfig = {
 }
 
 export const usePanelState = defineStore('panel', {
-  state: (): PanelState => {
-    const saved = localStorage.getItem(PANEL_KEY)
-    const parsed = saved ? JSON.parse(saved) : null
-    return {
-      panelConfig: parsed?.panelConfig || { ...defaultPanelConfig },
-    }
-  },
+  state: (): PanelState => ({
+    panelConfig: { ...defaultPanelConfig },
+  }),
 
   actions: {
     setPanelConfig(config: Panel.panelConfig) {
       this.panelConfig = { ...defaultPanelConfig, ...config }
-      this.save()
     },
 
     updatePanelConfigFromCloud(config: Panel.panelConfig) {
       this.setPanelConfig(config)
-    },
-
-    save() {
-      localStorage.setItem(PANEL_KEY, JSON.stringify({
-        panelConfig: this.panelConfig,
-      }))
     },
   },
 })
