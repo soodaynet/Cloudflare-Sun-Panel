@@ -319,6 +319,12 @@ async function importData(data: ExportData) {
               <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入 Logo 文字" /></div>
             <div><label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
               <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
+            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 距顶部 (px)</label>
+              <input :value="panelConfig.logoPositionTop" @input="(e: any) => panelConfig.logoPositionTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+            <div><label class="block text-sm mb-1 font-medium">Logo 距左侧 (px)</label>
+              <input :value="panelConfig.logoPositionLeft" @input="(e: any) => panelConfig.logoPositionLeft = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+            <div><label class="block text-sm mb-1 font-medium">Logo 图片高度 (px)</label>
+              <input :value="panelConfig.logoSize" @input="(e: any) => panelConfig.logoSize = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
             <div class="border-t pt-3">
               <label class="block text-sm mb-1 font-medium">背景模糊度: {{ panelConfig.announcementBlur ?? 12 }}</label>
               <input :value="panelConfig.announcementBlur" @input="(e: any) => panelConfig.announcementBlur = Number(e.target.value)" type="range" min="0" max="40" class="w-full" />
