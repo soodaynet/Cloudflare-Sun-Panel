@@ -20,11 +20,15 @@ const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 
-if (panelState.panelConfig.backgroundImageSrc) {
+const effectiveWallpaper = computed(() => {
+  return panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
+})
+
+if (effectiveWallpaper.value) {
   const link = document.createElement('link')
   link.rel = 'preload'
   link.as = 'image'
-  link.href = panelState.panelConfig.backgroundImageSrc
+  link.href = effectiveWallpaper.value
   link.setAttribute('fetchpriority', 'high')
   document.head.appendChild(link)
 }
@@ -179,8 +183,7 @@ onUnmounted(() => {
 })
 
 const wallpaperStyle = computed(() => {
-  const src = panelState.panelConfig.backgroundImageSrc
-  if (!src) return {}
+  if (!effectiveWallpaper.value) return {}
   return {
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
   }
@@ -352,15 +355,15 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 
 <template>
   <img
-    v-if="panelState.panelConfig.backgroundImageSrc"
-    :src="panelState.panelConfig.backgroundImageSrc"
+    v-if="effectiveWallpaper"
+    :src="effectiveWallpaper"
     class="fixed inset-0 z-[1] w-full h-full object-cover transition-opacity duration-700"
     :style="wallpaperStyle"
     fetchpriority="high"
     decoding="sync"
     alt=""
   />
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+  <div v-if="effectiveWallpaper" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
