@@ -61,8 +61,8 @@ onMounted(async () => {
 })
 
 async function handleLogin() {
-  if (!username.value || !password.value) {
-    message.warning('请输入用户名和密码')
+  if (!username.value) {
+    message.warning('请输入用户名')
     return
   }
   loading.value = true
