@@ -416,7 +416,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </NSpin>
     </div>
 
-    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="panelState.panelConfig.footerHtml" />
+    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm glass-footer" v-html="panelState.panelConfig.footerHtml" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">
@@ -520,18 +520,26 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 }
 
 .logo-bar {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
 }
 
 .glass-logo {
   padding: 6px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-footer {
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
+  color: rgba(255, 255, 255, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
 

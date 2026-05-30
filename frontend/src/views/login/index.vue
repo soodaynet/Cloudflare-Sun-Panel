@@ -5,6 +5,7 @@ import { useMessage } from 'naive-ui'
 import { login, getInit } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
+import { invalidateCacheByPrefix } from '@/utils/requestCache'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -68,6 +69,7 @@ async function handleLogin() {
     const res = await login<{ token: string; userInfo: User.Info }>(username.value, password.value)
     if (res.code === 0) {
       authStore.loginSuccess(res.data.token, res.data.userInfo)
+      invalidateCacheByPrefix('panel:')
       message.success('登录成功')
       router.push('/')
     } else {
