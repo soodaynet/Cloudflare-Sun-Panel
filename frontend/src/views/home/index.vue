@@ -20,19 +20,6 @@ const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 
-const effectiveWallpaper = computed(() => {
-  return panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
-})
-
-if (effectiveWallpaper.value) {
-  const link = document.createElement('link')
-  link.rel = 'preload'
-  link.as = 'image'
-  link.href = effectiveWallpaper.value
-  link.setAttribute('fetchpriority', 'high')
-  document.head.appendChild(link)
-}
-
 const groups = ref<ItemGroup[]>([])
 const loading = ref(true)
 const initDone = ref(false)
@@ -47,6 +34,19 @@ function loadCachedSiteConfig(): Panel.SiteConfig {
 }
 
 const siteConfig = ref<Panel.SiteConfig>(loadCachedSiteConfig())
+
+const effectiveWallpaper = computed(() => {
+  return panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
+})
+
+if (effectiveWallpaper.value) {
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'image'
+  link.href = effectiveWallpaper.value
+  link.setAttribute('fetchpriority', 'high')
+  document.head.appendChild(link)
+}
 
 if (siteConfig.value.site_title) {
   document.title = siteConfig.value.site_title
