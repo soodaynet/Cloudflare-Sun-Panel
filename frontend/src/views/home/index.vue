@@ -6,7 +6,7 @@ import { useAuthStore, usePanelState } from '@/store'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getSiteFavicon } from '@/api/index'
 import { getInit } from '@/api/index'
-import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
+import { invalidateCacheByPrefix } from '@/utils/requestCache'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 
@@ -191,7 +191,7 @@ function updateFavicon(url: string) {
 async function loadInitData() {
   loading.value = true
   try {
-    const res = await cachedRequest('panel:init', () => getInit())
+    const res = await getInit()
     if (res.code === 0 && res.data) {
       const { user, visitMode, siteConfig: sc, groups: rawGroups, itemsMap, panelConfig } = res.data
 
@@ -317,7 +317,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc"
-      class="sticky top-0 z-20 flex items-center p-4 logo-bar">
+      class="sticky top-0 z-20 flex items-center p-4">
       <div class="flex items-center gap-3 glass-logo">
         <img
           v-if="panelState.panelConfig.logoImageSrc"
@@ -416,7 +416,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       </NSpin>
     </div>
 
-    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm glass-footer" v-html="panelState.panelConfig.footerHtml" />
+    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-sm" v-html="panelState.panelConfig.footerHtml" :style="{ color: 'rgba(255,255,255,0.85)' }" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">
@@ -519,12 +519,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
 }
 
-.logo-bar {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
-  backdrop-filter: blur(var(--ann-blur, 12px));
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
-}
-
 .glass-logo {
   padding: 6px 12px;
   border-radius: 12px;
@@ -532,14 +526,6 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   backdrop-filter: blur(var(--ann-blur, 12px));
   -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.glass-footer {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));
-  backdrop-filter: blur(var(--ann-blur, 12px));
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
-  color: rgba(255, 255, 255, 0.85);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
 
