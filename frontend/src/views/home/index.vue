@@ -134,19 +134,19 @@ const wallpaperStyle = computed(() => {
 })
 
 const glassVars = computed(() => ({
-  '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
-  '--ann-opacity': panelState.panelConfig.announcementMaskOpacity ?? 0.15,
+  '--ann-blur': `${panelState.panelConfig.backgroundBlur ?? 0}px`,
+  '--ann-opacity': panelState.panelConfig.backgroundMaskNumber ?? 0.3,
 }))
 
 function syncGlassVars() {
-  const blur = panelState.panelConfig.announcementBlur ?? 12
-  const opacity = panelState.panelConfig.announcementMaskOpacity ?? 0.15
+  const blur = panelState.panelConfig.backgroundBlur ?? 0
+  const opacity = panelState.panelConfig.backgroundMaskNumber ?? 0.3
   document.documentElement.style.setProperty('--ann-blur', `${blur}px`)
   document.documentElement.style.setProperty('--ann-opacity', `${opacity}`)
 }
 
 watch(
-  () => [panelState.panelConfig.announcementBlur, panelState.panelConfig.announcementMaskOpacity],
+  () => [panelState.panelConfig.backgroundBlur, panelState.panelConfig.backgroundMaskNumber],
   () => syncGlassVars()
 )
 
