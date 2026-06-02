@@ -91,7 +91,7 @@ async function handleSkipLogin() {
     class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600"
     :style="loginPageStyle"
   >
-    <NCard class="w-96 shadow-xl login-card" :bordered="false">
+    <NCard class="w-full max-w-sm shadow-xl login-card mx-4" :bordered="false">
       <template #header>
         <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}

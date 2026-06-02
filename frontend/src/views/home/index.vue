@@ -357,17 +357,17 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <!-- 顶部：Logo + 访客标识 -->
-    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
-      <div class="flex items-center gap-3">
+    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center py-2 px-4 sm:p-4">
+      <div class="flex items-center gap-2 sm:gap-3">
         <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="rounded object-contain" alt="Logo" decoding="async" :style="logoStyle" />
-        <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
+        <span v-if="logoText" class="text-white text-lg sm:text-xl font-bold truncate max-w-[200px] sm:max-w-none">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
     </div>
 
     <!-- 公告 -->
     <Transition name="announce-fade">
-      <div v-if="announcementVisible && announcementText" class="fixed top-4 right-4 z-30 pointer-events-none">
+      <div v-if="announcementVisible && announcementText" class="fixed top-16 sm:top-4 right-2 sm:right-4 z-30 pointer-events-none">
         <div class="flex items-start gap-3 max-w-sm pointer-events-auto glass-panel text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
 
 
@@ -384,7 +384,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
-              <h3 class="text-white text-lg font-medium">{{ group.title }}</h3>
+              <h3 class="text-white text-base sm:text-lg font-medium">{{ group.title }}</h3>
               <div class="group-title-btns opacity-0 transition-opacity duration-200 flex items-center gap-1">
                 <NTooltip v-if="!authStore.isVisitMode" trigger="hover" placement="top">
                   <template #trigger>
@@ -402,13 +402,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 </NTooltip>
               </div>
             </div>
-            <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-3" @end="saveItemSortOrder(group)">
+            <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-2 sm:gap-3" @end="saveItemSortOrder(group)">
               <div v-for="(item, ii) in group.items" :key="item.id || ii"
-                class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
+                class="group-item w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                 @click="openUrl(item)">
-                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
                   <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" />
-                  <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                  <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
                   </div>
@@ -430,14 +430,14 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 </div>
               </div>
             </VueDraggable>
-            <div v-else class="flex flex-wrap gap-3">
+            <div v-else class="flex flex-wrap gap-2 sm:gap-3">
               <NTooltip v-for="(item, ii) in group.items" :key="item.id || ii" trigger="hover" :disabled="!item.description" placement="bottom">
                 <template #trigger>
-                  <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
+                  <div class="group-item w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                     @click="openUrl(item)">
-                      <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                      <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
                         <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" />
-                        <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                        <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-lg"
                           :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                           {{ item.icon?.text || item.title?.charAt(0) || '?' }}
                         </div>
@@ -477,7 +477,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     />
 
     <!-- ========== 编辑图标弹窗 ========== -->
-    <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[500px]">
+    <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="max-w-[500px] w-[95vw]">
       <div v-if="editingItem" class="flex flex-col gap-4">
         <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
         <div>
@@ -509,7 +509,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
     <NModal
       v-model:show="windowShow" :mask-closable="false" preset="card"
-      class="max-w-[1000px] h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"
+      class="max-w-[1000px] w-[95vw] h-[min(80vh,600px)] rounded-2xl" :bordered="true" size="small" role="dialog"
       aria-modal="true"
     >
       <template #header>
