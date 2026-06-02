@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useMessage } from 'naive-ui'
 import { VueDraggable } from 'vue-draggable-plus'
@@ -34,7 +33,6 @@ const show = computed({
 })
 
 const message = useMessage()
-const router = useRouter()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 const { panelConfig } = storeToRefs(panelState)
@@ -146,7 +144,7 @@ function openAddGroup() {
 
 function handleLogout() {
   authStore.removeToken()
-  router.push('/login')
+  window.location.reload()
 }
 
 // ====== 导入导出 ======
@@ -226,35 +224,35 @@ async function importData(data: ExportData) {
 </script>
 
 <template>
-  <NModal v-model:show="show" preset="card" title="" class="max-w-[900px] w-[95vw]" size="small" :mask-closable="true">
+  <NModal v-model:show="show" preset="card" title="" class="w-[900px]" size="small" :mask-closable="true">
     <template #header>
       <div class="flex items-center select-none cursor-pointer" @click="collapsed = !collapsed">
         <span class="text-lg mr-2">{{ collapsed ? '▶' : '◀' }}</span>
-        <span class="truncate">{{ apps.find(a => a.key === activeApp)?.name || '应用启动器' }}</span>
+        <span>{{ apps.find(a => a.key === activeApp)?.name || '应用启动器' }}</span>
       </div>
     </template>
-    <NLayout has-sider style="height:min(70vh, 500px);border-radius:0.75rem;">
+    <NLayout has-sider style="height:500px;border-radius:0.75rem;">
       <NLayoutSider
         :collapsed="collapsed"
         collapse-mode="width"
         :collapsed-width="0"
-        :width="180"
+        :width="isSmallScreen ? '100%' : 180"
         content-style="overflow: hidden"
       >
         <div class="h-full dark:bg-[#2c2c32] p-2">
           <div
             v-for="app in apps" :key="app.key"
-            class="px-2 sm:px-3 py-2.5 rounded-lg mb-1 cursor-pointer font-medium text-xs sm:text-sm flex items-center gap-2 transition-colors"
+            class="px-3 py-2.5 rounded-lg mb-1 cursor-pointer font-medium text-sm flex items-center gap-2 transition-colors"
             :class="activeApp === app.key ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'"
-            @click="activeApp = app.key; if (isSmallScreen) collapsed = true"
+            @click="activeApp = app.key"
           >
             <span>{{ app.icon }}</span>
-            <span class="truncate">{{ app.name }}</span>
+            <span>{{ app.name }}</span>
           </div>
         </div>
       </NLayoutSider>
-      <NLayoutContent :content-style="`height:min(70vh,500px)`">
-        <div class="h-full overflow-auto p-3 sm:p-4">
+      <NLayoutContent content-style="height:500px">
+        <div class="h-full overflow-auto p-4">
 
           <!-- ====== 我的信息 ====== -->
           <div v-if="activeApp === 'UserInfo'" class="flex flex-col gap-4">

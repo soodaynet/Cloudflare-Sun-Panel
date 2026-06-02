@@ -4,7 +4,7 @@ import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } fro
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getAllData, getInit } from '@/api/index'
+import { getAllData } from '@/api/index'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getAbout, getAuthInfo, getSiteFavicon } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
@@ -56,7 +56,7 @@ const editingItem = ref<Panel.ItemInfo>({
   icon: { itemType: 0, text: '', backgroundColor: '#4a90d9' },
   itemIconGroupId: undefined,
 })
-const editingGroupId = ref<number | undefined>()
+const editingGroupId = ref<number>()
 const getIconLoading = ref(false)
 
 // 分组编辑模式（控制每个分组内是否可排序/编辑/删除）
@@ -112,7 +112,7 @@ const starterShow = ref(false)
 const windowShow = ref(false)
 const windowSrc = ref('')
 const windowTitle = ref('')
-const windowIframeRef = ref<HTMLElement | null>(null)
+const windowIframeRef = ref(null)
 const windowIframeIsLoad = ref(false)
 
 const scrollContainerRef = ref<HTMLElement>()
@@ -129,16 +129,6 @@ const containerStyle = computed(() => {
 })
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
-
-const logoStyle = computed(() => {
-  const config = panelState.panelConfig
-  return {
-    height: `${config.logoSize || 48}px`,
-    width: `${config.logoSize || 48}px`,
-    marginTop: `${config.logoPositionTop ?? 16}px`,
-    marginLeft: `${config.logoPositionLeft ?? 16}px`,
-  }
-})
 
 const glassVars = computed(() => ({
   '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
@@ -258,63 +248,18 @@ async function loadData() {
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
 
-async function initAll() {
-  loading.value = true
-  try {
-    const res = await getInit<{
-      groups: Panel.ItemIconGroup[]
-      itemsMap: Record<number, Panel.ItemInfo[]>
-      panelConfig: Panel.panelConfig
-      about: Record<string, string>
-      authInfo: { user: User.Info | null; visitMode: number }
-    }>()
-    if (res.code === 0 && res.data) {
-      const { groups: rawGroups, itemsMap, panelConfig, about, authInfo } = res.data
-
-      // 设置认证信息
-      if (authInfo.user) {
-        authStore.setUserInfo(authInfo.user)
-        authStore.setVisitMode(authInfo.visitMode)
-      } else {
-        authStore.setVisitMode(authInfo.visitMode)
-      }
-
-      // 设置站点配置
-      const siteConf: Panel.SiteConfig = {
-        site_title: about?.site_title || '',
-        login_bg_image: about?.login_bg_image || '',
-        footer_html: about?.footer_html || '',
-        logo_text: about?.logo_text || '',
-        logo_image_src: about?.logo_image_src || '',
-        favicon_url: about?.favicon_url || '',
-      }
-      siteConfig.value = siteConf
-      localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConf))
-      siteConfigLoaded.value = true
-      document.title = siteConf.site_title || 'Sun-Panel'
-      updateFavicon(siteConf.favicon_url || '')
-
-      // 设置面板数据
-      groups.value = (rawGroups || []).map(g => ({
-        ...g, hoverStatus: false, sortStatus: false,
-        items: (g.id && itemsMap[g.id]) ? itemsMap[g.id] : [],
-      })) as ItemGroup[]
-
-      if (panelConfig && Object.keys(panelConfig).length > 0) {
-        panelState.updatePanelConfigFromCloud(panelConfig)
-      }
-    }
-  } catch (e) { console.error(e) } finally { loading.value = false }
-}
-
 function refreshAll() {
   invalidateCacheByPrefix('panel:')
-  initAll()
+  updateLocalUserInfo().then(() => {
+    Promise.all([loadData(), loadSiteConfig()])
+  })
 }
 
 onMounted(async () => {
   syncGlassVars()
-  await initAll()
+  await updateLocalUserInfo()
+  loadSiteConfig()
+  loadData()
   startAnnouncementTimer()
 })
 
@@ -330,7 +275,7 @@ function openAddItem(groupId: number) {
 }
 
 function openEditItem(item: Panel.ItemInfo) {
-  editingItem.value = { ...item, icon: item.icon || { itemType: 0, text: '', backgroundColor: '#4a90d9' } }
+  editingItem.value = { ...item }
   editingGroupId.value = item.itemIconGroupId
   editModalShow.value = true
 }
@@ -345,27 +290,20 @@ async function handleSaveItem() {
   } catch { message.error('网络错误') }
 }
 
-function getIconByUrl() {
+async function getIconByUrl() {
   if (!editingItem.value.url) return
   getIconLoading.value = true
   try {
-    const domain = new URL(editingItem.value.url).hostname
-    const faviconUrl = `https://favicon.im/${domain}`
-    editingItem.value.icon!.src = faviconUrl
-    // 验证 favicon 是否可访问
-    const img = new Image()
-    img.onload = () => {
-      editingItem.value.icon!.src = faviconUrl
+    const res = await getSiteFavicon<{ iconUrl: string }>(editingItem.value.url)
+    if (res.code === 0 && res.data) {
+      editingItem.value.icon!.src = res.data.iconUrl
       message.success('图标获取成功')
-      getIconLoading.value = false
+    } else {
+      message.error(res.msg || '获取图标失败')
     }
-    img.onerror = () => {
-      message.error('获取图标失败')
-      getIconLoading.value = false
-    }
-    img.src = faviconUrl
   } catch {
-    message.error('无效的 URL')
+    message.error('网络错误')
+  } finally {
     getIconLoading.value = false
   }
 }
@@ -414,17 +352,17 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 
     <!-- 顶部：Logo + 访客标识 -->
-    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center py-2 px-4 sm:p-4">
-      <div class="flex items-center gap-2 sm:gap-3">
-        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="rounded object-contain" alt="Logo" decoding="async" :style="logoStyle" />
-        <span v-if="logoText" class="text-white text-lg sm:text-xl font-bold truncate max-w-[200px] sm:max-w-none">{{ logoText }}</span>
+    <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
+      <div class="flex items-center gap-3">
+        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" />
+        <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
     </div>
 
     <!-- 公告 -->
     <Transition name="announce-fade">
-      <div v-if="announcementVisible && announcementText" class="fixed top-16 sm:top-4 right-2 sm:right-4 z-30 pointer-events-none">
+      <div v-if="announcementVisible && announcementText" class="fixed top-4 right-4 z-30 pointer-events-none">
         <div class="flex items-start gap-3 max-w-sm pointer-events-auto glass-panel text-white px-4 py-3 rounded-xl shadow-lg text-sm leading-relaxed border border-white/10">
 
 
@@ -441,7 +379,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
-              <h3 class="text-white text-base sm:text-lg font-medium">{{ group.title }}</h3>
+              <h3 class="text-white text-lg font-medium">{{ group.title }}</h3>
               <div class="group-title-btns opacity-0 transition-opacity duration-200 flex items-center gap-1">
                 <NTooltip v-if="!authStore.isVisitMode" trigger="hover" placement="top">
                   <template #trigger>
@@ -459,13 +397,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 </NTooltip>
               </div>
             </div>
-            <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-2 sm:gap-3" @end="saveItemSortOrder(group)">
+            <VueDraggable v-if="editModeGroupId === group.id" v-model="group.items" :animation="200" class="flex flex-wrap gap-3" @end="saveItemSortOrder(group)">
               <div v-for="(item, ii) in group.items" :key="item.id || ii"
-                class="group-item w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
+                class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                 @click="openUrl(item)">
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" />
-                  <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-lg"
+                <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
+                  <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
                   </div>
@@ -487,21 +425,21 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 </div>
               </div>
             </VueDraggable>
-            <div v-else class="flex flex-wrap gap-2 sm:gap-3">
+            <div v-else class="flex flex-wrap gap-3">
               <NTooltip v-for="(item, ii) in group.items" :key="item.id || ii" trigger="hover" :disabled="!item.description" placement="bottom">
                 <template #trigger>
-                  <div class="group-item w-20 h-20 sm:w-24 sm:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
+                  <div class="group-item w-24 h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                     @click="openUrl(item)">
-                      <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                        <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" width="40" height="40" />
-                        <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-lg"
-                          :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
-                          {{ item.icon?.text || item.title?.charAt(0) || '?' }}
-                        </div>
+                    <div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
+                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
+                      <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                        :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
+                        {{ item.icon?.text || item.title?.charAt(0) || '?' }}
                       </div>
-                      <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
                     </div>
-                  </template>
+                    <span class="text-white text-xs text-center line-clamp-2 px-1">{{ item.title }}</span>
+                  </div>
+                </template>
                 <span>{{ item.description }}</span>
               </NTooltip>
             </div>
@@ -534,7 +472,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     />
 
     <!-- ========== 编辑图标弹窗 ========== -->
-    <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="max-w-[500px] w-[95vw]">
+    <NModal v-model:show="editModalShow" title="编辑图标" preset="card" class="w-[500px]">
       <div v-if="editingItem" class="flex flex-col gap-4">
         <div><label class="block text-sm mb-1">标题 *</label><input v-model="editingItem.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入标题" /></div>
         <div>
@@ -566,7 +504,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
     <NModal
       v-model:show="windowShow" :mask-closable="false" preset="card"
-      class="max-w-[1000px] w-[95vw] h-[min(80vh,600px)] rounded-2xl" :bordered="true" size="small" role="dialog"
+      class="max-w-[1000px] h-[600px] rounded-2xl" :bordered="true" size="small" role="dialog"
       aria-modal="true"
     >
       <template #header>

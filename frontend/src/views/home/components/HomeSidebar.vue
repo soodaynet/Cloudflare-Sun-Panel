@@ -59,7 +59,7 @@ function handleSettings() {
 
 function handleLogout() {
   authStore.removeToken()
-  router.push('/login')
+  window.location.reload()
 }
 
 onMounted(() => {
