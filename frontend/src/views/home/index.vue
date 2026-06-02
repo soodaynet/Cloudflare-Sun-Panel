@@ -125,6 +125,16 @@ const containerStyle = computed(() => {
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
 
+const logoStyle = computed(() => {
+  const config = panelState.panelConfig
+  return {
+    height: `${config.logoSize || 48}px`,
+    width: `${config.logoSize || 48}px`,
+    marginTop: `${config.logoPositionTop ?? 16}px`,
+    marginLeft: `${config.logoPositionLeft ?? 16}px`,
+  }
+})
+
 const glassVars = computed(() => ({
   '--ann-blur': `${panelState.panelConfig.announcementBlur ?? 12}px`,
   '--ann-opacity': panelState.panelConfig.announcementMaskOpacity ?? 0.15,
@@ -349,7 +359,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     <!-- 顶部：Logo + 访客标识 -->
     <div v-if="panelState.panelConfig.logoText || panelState.panelConfig.logoImageSrc || authStore.isVisitMode" class="sticky top-0 z-20 flex justify-between items-center p-4">
       <div class="flex items-center gap-3">
-        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="h-8 rounded" alt="Logo" decoding="async" width="32" height="32" />
+        <img v-if="panelState.panelConfig.logoImageSrc" :src="panelState.panelConfig.logoImageSrc" class="rounded object-contain" alt="Logo" decoding="async" :style="logoStyle" />
         <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
         <span v-if="authStore.isVisitMode" class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded">访客模式</span>
       </div>
