@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useMessage } from 'naive-ui'
 import { VueDraggable } from 'vue-draggable-plus'
@@ -33,6 +34,7 @@ const show = computed({
 })
 
 const message = useMessage()
+const router = useRouter()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 const { panelConfig } = storeToRefs(panelState)
@@ -144,7 +146,7 @@ function openAddGroup() {
 
 function handleLogout() {
   authStore.removeToken()
-  window.location.reload()
+  router.push('/login')
 }
 
 // ====== 导入导出 ======

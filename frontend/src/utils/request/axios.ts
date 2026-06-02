@@ -1,4 +1,5 @@
 import axios, { type AxiosResponse } from 'axios'
+import { router } from '@/router'
 import { useAuthStore } from '@/store/modules/auth'
 
 const service = axios.create({
@@ -26,7 +27,7 @@ service.interceptors.response.use(
     if (response.status === 401) {
       const authStore = useAuthStore()
       authStore.removeToken()
-      window.location.href = '/#/login'
+      router.push('/login')
     }
     throw new Error(response.status.toString())
   },
@@ -34,7 +35,7 @@ service.interceptors.response.use(
     if (error.response?.status === 401) {
       const authStore = useAuthStore()
       authStore.removeToken()
-      window.location.href = '/#/login'
+      router.push('/login')
     }
     if (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) {
       return Promise.reject(new Error('请求超时，请稍后重试'))

@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import DOMPurify from 'dompurify'
 import { NBackTop, NButton, NModal, NSkeleton, NSpin, NTooltip, useMessage } from 'naive-ui'
 import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
-import { getAllData } from '@/api/index'
+import { getAllData, getInit } from '@/api/index'
 import { addItems, editItem, deleteItems, saveItemSort } from '@/api/index'
 import { getAbout, getAuthInfo, getSiteFavicon } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
@@ -43,6 +44,10 @@ if (siteConfig.value.site_title) {
 if (siteConfig.value.favicon_url) {
   updateFavicon(siteConfig.value.favicon_url)
 }
+
+const safeFooterHtml = computed(() => {
+  return DOMPurify.sanitize(panelState.panelConfig.footerHtml || '')
+})
 
 // 编辑弹窗
 const editModalShow = ref(false)
@@ -253,18 +258,63 @@ async function loadData() {
   } catch (e) { console.error(e) } finally { loading.value = false }
 }
 
+async function initAll() {
+  loading.value = true
+  try {
+    const res = await getInit<{
+      groups: Panel.ItemIconGroup[]
+      itemsMap: Record<number, Panel.ItemInfo[]>
+      panelConfig: Panel.panelConfig
+      about: Record<string, string>
+      authInfo: { user: User.Info | null; visitMode: number }
+    }>()
+    if (res.code === 0 && res.data) {
+      const { groups: rawGroups, itemsMap, panelConfig, about, authInfo } = res.data
+
+      // 设置认证信息
+      if (authInfo.user) {
+        authStore.setUserInfo(authInfo.user)
+        authStore.setVisitMode(authInfo.visitMode)
+      } else {
+        authStore.setVisitMode(authInfo.visitMode)
+      }
+
+      // 设置站点配置
+      const siteConf: Panel.SiteConfig = {
+        site_title: about?.site_title || '',
+        login_bg_image: about?.login_bg_image || '',
+        footer_html: about?.footer_html || '',
+        logo_text: about?.logo_text || '',
+        logo_image_src: about?.logo_image_src || '',
+        favicon_url: about?.favicon_url || '',
+      }
+      siteConfig.value = siteConf
+      localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(siteConf))
+      siteConfigLoaded.value = true
+      document.title = siteConf.site_title || 'Sun-Panel'
+      updateFavicon(siteConf.favicon_url || '')
+
+      // 设置面板数据
+      groups.value = (rawGroups || []).map(g => ({
+        ...g, hoverStatus: false, sortStatus: false,
+        items: (g.id && itemsMap[g.id]) ? itemsMap[g.id] : [],
+      })) as ItemGroup[]
+
+      if (panelConfig && Object.keys(panelConfig).length > 0) {
+        panelState.updatePanelConfigFromCloud(panelConfig)
+      }
+    }
+  } catch (e) { console.error(e) } finally { loading.value = false }
+}
+
 function refreshAll() {
   invalidateCacheByPrefix('panel:')
-  updateLocalUserInfo().then(() => {
-    Promise.all([loadData(), loadSiteConfig()])
-  })
+  initAll()
 }
 
 onMounted(async () => {
   syncGlassVars()
-  await updateLocalUserInfo()
-  loadSiteConfig()
-  loadData()
+  await initAll()
   startAnnouncementTimer()
 })
 
@@ -295,20 +345,27 @@ async function handleSaveItem() {
   } catch { message.error('网络错误') }
 }
 
-async function getIconByUrl() {
+function getIconByUrl() {
   if (!editingItem.value.url) return
   getIconLoading.value = true
   try {
-    const res = await getSiteFavicon<{ iconUrl: string }>(editingItem.value.url)
-    if (res.code === 0 && res.data) {
-      editingItem.value.icon!.src = res.data.iconUrl
+    const domain = new URL(editingItem.value.url).hostname
+    const faviconUrl = `https://favicon.im/${domain}`
+    editingItem.value.icon!.src = faviconUrl
+    // 验证 favicon 是否可访问
+    const img = new Image()
+    img.onload = () => {
+      editingItem.value.icon!.src = faviconUrl
       message.success('图标获取成功')
-    } else {
-      message.error(res.msg || '获取图标失败')
+      getIconLoading.value = false
     }
+    img.onerror = () => {
+      message.error('获取图标失败')
+      getIconLoading.value = false
+    }
+    img.src = faviconUrl
   } catch {
-    message.error('网络错误')
-  } finally {
+    message.error('无效的 URL')
     getIconLoading.value = false
   }
 }
@@ -457,7 +514,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
     </div>
 
     <!-- 自定义页脚 -->
-    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="panelState.panelConfig.footerHtml" />
+    <div v-if="panelState.panelConfig.footerHtml" class="sticky bottom-0 z-20 text-center py-4 text-gray-400 text-sm" v-html="safeFooterHtml" />
 
     <NBackTop :listen-to="() => scrollContainerRef" :right="10" :bottom="10" style="background-color:transparent;border:none;box-shadow:none;">
       <div class="shadow-[0_0_10px_2px_rgba(0,0,0,0.2)] rounded-lg">

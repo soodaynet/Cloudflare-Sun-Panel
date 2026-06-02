@@ -7,10 +7,21 @@ const DEFAULT_SECRET = 'sun-panel-jwt-secret-key-change-in-production'
 
 function getSecretKey(customSecret?: string): string {
   if (customSecret) return customSecret
-  if (typeof process !== 'undefined' && process.env?.JWT_SECRET) {
-    return process.env.JWT_SECRET
+
+  // In wrangler dev, process.env is available via polyfill
+  // In production Cloudflare Workers, process.env may not exist
+  const envSecret = (typeof process !== 'undefined' && process.env?.JWT_SECRET) ? process.env.JWT_SECRET : undefined
+  if (envSecret) return envSecret
+
+  // Check if we're in a real Worker environment (not wrangler dev)
+  // wrangler dev provides process.env, so if it exists and JWT_SECRET is empty, we're in dev mode
+  if (typeof process !== 'undefined' && process.env) {
+    // wrangler dev mode - use default secret
+    return DEFAULT_SECRET
   }
-  return DEFAULT_SECRET
+
+  // Production Worker without JWT_SECRET - this is a security risk
+  throw new Error('JWT_SECRET is not set. Please set it via `wrangler secret put JWT_SECRET` in production.')
 }
 
 async function getKey(secret?: string): Promise<CryptoKey> {

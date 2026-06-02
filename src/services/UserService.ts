@@ -2,18 +2,17 @@ import type { D1Database } from '@cloudflare/workers-types'
 import type { UserRow } from '../models/types'
 import { hashPassword, verifyPassword } from '../utils/password'
 import { signToken } from '../utils/jwt'
+import { queryAll, queryFirst } from '../utils/db'
 
 export class UserService {
   constructor(private db: D1Database) {}
 
   async findByUsername(username: string): Promise<UserRow | null> {
-    return this.db.prepare('SELECT * FROM users WHERE username = ?')
-      .bind(username).first() as unknown as UserRow | null
+    return queryFirst<UserRow>(this.db, 'SELECT * FROM users WHERE username = ?', username)
   }
 
   async findById(id: number): Promise<UserRow | null> {
-    return this.db.prepare('SELECT * FROM users WHERE id = ?')
-      .bind(id).first() as unknown as UserRow | null
+    return queryFirst<UserRow>(this.db, 'SELECT * FROM users WHERE id = ?', id)
   }
 
   async authenticate(username: string, password: string) {
@@ -65,8 +64,7 @@ export class UserService {
   }
 
   async updatePassword(userId: number, oldPassword: string, newPassword: string) {
-    const row = await this.db.prepare('SELECT password FROM users WHERE id = ?')
-      .bind(userId).first() as unknown as UserRow | null
+    const row = await queryFirst<UserRow>(this.db, 'SELECT password FROM users WHERE id = ?', userId)
 
     if (!row) return { error: '用户不存在' as const }
 
@@ -82,18 +80,18 @@ export class UserService {
 
   async getList(page: number, pageSize: number) {
     const offset = (page - 1) * pageSize
-    const [rows, countResult] = await Promise.all([
-      this.db.prepare('SELECT * FROM users ORDER BY id DESC LIMIT ? OFFSET ?').bind(pageSize, offset).all(),
+    const [list, countResult] = await Promise.all([
+      queryAll<UserRow>(this.db, 'SELECT * FROM users ORDER BY id DESC LIMIT ? OFFSET ?', pageSize, offset),
       this.db.prepare('SELECT COUNT(*) as total FROM users').first() as Promise<{ total: number }>,
     ])
 
-    const list = (rows.results as unknown as UserRow[]).map(r => ({
+    const mapped = list.map(r => ({
       id: r.id, username: r.username, name: r.name, headImage: r.head_image,
       status: r.status, role: r.role, mail: r.mail,
       createTime: r.created_at, updateTime: r.updated_at,
     }))
 
-    return { list, total: countResult.total, page, pageSize }
+    return { list: mapped, total: countResult.total, page, pageSize }
   }
 
   async adminCreate(username: string, password: string, name: string, role = 2, status = 1) {
@@ -159,9 +157,8 @@ export class UserService {
     const userId = setting?.config_value ? parseInt(setting.config_value, 10) : null
     if (!userId) return null
 
-    const user = await this.db.prepare(
-      'SELECT id, username, name, head_image, role, status, mail, created_at FROM users WHERE id = ?'
-    ).bind(userId).first() as unknown as UserRow | null
+    const user = await queryFirst<UserRow>(this.db,
+      'SELECT id, username, name, head_image, role, status, mail, created_at FROM users WHERE id = ?', userId)
 
     if (!user) return null
     return {

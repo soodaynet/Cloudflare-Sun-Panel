@@ -5,6 +5,7 @@ import { verifyToken } from '../utils/jwt';
 export interface AuthUser {
   userId: number;
   username: string;
+  name: string;
   role: number;
   visitMode: number; // 0=登录, 1=公开/访客
 }
@@ -40,6 +41,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
   c.set('authUser', {
     userId: payload.userId as number,
     username: payload.username as string,
+    name: (payload.name as string) || '',
     role: payload.role as number,
     visitMode: 0, // 登录模式
   } as AuthUser);
@@ -63,6 +65,7 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
       c.set('authUser', {
         userId: payload.userId as number,
         username: payload.username as string,
+        name: (payload.name as string) || '',
         role: payload.role as number,
         visitMode: 0,
       } as AuthUser)
@@ -102,6 +105,7 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
     c.set('authUser', {
       userId: targetUser.id as number,
       username: targetUser.username as string,
+      name: (targetUser.name as string) || '',
       role: targetUser.role as number,
       visitMode: 1,
     } as AuthUser)

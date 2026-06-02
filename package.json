@@ -7,7 +7,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute sun-panel-db --file=./schema.sql",
-    "db:init:local": "wrangler d1 execute sun-panel-db --file=./schema.sql --local"
+    "db:init:local": "wrangler d1 execute sun-panel-db --file=./schema.sql --local",
+    "lint": "eslint . --ext .ts,.tsx,.vue",
+    "format": "prettier --write \"src/**/*.ts\" \"frontend/src/**/*.{ts,vue}\""
   },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild", "workerd", "sharp", "vue-demi"]

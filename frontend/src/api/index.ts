@@ -130,3 +130,8 @@ export function getAbout<T>() {
 export function saveSiteSettings<T>(settings: Record<string, string>) {
   return post<T>({ url: '/system/settings/saveAll', data: settings })
 }
+
+// ========== 聚合初始化 API ==========
+export function getInit<T>() {
+  return post<T>({ url: '/init' })
+}

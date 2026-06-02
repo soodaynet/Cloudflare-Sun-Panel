@@ -35,9 +35,6 @@ authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
       return fail(c, result.error!);
     }
 
-    await c.env.DB.prepare('UPDATE users SET token = ? WHERE id = ?')
-      .bind(result.token, result.userInfo.id).run();
-
     return ok(c, { token: result.token, userInfo: result.userInfo });
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);
@@ -63,7 +60,6 @@ authApp.post('/register', registerLimiter, validate(registerSchema), async (c) =
 
     const { signToken } = await import('../utils/jwt');
     const token = await signToken({ userId, username: body.username, role: 2 });
-    await db.prepare('UPDATE users SET token = ? WHERE id = ?').bind(token, userId).run();
 
     const userInfo: UserInfo = {
       id: userId,

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { D1Database } from '@cloudflare/workers-types';
 import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
-import { validate, iconEditSchema, iconAddMultipleSchema, idsSchema, sortSchema, faviconSchema, getListByGroupIdSchema } from '../utils/validate';
+import { validate, iconEditSchema, iconAddMultipleSchema, idsSchema, sortSchema, getListByGroupIdSchema } from '../utils/validate';
 import { PanelService } from '../services/PanelService';
 import { ok, fail } from '../utils/response';
 
@@ -24,78 +24,28 @@ function isValidUrl(urlStr: string): boolean {
     if (!['http:', 'https:'].includes(url.protocol)) return false
     const hostname = url.hostname.toLowerCase()
     if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') return false
-    if (hostname.startsWith('10.') ||
-        hostname.startsWith('172.') && hostname.split('.')[1] >= '16' && hostname.split('.')[1] <= '31' ||
-        hostname.startsWith('192.168.')) return false
+
+    // Check private/reserved IP ranges
+    const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+    const match = hostname.match(ipv4Pattern)
+    if (match) {
+      const [, a, b, c, d] = match.map(Number)
+      // 10.0.0.0/8
+      if (a === 10) return false
+      // 172.16.0.0/12
+      if (a === 172 && b >= 16 && b <= 31) return false
+      // 192.168.0.0/16
+      if (a === 192 && b === 168) return false
+      // 127.0.0.0/8
+      if (a === 127) return false
+      // 169.254.0.0/16 (link-local)
+      if (a === 169 && b === 254) return false
+      // 0.0.0.0/8
+      if (a === 0) return false
+    }
     return true
   } catch {
     return false
-  }
-}
-
-const FETCH_TIMEOUT_MS = 8000
-
-async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-  try {
-    const response = await fetch(url, { ...options, signal: controller.signal })
-    return response
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-function isHttpUrl(url: string): boolean {
-  return /^(https?:\/\/|\/\/)/i.test(url);
-}
-
-async function getFaviconUrl(urlStr: string): Promise<string | null> {
-  if (!isValidUrl(urlStr)) return null
-
-  try {
-    const domain = new URL(urlStr)
-    const resp = await fetchWithTimeout(urlStr, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-      redirect: 'follow',
-    })
-
-    if (!resp.ok) {
-      const resp2 = await fetchWithTimeout(`https://${domain.hostname}/favicon.ico`, { method: 'HEAD' })
-      if (resp2.ok) return `https://${domain.hostname}/favicon.ico`
-      return null
-    }
-
-    const html = await resp.text();
-    const linkRegex = /<link[^>]+rel=["']([^"']*\bicon\b[^"']*)["'][^>]*href=["']([^"']+)["'][^>]*>/gi;
-    const hrefRegex = /<link[^>]+href=["']([^"']+)["'][^>]*rel=["']([^"']*\bicon\b[^"']*)["'][^>]*>/gi;
-
-    let match;
-    const icons: string[] = [];
-
-    for (const re of [linkRegex, hrefRegex]) {
-      while ((match = re.exec(html)) !== null) {
-        const href = re === linkRegex ? match[2] : match[1];
-        if (href.match(/\.(ico|png|svg|jpg|jpeg|gif|webp)/i) || match[1]?.includes('icon')) {
-          icons.push(href);
-        }
-      }
-    }
-
-    for (const v of icons) {
-      if (isHttpUrl(v)) return v;
-      const urlInfo = new URL(urlStr);
-      const fullUrl = `${urlInfo.protocol}//${urlInfo.host}/${v.replace(/^\//, '')}`;
-      return fullUrl;
-    }
-
-    const defaultFavicon = `${domain.protocol}//${domain.hostname}/favicon.ico`
-    const checkResp = await fetchWithTimeout(defaultFavicon, { method: 'HEAD' })
-    if (checkResp.ok) return defaultFavicon
-
-    return null;
-  } catch {
-    return null;
   }
 }
 
@@ -209,26 +159,6 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
     const service = new PanelService(c.env.DB);
     await service.saveIconSort(sortItems, user!.userId);
     return ok(c, null);
-  } catch (e: unknown) {
-    return fail(c, getErrorMessage(e), 500);
-  }
-});
-
-/**
- * 获取网站 favicon 图标 URL
- * POST /api/panel/itemIcon/getSiteFavicon
- */
-panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
-  try {
-    const { url } = c.var.validatedBody as { url: string };
-
-    const iconUrl = await getFaviconUrl(url);
-
-    if (!iconUrl) {
-      return fail(c, '获取图标失败', 1);
-    }
-
-    return ok(c, { iconUrl });
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);
   }

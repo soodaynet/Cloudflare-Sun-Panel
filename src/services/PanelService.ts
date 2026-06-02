@@ -1,5 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types'
 import type { ItemIconRow, ItemIconGroupRow } from '../models/types'
+import { queryAll, queryFirst } from '../utils/db'
 
 export class PanelService {
   constructor(private db: D1Database) {}
@@ -29,31 +30,27 @@ export class PanelService {
   }
 
   async getAllData(userId: number) {
-    const groupRows = await this.db.prepare(
-      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC'
-    ).bind(userId).all()
-
-    const groups = groupRows.results as unknown as ItemIconGroupRow[]
+    const groups = await queryAll<ItemIconGroupRow>(this.db,
+      'SELECT * FROM item_icon_groups WHERE user_id = ? ORDER BY sort ASC, id ASC', userId)
 
     const groupIds = groups.map(g => g.id)
     let itemsMap: Record<number, ReturnType<typeof this.formatIcon>[]> = {}
 
     if (groupIds.length > 0) {
       const placeholders = groupIds.map(() => '?').join(',')
-      const iconRows = await this.db.prepare(
-        `SELECT * FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`
-      ).bind(...groupIds, userId).all()
+      const iconRows = await queryAll<ItemIconRow>(this.db,
+        `SELECT * FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`,
+        ...groupIds, userId)
 
-      for (const row of iconRows.results as unknown as ItemIconRow[]) {
+      for (const row of iconRows) {
         const gid = row.item_icon_group_id
         if (!itemsMap[gid]) itemsMap[gid] = []
         itemsMap[gid].push(this.formatIcon(row))
       }
     }
 
-    const configRow = await this.db.prepare(
-      'SELECT panel_json FROM user_configs WHERE user_id = ?'
-    ).bind(userId).first() as { panel_json: string } | null
+    const configRow = await queryFirst<{ panel_json: string }>(this.db,
+      'SELECT panel_json FROM user_configs WHERE user_id = ?', userId)
 
     return {
       groups: groups.map(g => this.formatGroup(g)),
@@ -94,9 +91,8 @@ export class PanelService {
         body.itemIconGroupId, body.id, userId
       ).run()
 
-      const row = await this.db.prepare('SELECT * FROM item_icons WHERE id = ?')
-        .bind(body.id).first()
-      return this.formatIcon(row as unknown as ItemIconRow)
+      const row = await queryFirst<ItemIconRow>(this.db, 'SELECT * FROM item_icons WHERE id = ?', body.id)
+      return this.formatIcon(row as ItemIconRow)
     } else {
       const result = await this.db.prepare(
         'INSERT INTO item_icons (icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -106,18 +102,16 @@ export class PanelService {
         body.itemIconGroupId, userId
       ).run()
 
-      const row = await this.db.prepare('SELECT * FROM item_icons WHERE id = ?')
-        .bind(result.meta.last_row_id).first()
-      return this.formatIcon(row as unknown as ItemIconRow)
+      const row = await queryFirst<ItemIconRow>(this.db,
+        'SELECT * FROM item_icons WHERE id = ?', result.meta.last_row_id)
+      return this.formatIcon(row as ItemIconRow)
     }
   }
 
   async getIconsByGroupId(itemIconGroupId: number, userId: number) {
-    const rows = await this.db.prepare(
-      'SELECT * FROM item_icons WHERE item_icon_group_id = ? AND user_id = ? ORDER BY sort ASC, id ASC'
-    ).bind(itemIconGroupId, userId).all()
-
-    return (rows.results as unknown as ItemIconRow[]).map(row => this.formatIcon(row))
+    return (await queryAll<ItemIconRow>(this.db,
+      'SELECT * FROM item_icons WHERE item_icon_group_id = ? AND user_id = ? ORDER BY sort ASC, id ASC',
+      itemIconGroupId, userId)).map(row => this.formatIcon(row))
   }
 
   async deleteIcons(ids: number[], userId: number) {
@@ -156,9 +150,8 @@ export class PanelService {
         body.sort || 0, body.publicVisible ?? 1, body.id, userId
       ).run()
 
-      const row = await this.db.prepare('SELECT * FROM item_icon_groups WHERE id = ?')
-        .bind(body.id).first()
-      return this.formatGroup(row as unknown as ItemIconGroupRow)
+      const row = await queryFirst<ItemIconGroupRow>(this.db, 'SELECT * FROM item_icon_groups WHERE id = ?', body.id)
+      return this.formatGroup(row as ItemIconGroupRow)
     } else {
       const result = await this.db.prepare(
         'INSERT INTO item_icon_groups (icon, title, description, sort, public_visible, user_id) VALUES (?, ?, ?, ?, ?, ?)'
@@ -167,9 +160,9 @@ export class PanelService {
         body.sort || 0, body.publicVisible ?? 1, userId
       ).run()
 
-      const row = await this.db.prepare('SELECT * FROM item_icon_groups WHERE id = ?')
-        .bind(result.meta.last_row_id).first()
-      return this.formatGroup(row as unknown as ItemIconGroupRow)
+      const row = await queryFirst<ItemIconGroupRow>(this.db,
+        'SELECT * FROM item_icon_groups WHERE id = ?', result.meta.last_row_id)
+      return this.formatGroup(row as ItemIconGroupRow)
     }
   }
 
