@@ -6,18 +6,30 @@ const authStore = useAuthStore()
 const panelState = usePanelState()
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
+
+const logoStyle = computed(() => ({
+  top: `${panelState.panelConfig.logoPositionTop ?? 16}px`,
+  left: `${panelState.panelConfig.logoPositionLeft ?? 16}px`,
+}))
+
+const logoImgStyle = computed(() => {
+  const size = panelState.panelConfig.logoSize
+  return size ? { height: `${size}px` } : { height: '32px' }
+})
 </script>
 
 <template>
   <div
     v-if="panelState.panelConfig.logoImageSrc || logoText || authStore.isVisitMode"
     class="home-logo"
+    :style="logoStyle"
   >
     <div class="flex items-center gap-3">
       <img
         v-if="panelState.panelConfig.logoImageSrc"
         :src="panelState.panelConfig.logoImageSrc"
-        class="h-8 rounded"
+        class="rounded"
+        :style="logoImgStyle"
         alt="Logo"
         decoding="async"
       />
