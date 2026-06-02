@@ -91,7 +91,7 @@ async function handleSkipLogin() {
     class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600"
     :style="loginPageStyle"
   >
-    <NCard class="w-full max-w-sm shadow-xl login-card mx-4" :bordered="false">
+    <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false">
       <template #header>
         <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}
@@ -100,10 +100,10 @@ async function handleSkipLogin() {
 
       <NForm @submit.prevent="handleLogin">
         <NFormItem label="用户名">
-          <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" />
+          <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
         </NFormItem>
         <NFormItem label="密码">
-          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" @keyup.enter="handleLogin" />
+          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" @keyup.enter="handleLogin" />
         </NFormItem>
         <NButton type="primary" block size="large" :loading="loading" @click="handleLogin">登录</NButton>
       </NForm>
@@ -123,6 +123,10 @@ async function handleSkipLogin() {
   backdrop-filter: blur(16px);
   border-radius: 16px !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+.login-card :deep(.n-button) {
+  touch-action: manipulation;
 }
 
 :deep(.login-card .n-card-header) {

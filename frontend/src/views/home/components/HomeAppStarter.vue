@@ -66,6 +66,10 @@ function handleResize() {
   if (isSmallScreen.value) collapsed.value = true
 }
 
+const layoutHeight = computed(() => {
+  return isSmallScreen.value ? 'min(80vh, 450px)' : '500px'
+})
+
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   handleResize()
@@ -224,14 +228,14 @@ async function importData(data: ExportData) {
 </script>
 
 <template>
-  <NModal v-model:show="show" preset="card" title="" class="w-[900px]" size="small" :mask-closable="true">
+  <NModal v-model:show="show" preset="card" title="" class="w-[95vw] sm:w-[700px] md:w-[900px]" size="small" :mask-closable="true">
     <template #header>
       <div class="flex items-center select-none cursor-pointer" @click="collapsed = !collapsed">
         <span class="text-lg mr-2">{{ collapsed ? '▶' : '◀' }}</span>
         <span>{{ apps.find(a => a.key === activeApp)?.name || '应用启动器' }}</span>
       </div>
     </template>
-    <NLayout has-sider style="height:500px;border-radius:0.75rem;">
+    <NLayout has-sider :style="`height:${layoutHeight};border-radius:0.75rem;`">
       <NLayoutSider
         :collapsed="collapsed"
         collapse-mode="width"
@@ -251,12 +255,12 @@ async function importData(data: ExportData) {
           </div>
         </div>
       </NLayoutSider>
-      <NLayoutContent content-style="height:500px">
-        <div class="h-full overflow-auto p-4">
+      <NLayoutContent :content-style="`height:${layoutHeight}`">
+        <div class="h-full overflow-auto p-3 sm:p-4">
 
           <!-- ====== 我的信息 ====== -->
           <div v-if="activeApp === 'UserInfo'" class="flex flex-col gap-4">
-            <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded">
+            <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded">
               <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
                 {{ authStore.userInfo?.name?.charAt(0) || '?' }}
               </div>
@@ -281,7 +285,7 @@ async function importData(data: ExportData) {
                 <NButton size="small" :type="appStore.language === 'en-US' ? 'primary' : 'default'" @click="appStore.setLanguage('en-US')">English</NButton>
               </div>
             </div>
-            <div class="pt-2 border-t">
+            <div class="pt-2 border-t mt-auto">
               <NButton type="error" block @click="handleLogout">退出登录</NButton>
             </div>
           </div>
@@ -289,19 +293,19 @@ async function importData(data: ExportData) {
           <!-- ====== 风格设置 ====== -->
           <div v-if="activeApp === 'Style'" class="flex flex-col gap-4">
             <div><label class="block text-sm mb-1 font-medium">壁纸地址</label>
-              <input :value="panelConfig.backgroundImageSrc" @input="(e: any) => panelConfig.backgroundImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
+              <input :value="panelConfig.backgroundImageSrc" @input="(e: any) => panelConfig.backgroundImageSrc = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图片URL" /></div>
             <div><label class="block text-sm mb-1 font-medium">模糊度: {{ panelConfig.backgroundBlur || 0 }}</label>
               <input :value="panelConfig.backgroundBlur" @input="(e: any) => panelConfig.backgroundBlur = Number(e.target.value)" type="range" min="0" max="50" class="w-full" /></div>
             <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
               <input :value="panelConfig.backgroundMaskNumber" @input="(e: any) => panelConfig.backgroundMaskNumber = Number(e.target.value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
             <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
-              <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
+              <textarea :value="panelConfig.footerHtml" @input="(e: any) => panelConfig.footerHtml = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
             <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
-              <input :value="panelConfig.maxWidth" @input="(e: any) => panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.maxWidth" @input="(e: any) => panelConfig.maxWidth = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div><label class="block text-sm mb-1 font-medium">上边距</label>
-              <input :value="panelConfig.marginTop" @input="(e: any) => panelConfig.marginTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.marginTop" @input="(e: any) => panelConfig.marginTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div><label class="block text-sm mb-1 font-medium">下边距</label>
-              <input :value="panelConfig.marginBottom" @input="(e: any) => panelConfig.marginBottom = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.marginBottom" @input="(e: any) => panelConfig.marginBottom = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton @click="resetSettings">重置</NButton>
               <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
@@ -311,20 +315,20 @@ async function importData(data: ExportData) {
           <!-- ====== 公告设置 ====== -->
           <div v-if="activeApp === 'Announce'" class="flex flex-col gap-4">
             <div><label class="block text-sm mb-1 font-medium">公告内容</label>
-              <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 text-sm" rows="3" placeholder="公告文字，留空不显示" /></div>
+              <textarea :value="panelConfig.announcement" @input="(e: any) => panelConfig.announcement = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" rows="3" placeholder="公告文字，留空不显示" /></div>
             <div><label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
-              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.announcementDuration" @input="(e: any) => panelConfig.announcementDuration = Number(e.target.value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div class="border-t pt-3">
               <label class="block text-sm mb-1 font-medium">Logo 文字</label>
-              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入 Logo 文字" /></div>
+              <input :value="panelConfig.logoText" @input="(e: any) => panelConfig.logoText = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入 Logo 文字" /></div>
             <div><label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
-              <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
+              <input :value="panelConfig.logoImageSrc" @input="(e: any) => panelConfig.logoImageSrc = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图片URL" /></div>
             <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 距顶部 (px)</label>
-              <input :value="panelConfig.logoPositionTop" @input="(e: any) => panelConfig.logoPositionTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.logoPositionTop" @input="(e: any) => panelConfig.logoPositionTop = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div><label class="block text-sm mb-1 font-medium">Logo 距左侧 (px)</label>
-              <input :value="panelConfig.logoPositionLeft" @input="(e: any) => panelConfig.logoPositionLeft = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.logoPositionLeft" @input="(e: any) => panelConfig.logoPositionLeft = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div><label class="block text-sm mb-1 font-medium">Logo 图片高度 (px)</label>
-              <input :value="panelConfig.logoSize" @input="(e: any) => panelConfig.logoSize = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 text-sm" /></div>
+              <input :value="panelConfig.logoSize" @input="(e: any) => panelConfig.logoSize = Number(e.target.value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
             <div class="border-t pt-3">
               <label class="block text-sm mb-1 font-medium">背景模糊度: {{ panelConfig.announcementBlur ?? 12 }}</label>
               <input :value="panelConfig.announcementBlur" @input="(e: any) => panelConfig.announcementBlur = Number(e.target.value)" type="range" min="0" max="40" class="w-full" />
@@ -343,7 +347,7 @@ async function importData(data: ExportData) {
           <div v-if="activeApp === 'GroupManage'" class="flex flex-col gap-4">
             <div class="flex gap-2"><NButton type="primary" size="small" @click="openAddGroup">添加分组</NButton></div>
             <div class="text-xs text-gray-400">拖拽分组可调整排序</div>
-            <VueDraggable v-model="props.groups" :animation="200" class="flex flex-col gap-2 max-h-[340px] overflow-auto" @end="handleGroupSortEnd">
+            <VueDraggable v-model="props.groups" :animation="200" class="flex flex-col gap-2 max-h-[250px] sm:max-h-[340px] overflow-auto" @end="handleGroupSortEnd">
               <div v-for="(group, gi) in props.groups" :key="group.id || gi" class="flex items-center justify-between p-3 border rounded cursor-move bg-white/50 dark:bg-gray-800/50">
                 <div class="flex items-center gap-2">
                   <span class="text-gray-400 text-sm cursor-move">⠿</span>
@@ -364,7 +368,7 @@ async function importData(data: ExportData) {
           <div v-if="activeApp === 'ImportExport'" class="flex flex-col gap-4 items-center py-6">
             <p class="text-sm text-gray-500 mb-4">导出格式为 .sun-panel.json，可跨设备备份和恢复</p>
             <input ref="fileInputRef" type="file" accept=".sun-panel.json,.json" class="hidden" @change="handleImportFile" />
-            <div class="flex gap-4">
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <NButton type="primary" :loading="importExportLoading" @click="handleExport">导出数据</NButton>
               <NButton :loading="importExportLoading" @click="fileInputRef?.click()">导入数据</NButton>
             </div>
@@ -378,11 +382,11 @@ async function importData(data: ExportData) {
           <!-- ====== 站点设置 ====== -->
           <div v-if="activeApp === 'SiteSettings'" class="flex flex-col gap-4">
             <div><label class="block text-sm mb-1 font-medium">站点标题 (浏览器标签页)</label>
-              <input :value="localSiteConfig.site_title" @input="(e: any) => localSiteConfig.site_title = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="站点标题" /></div>
+              <input :value="localSiteConfig.site_title" @input="(e: any) => localSiteConfig.site_title = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="站点标题" /></div>
             <div><label class="block text-sm mb-1 font-medium">网站图标 URL (favicon)</label>
-              <input :value="localSiteConfig.favicon_url" @input="(e: any) => localSiteConfig.favicon_url = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图标URL，显示在浏览器标签页上" /></div>
+              <input :value="localSiteConfig.favicon_url" @input="(e: any) => localSiteConfig.favicon_url = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图标URL，显示在浏览器标签页上" /></div>
             <div><label class="block text-sm mb-1 font-medium">登录页背景图片</label>
-              <input :value="localSiteConfig.login_bg_image" @input="(e: any) => localSiteConfig.login_bg_image = e.target.value" class="w-full border rounded px-3 py-2 text-sm" placeholder="输入图片URL" /></div>
+              <input :value="localSiteConfig.login_bg_image" @input="(e: any) => localSiteConfig.login_bg_image = e.target.value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图片URL" /></div>
             <div class="flex justify-end gap-2 pt-2 border-t">
               <NButton type="primary" @click="handleSaveSiteSettings">保存</NButton>
             </div>
@@ -396,7 +400,7 @@ async function importData(data: ExportData) {
     <NModal v-model:show="editGroupModalVisible" title="编辑分组" preset="card" class="w-[400px]">
       <div v-if="editingGroup" class="flex flex-col gap-4">
         <div><label class="block text-sm mb-1">分组名称 *</label>
-          <input v-model="editingGroup.title" class="w-full border rounded px-3 py-2 text-sm" placeholder="请输入分组名称" /></div>
+          <input v-model="editingGroup.title" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="请输入分组名称" /></div>
         <div class="flex items-center gap-2">
           <label class="text-sm">访客可见</label>
           <NSwitch v-model:value="editingGroup.publicVisible" :checked-value="1" :unchecked-value="0" />

@@ -64,7 +64,7 @@ function handleLogout() {
 
 onMounted(() => {
   checkMobile()
-  window.addEventListener('resize', handleResize)
+  window.addEventListener('resize', handleResize, { passive: true })
 })
 
 onUnmounted(() => {
@@ -128,7 +128,7 @@ onUnmounted(() => {
   </div>
 
   <!-- 移动端下拉菜单 -->
-  <div v-if="isMobile && mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false">
+  <div v-if="isMobile && mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false" @touchmove.prevent>
     <div class="mobile-menu" @click.stop>
       <div
         v-for="(item, i) in navItems"
@@ -224,6 +224,8 @@ onUnmounted(() => {
   align-items: center;
   cursor: pointer;
   position: relative;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .nav-slip {
@@ -249,6 +251,10 @@ onUnmounted(() => {
 .sidebar-bar.expanded .nav-title {
   opacity: 1;
   margin-left: 10px;
+}
+
+.sidebar-bar.expanded .nav-item {
+  padding: 4px 0;
 }
 
 .sidebar-bar.expanded .nav-slip {
@@ -294,6 +300,9 @@ onUnmounted(() => {
   align-items: center;
   cursor: pointer;
   z-index: 50;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .mobile-overlay {
@@ -304,6 +313,7 @@ onUnmounted(() => {
   height: 100%;
   z-index: 49;
   background: rgba(0,0,0,0.3);
+  touch-action: manipulation;
 }
 
 .mobile-menu {
@@ -313,17 +323,19 @@ onUnmounted(() => {
   background: rgba(42, 42, 42, 0.95);
   border-radius: 0.5rem;
   padding: 8px;
-  min-width: 160px;
+  min-width: 180px;
   backdrop-filter: blur(10px);
 }
 
 .mobile-nav-item {
-  padding: 10px 14px;
+  padding: 12px 14px;
   color: white;
   font-size: 14px;
   border-radius: 0.375rem;
   cursor: pointer;
   transition: background 0.2s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-nav-item:hover {

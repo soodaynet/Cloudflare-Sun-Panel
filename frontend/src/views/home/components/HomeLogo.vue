@@ -24,7 +24,7 @@ const logoImgStyle = computed(() => {
     class="home-logo"
     :style="logoStyle"
   >
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 sm:gap-3">
       <img
         v-if="panelState.panelConfig.logoImageSrc"
         :src="panelState.panelConfig.logoImageSrc"
@@ -33,10 +33,10 @@ const logoImgStyle = computed(() => {
         alt="Logo"
         decoding="async"
       />
-      <span v-if="logoText" class="text-white text-xl font-bold">{{ logoText }}</span>
+      <span v-if="logoText" class="text-white text-base sm:text-xl font-bold">{{ logoText }}</span>
       <span
         v-if="authStore.isVisitMode"
-        class="text-yellow-400 text-xs bg-yellow-900/50 px-2 py-0.5 rounded"
+        class="text-yellow-400 text-[10px] sm:text-xs bg-yellow-900/50 px-1.5 sm:px-2 py-0.5 rounded"
       >访客模式</span>
     </div>
   </div>
