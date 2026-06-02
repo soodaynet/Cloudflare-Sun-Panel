@@ -10,7 +10,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Sun-Panel</title>
 
-    <!-- 预连接到常见的图标 CDN 域名，加速图片加载 -->
+    <!-- 预连接到常见的图标 CDN 域名，提前完成 TLS 握手以加速图片加载 -->
+    <link rel="preconnect" href="https://cloudflare-imgbed.sooday.dpdns.org" crossorigin />
+    <link rel="preconnect" href="https://toolb.cn" crossorigin />
+    <link rel="preconnect" href="https://ts4.tc.mm.bing.net" crossorigin />
     <link rel="dns-prefetch" href="https://cloudflare-imgbed.sooday.dpdns.org" />
     <link rel="dns-prefetch" href="https://toolb.cn" />
     <link rel="dns-prefetch" href="https://ts4.tc.mm.bing.net" />

@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     EditUser: typeof import('./components/apps/Users/EditUser/index.vue')['default']
+    LazyImg: typeof import('./components/common/LazyImg.vue')['default']
     NAlert: typeof import('naive-ui')['NAlert']
     NButton: typeof import('naive-ui')['NButton']
     NDataTable: typeof import('naive-ui')['NDataTable']
