@@ -11,6 +11,7 @@ export function fail(c: Context, msg: string, code = 400, status?: number) {
   return c.json({ code, msg, data: null } satisfies ApiResponse)
 }
 
-export function serverError(c: Context, msg = '服务器内部错误') {
-  return fail(c, msg, 500, 500)
+export function getErrorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message
+  return '服务器错误'
 }

@@ -10,6 +10,10 @@ export interface AuthUser {
   visitMode: number; // 0=登录, 1=公开/访客
 }
 
+// ========== 设置缓存（减少 D1 查询） ==========
+let settingsCache: { publicUserId: string | null; guestMode: string | null; timestamp: number } | null = null
+const SETTINGS_CACHE_TTL = 60_000 // 60 秒
+
 // ========== 辅助函数 ==========
 
 /** 获取 D1 数据库实例 */
@@ -74,17 +78,22 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
     }
   }
 
-  // 并行查询 panel_public_user_id 和 default_guest_mode
-  const settings = await db.batch([
-    db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'"),
-    db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'default_guest_mode'"),
-  ])
+  // 查询公开模式设置（使用缓存减少 D1 请求）
+  const now = Date.now()
+  if (!settingsCache || (now - settingsCache.timestamp) > SETTINGS_CACHE_TTL) {
+    const settings = await db.batch([
+      db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'panel_public_user_id'"),
+      db.prepare("SELECT config_value FROM system_settings WHERE config_name = 'default_guest_mode'"),
+    ])
+    settingsCache = {
+      publicUserId: (settings[0].results[0] as { config_value: string } | undefined)?.config_value ?? null,
+      guestMode: (settings[1].results[0] as { config_value: string } | undefined)?.config_value ?? null,
+      timestamp: now,
+    }
+  }
 
-  const publicUserIdSetting = settings[0].results[0] as { config_value: string } | undefined
-  const guestModeSetting = settings[1].results[0] as { config_value: string } | undefined
-
-  const publicUserIdValue = publicUserIdSetting?.config_value
-  const guestModeValue = guestModeSetting?.config_value
+  const publicUserIdValue = settingsCache.publicUserId
+  const guestModeValue = settingsCache.guestMode
 
   let targetUser: Record<string, unknown> | null = null
 

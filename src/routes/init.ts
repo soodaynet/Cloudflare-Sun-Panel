@@ -3,16 +3,11 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
 import { PanelService } from '../services/PanelService';
 import { SettingsService } from '../services/SettingsService';
-import { ok, fail } from '../utils/response';
+import { ok, fail, getErrorMessage } from '../utils/response';
 
 const initApp = new Hono<{ Bindings: { DB: D1Database } }>();
 
 initApp.use('*', publicModeMiddleware);
-
-function getErrorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return '服务器错误';
-}
 
 initApp.post('/init', async (c) => {
   try {

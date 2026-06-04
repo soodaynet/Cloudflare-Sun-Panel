@@ -3,7 +3,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { publicModeMiddleware, getAuthUser } from '../middleware/auth';
 import { validate, iconEditSchema, iconAddMultipleSchema, idsSchema, sortSchema, getListByGroupIdSchema } from '../utils/validate';
 import { PanelService } from '../services/PanelService';
-import { ok, fail } from '../utils/response';
+import { ok, fail, getErrorMessage } from '../utils/response';
 
 type Variables = {
   validatedBody: unknown;
@@ -12,42 +12,6 @@ type Variables = {
 const panelApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>();
 
 panelApp.use('*', publicModeMiddleware);
-
-function getErrorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return '服务器错误';
-}
-
-function isValidUrl(urlStr: string): boolean {
-  try {
-    const url = new URL(urlStr)
-    if (!['http:', 'https:'].includes(url.protocol)) return false
-    const hostname = url.hostname.toLowerCase()
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') return false
-
-    // Check private/reserved IP ranges
-    const ipv4Pattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
-    const match = hostname.match(ipv4Pattern)
-    if (match) {
-      const [, a, b, c, d] = match.map(Number)
-      // 10.0.0.0/8
-      if (a === 10) return false
-      // 172.16.0.0/12
-      if (a === 172 && b >= 16 && b <= 31) return false
-      // 192.168.0.0/16
-      if (a === 192 && b === 168) return false
-      // 127.0.0.0/8
-      if (a === 127) return false
-      // 169.254.0.0/16 (link-local)
-      if (a === 169 && b === 254) return false
-      // 0.0.0.0/8
-      if (a === 0) return false
-    }
-    return true
-  } catch {
-    return false
-  }
-}
 
 /**
  * 统一获取全部数据（分组 + 所有图标 + 用户配置）

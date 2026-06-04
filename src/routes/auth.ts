@@ -3,7 +3,7 @@ import type { D1Database } from '@cloudflare/workers-types';
 import type { ApiResponse, UserInfo } from '../models/types';
 import { UserService } from '../services/UserService';
 import { validate, loginSchema, registerSchema } from '../utils/validate';
-import { ok, fail } from '../utils/response';
+import { ok, fail, getErrorMessage } from '../utils/response';
 import { createRateLimiter } from '../middleware/rateLimiter';
 
 type Variables = {
@@ -14,11 +14,6 @@ const authApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>
 
 const loginLimiter = createRateLimiter({ maxRequests: 10, windowMs: 60000 });
 const registerLimiter = createRateLimiter({ maxRequests: 5, windowMs: 60000 });
-
-function getErrorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message
-  return '服务器错误'
-}
 
 /**
  * 登录

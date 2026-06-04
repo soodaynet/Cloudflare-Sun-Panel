@@ -58,10 +58,6 @@ function http<T = any>(
     : request.post(url, params, { headers, signal }).then(successHandler, failHandler)
 }
 
-export function get<T = any>(opt: HttpOption): Promise<Response<T>> {
-  return http<T>({ ...opt, method: 'GET' })
-}
-
 export function post<T = any>(opt: HttpOption): Promise<Response<T>> {
   return http<T>({ ...opt, method: 'POST' })
 }

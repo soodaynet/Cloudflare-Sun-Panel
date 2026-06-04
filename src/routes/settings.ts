@@ -3,18 +3,13 @@ import type { D1Database } from '@cloudflare/workers-types';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { validate, settingGetSchema, settingSetSchema } from '../utils/validate';
 import { SettingsService } from '../services/SettingsService';
-import { ok, fail } from '../utils/response';
+import { ok, fail, getErrorMessage } from '../utils/response';
 
 type Variables = {
   validatedBody: unknown;
 };
 
 const settingsApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>();
-
-function getErrorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return '服务器错误';
-}
 
 /**
  * 获取系统设置 (通过 configName) - 公开可访问

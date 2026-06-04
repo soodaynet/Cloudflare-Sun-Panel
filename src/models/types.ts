@@ -9,7 +9,6 @@ export interface UserRow {
   status: number;
   role: number;
   mail: string;
-  token: string;
   created_at: string;
   updated_at: string;
 }
@@ -40,14 +39,6 @@ export interface ItemIconRow {
   updated_at: string;
 }
 
-export interface UserConfigRow {
-  user_id: number;
-  panel_json: string;
-  search_engine_json: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface SystemSettingRow {
   id: number;
   config_name: string;
@@ -58,18 +49,6 @@ export interface SystemSettingRow {
 
 // ========== API 请求/响应类型 ==========
 
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  username: string;
-  password: string;
-  name?: string;
-  mail?: string;
-}
-
 export interface UserInfo {
   id: number;
   username: string;
@@ -79,53 +58,6 @@ export interface UserInfo {
   role: number;
   mail: string;
   created_at: string;
-}
-
-export interface ItemIconGroupRequest {
-  id?: number;
-  icon?: string;
-  title: string;
-  description?: string;
-  sort?: number;
-  publicVisible?: number;
-}
-
-export interface ItemIconRequest {
-  id?: number;
-  icon?: ItemIconInfo;
-  title: string;
-  url: string;
-  description?: string;
-  openMethod?: number;
-  sort?: number;
-  itemIconGroupId: number;
-}
-
-export interface ItemIconInfo {
-  itemType: number;     // 1:图片 2:文字 3:颜色
-  src?: string;
-  text?: string;
-  backgroundColor?: string;
-}
-
-export interface SortItemRequest {
-  id: number;
-  sort: number;
-}
-
-export interface ItemIconSortRequest {
-  sortItems: SortItemRequest[];
-  itemIconGroupId: number;
-}
-
-export interface UserConfigRequest {
-  panel?: Record<string, unknown>;
-  searchEngine?: Record<string, unknown>;
-}
-
-export interface PaginationRequest {
-  page: number;
-  pageSize: number;
 }
 
 export interface ApiResponse<T = unknown> {

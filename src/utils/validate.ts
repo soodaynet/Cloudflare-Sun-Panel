@@ -133,10 +133,6 @@ export const publicVisitUserSchema = z.object({
   userId: z.number().int().positive().nullable(),
 })
 
-export const faviconSchema = z.object({
-  url: z.string().min(1, 'url 不能为空'),
-})
-
 export const getListByGroupIdSchema = z.object({
   itemIconGroupId: z.number().int().optional(),
 })
