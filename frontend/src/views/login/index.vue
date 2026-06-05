@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from 'naive-ui'
+import { NButton, NCard, NInput, useMessage, NDivider } from 'naive-ui'
 import { login, getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
@@ -98,15 +98,17 @@ async function handleSkipLogin() {
         </div>
       </template>
 
-      <NForm @submit.prevent="handleLogin">
-        <NFormItem label="用户名">
+      <form @submit.prevent="handleLogin">
+        <div class="mb-4">
+          <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">用户名</label>
           <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
-        </NFormItem>
-        <NFormItem label="密码">
-          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" @keyup.enter="handleLogin" />
-        </NFormItem>
-        <NButton type="primary" block size="large" :loading="loading" @click="handleLogin">登录</NButton>
-      </NForm>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">密码</label>
+          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" />
+        </div>
+        <NButton type="primary" block size="large" :loading="loading" attr-type="submit">登录</NButton>
+      </form>
 
       <template v-if="hasPublicMode" #footer>
         <NDivider />
@@ -131,11 +133,6 @@ async function handleSkipLogin() {
 
 :deep(.login-card .n-card-header) {
   color: rgba(255, 255, 255, 0.95);
-}
-
-:deep(.login-card .n-form-item-label) {
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 500;
 }
 
 :deep(.login-card .n-input) {

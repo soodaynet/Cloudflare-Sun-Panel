@@ -512,6 +512,13 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   opacity: 1;
 }
 
+/* 移动端触屏设备始终显示编辑按钮 */
+@media (hover: none) {
+  .group-title-btns {
+    opacity: 1;
+  }
+}
+
 .announce-fade-enter-active,
 .announce-fade-leave-active {
   transition: opacity 0.4s ease;

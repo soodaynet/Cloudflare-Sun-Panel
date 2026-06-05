@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore, usePanelState } from '@/store'
 
 const authStore = useAuthStore()
@@ -7,14 +7,33 @@ const panelState = usePanelState()
 
 const logoText = computed(() => panelState.panelConfig.logoText || '')
 
-const logoStyle = computed(() => ({
-  top: `${panelState.panelConfig.logoPositionTop ?? 16}px`,
-  left: `${panelState.panelConfig.logoPositionLeft ?? 16}px`,
-}))
+const logoStyle = computed(() => {
+  const baseLeft = panelState.panelConfig.logoPositionLeft ?? 16
+  const left = isMobile.value ? baseLeft + 60 : baseLeft
+  return {
+    top: `${panelState.panelConfig.logoPositionTop ?? 16}px`,
+    left: `${left}px`,
+  }
+})
 
 const logoImgStyle = computed(() => {
   const size = panelState.panelConfig.logoSize
   return size ? { height: `${size}px` } : { height: '32px' }
+})
+
+const isMobile = ref(false)
+
+function checkMobile() {
+  isMobile.value = window.innerWidth < 640
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 

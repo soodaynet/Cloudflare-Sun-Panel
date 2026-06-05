@@ -248,7 +248,7 @@ async function importData(data: ExportData) {
             v-for="app in apps" :key="app.key"
             class="px-3 py-2.5 rounded-lg mb-1 cursor-pointer font-medium text-sm flex items-center gap-2 transition-colors"
             :class="activeApp === app.key ? 'bg-blue-500 text-white' : 'hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-700 dark:text-gray-300'"
-            @click="activeApp = app.key"
+            @click="activeApp = app.key; if (isSmallScreen) collapsed = true"
           >
             <span>{{ app.icon }}</span>
             <span>{{ app.name }}</span>
