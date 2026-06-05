@@ -113,7 +113,7 @@ panelApp.post('/getAllData', async (c) => {
     const service = new PanelService(c.env.DB);
     const result = await service.getAllData(userId);
 
-    c.header('Cache-Control', 'public, max-age=30');
+    c.header('Cache-Control', 'private, max-age=30');
     return ok(c, result);
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);

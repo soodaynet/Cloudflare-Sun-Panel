@@ -5,7 +5,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { getAllData, deleteItems, saveItemSort, getAbout, getAuthInfo } from '@/api/index'
-import { cachedRequest, invalidateCacheByPrefix } from '@/utils/requestCache'
+import { cachedRequest, invalidateCacheByPrefix, invalidateCache } from '@/utils/requestCache'
 import { useAnnouncement } from './composables/useAnnouncement'
 import { useItemEditor } from './composables/useItemEditor'
 import HomeAppStarter from './components/HomeAppStarter.vue'
@@ -179,6 +179,7 @@ function updateFavicon(url: string) {
     document.head.appendChild(link)
   }
   link.href = url
+  link.setAttribute('fetchpriority', 'low')
 }
 
 // ====== 数据加载 ======
@@ -200,7 +201,7 @@ async function updateLocalUserInfo() {
 
 async function loadSiteConfig() {
   try {
-    const res = await getAbout<Record<string, string>>()
+    const res = await cachedRequest('site:about', () => getAbout<Record<string, string>>(), 300)
     if (res.code === 0) {
       siteConfig.value = {
         site_title: res.data?.site_title || '',
@@ -248,8 +249,9 @@ async function loadData() {
 
 function refreshAll() {
   invalidateCacheByPrefix('panel:')
-  updateLocalUserInfo().then(() => {
-    Promise.all([loadData(), loadSiteConfig()])
+  invalidateCache('site:about')
+  Promise.all([updateLocalUserInfo(), loadSiteConfig()]).then(() => {
+    loadData()
   })
 }
 
@@ -285,6 +287,7 @@ async function saveItemSortOrder(group: ItemGroup) {
 
 // ====== AppStarter 回调 ======
 function handleStarterSaved() { refreshAll() }
+function handleGroupSaved() { invalidateCacheByPrefix('panel:'); loadData() }
 function handleSiteConfigUpdate(config: Panel.SiteConfig) {
   siteConfig.value = config
   localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
@@ -389,6 +392,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
       :groups="groups"
       :on-saved="handleStarterSaved"
       @update:site-config="handleSiteConfigUpdate"
+      @group-saved="handleGroupSaved"
     />
 
     <!-- ========== 编辑图标弹窗 ========== -->

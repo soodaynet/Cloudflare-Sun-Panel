@@ -2,11 +2,15 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMessage } from 'naive-ui'
-import { VueDraggable } from 'vue-draggable-plus'
-import { useAuthStore, usePanelState, useAppStore } from '@/store'
-import { saveSiteSettings, setUserConfig, saveGroup, deleteGroups, getAllData, addItems, saveGroupSort } from '@/api/index'
+import { useAuthStore, usePanelState } from '@/store'
+import { saveGroup, deleteGroups } from '@/api/index'
 import UsersManage from '@/components/apps/Users/index.vue'
-import { createExportData, downloadJSON, validateImportData, readFileAsText, type ExportGroup, type ExportData } from '@/utils/importExport'
+import PanelUserInfo from './panels/PanelUserInfo.vue'
+import PanelStyleSettings from './panels/PanelStyleSettings.vue'
+import PanelAnnounceSettings from './panels/PanelAnnounceSettings.vue'
+import PanelGroupManage from './panels/PanelGroupManage.vue'
+import PanelImportExport from './panels/PanelImportExport.vue'
+import PanelSiteSettings from './panels/PanelSiteSettings.vue'
 
 interface App {
   name: string
@@ -35,6 +39,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:visible', visible: boolean): void
   (e: 'update:siteConfig', config: Panel.SiteConfig): void
+  (e: 'groupSaved'): void
 }>()
 
 const show = computed({
@@ -46,7 +51,6 @@ const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 const { panelConfig } = storeToRefs(panelState)
-const appStore = useAppStore()
 
 const activeApp = ref('UserInfo')
 const collapsed = ref(false)
@@ -54,9 +58,6 @@ const screenWidth = ref(window.innerWidth)
 const isSmallScreen = ref(false)
 const editGroupModalVisible = ref(false)
 const editingGroup = ref<Panel.ItemIconGroup>({ title: '' })
-
-const localGroups = ref<ItemGroup[]>([...props.groups])
-watch(() => props.groups, (val) => { localGroups.value = [...val] })
 
 const apps = computed<App[]>(() => {
   const list: App[] = [
@@ -89,19 +90,6 @@ onMounted(() => {
   syncSiteConfig()
 })
 
-watch(() => props.siteConfig, () => syncSiteConfig(), { deep: true })
-
-// ====== 风格设置 ======
-async function handleSaveStyleSettings() {
-  const config = { ...panelState.panelConfig }
-  try {
-    const res = await setUserConfig({ panel: config })
-    if (res.code === 0) { panelState.updatePanelConfigFromCloud(config); message.success('配置已保存'); props.onSaved() }
-  } catch { message.error('保存失败') }
-}
-
-function resetSettings() { panelState.setPanelConfig({}); message.success('已重置') }
-
 // ====== 站点设置 ======
 const localSiteConfig = ref<Panel.SiteConfig>({})
 
@@ -109,20 +97,10 @@ function syncSiteConfig() {
   localSiteConfig.value = { ...props.siteConfig }
 }
 
-async function handleSaveSiteSettings() {
-  try {
-    const res = await saveSiteSettings({
-      site_title: localSiteConfig.value.site_title || '',
-      login_bg_image: localSiteConfig.value.login_bg_image || '',
-      login_blur: String(localSiteConfig.value.login_blur ?? 12),
-      login_mask_opacity: String(localSiteConfig.value.login_mask_opacity ?? 0.15),
-      favicon_url: localSiteConfig.value.favicon_url || '',
-    })
-    if (res.code === 0) {
-      emit('update:siteConfig', { ...localSiteConfig.value })
-      message.success('站点设置已保存')
-    } else message.error(res.msg || '保存失败')
-  } catch { message.error('保存失败') }
+watch(() => props.siteConfig, () => syncSiteConfig(), { deep: true })
+
+function handleSiteConfigUpdate(config: Panel.SiteConfig) {
+  emit('update:siteConfig', config)
 }
 
 // ====== 分组管理 ======
@@ -147,98 +125,13 @@ async function handleDeleteGroup(group: ItemGroup) {
   } catch { message.error('网络错误') }
 }
 
-async function handleGroupSortEnd() {
-  const sortItems = localGroups.value.filter(g => g.id).map((g, i) => ({ id: g.id!, sort: i }))
-  try {
-    const res = await saveGroupSort(sortItems)
-    if (res.code === 0) { message.success('分组排序已保存'); props.onSaved() }
-    else message.error(res.msg || '排序保存失败')
-  } catch { message.error('网络错误') }
-}
-
 function openAddGroup() {
   editingGroup.value = { title: '', publicVisible: 1 }
   editGroupModalVisible.value = true
 }
 
-function handleLogout() {
-  authStore.removeToken()
-  window.location.reload()
-}
-
-// ====== 导入导出 ======
-const importExportLoading = ref(false)
-const fileInputRef = ref<HTMLInputElement>()
-
-async function handleExport() {
-  importExportLoading.value = true
-  try {
-    const res = await getAllData<{
-      groups: Panel.ItemIconGroup[]
-      itemsMap: Record<number, Panel.ItemInfo[]>
-    }>()
-    if (res.code === 0 && res.data) {
-      const groupList = res.data.groups || []
-      const itemsMap = res.data.itemsMap || {}
-      const groups: ExportGroup[] = groupList.map(g => ({
-        title: g.title || '',
-        sort: g.sort || 0,
-        children: (g.id && itemsMap[g.id] ? itemsMap[g.id].map(item => ({
-          title: item.title,
-          sort: item.sort || 0,
-          icon: item.icon,
-          url: item.url,
-          description: item.description || '',
-          openMethod: item.openMethod || 1,
-        })) : []),
-      }))
-      const data = createExportData(groups)
-      downloadJSON(data)
-      message.success('导出成功')
-    }
-  } catch { message.error('导出失败') }
-  finally { importExportLoading.value = false }
-}
-
-async function handleImportFile(e: Event) {
-  const target = e.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
-  importExportLoading.value = true
-  try {
-    const text = await readFileAsText(file)
-    const result = validateImportData(text)
-    if (!result.valid || !result.data) {
-      message.error(result.error || '导入失败')
-      return
-    }
-    await importData(result.data)
-    message.success('导入成功，请刷新页面查看')
-    props.onSaved()
-  } catch (err) {
-    message.error(err instanceof Error ? err.message : '导入失败')
-  }
-  finally {
-    importExportLoading.value = false
-    if (fileInputRef.value) fileInputRef.value.value = ''
-  }
-}
-
-async function importData(data: ExportData) {
-  const batchSize = 50
-  for (const g of data.icons) {
-    const groupRes = await saveGroup<Panel.ItemIconGroup>({ title: g.title, sort: g.sort })
-    if (groupRes.code === 0 && groupRes.data?.id) {
-      const groupId = groupRes.data.id
-      const items: Panel.ItemInfo[] = g.children.map(item => ({
-        ...item, itemIconGroupId: groupId, openMethod: item.openMethod || 2,
-      }))
-      for (let i = 0; i < items.length; i += batchSize) {
-        const batch = items.slice(i, i + batchSize)
-        await addItems(batch)
-      }
-    }
-  }
+function handleGroupSaved() {
+  emit('groupSaved')
 }
 </script>
 
@@ -274,120 +167,37 @@ async function importData(data: ExportData) {
         <div class="h-full overflow-auto p-3 sm:p-4">
 
           <!-- ====== 我的信息 ====== -->
-          <div v-if="activeApp === 'UserInfo'" class="flex flex-col gap-4">
-            <div class="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded">
-              <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-lg">
-                {{ authStore.userInfo?.name?.charAt(0) || '?' }}
-              </div>
-              <div>
-                <div class="font-medium">{{ authStore.userInfo?.name }}</div>
-                <div class="text-sm text-gray-500">{{ authStore.userInfo?.username }}</div>
-                <div class="text-xs text-gray-400">角色: {{ authStore.userInfo?.role === 1 ? '管理员' : '普通用户' }}</div>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm mb-1 font-medium">主题</label>
-              <div class="flex gap-2">
-                <NButton size="small" :type="appStore.theme === 'dark' ? 'primary' : 'default'" @click="appStore.setTheme('dark')">深色</NButton>
-                <NButton size="small" :type="appStore.theme === 'light' ? 'primary' : 'default'" @click="appStore.setTheme('light')">浅色</NButton>
-                <NButton size="small" :type="appStore.theme === 'auto' ? 'primary' : 'default'" @click="appStore.setTheme('auto')">跟随系统</NButton>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm mb-1 font-medium">语言</label>
-              <div class="flex gap-2">
-                <NButton size="small" :type="appStore.language === 'zh-CN' ? 'primary' : 'default'" @click="appStore.setLanguage('zh-CN')">中文</NButton>
-                <NButton size="small" :type="appStore.language === 'en-US' ? 'primary' : 'default'" @click="appStore.setLanguage('en-US')">English</NButton>
-              </div>
-            </div>
-            <div class="pt-2 border-t mt-auto">
-              <NButton type="error" block @click="handleLogout">退出登录</NButton>
-            </div>
-          </div>
+          <PanelUserInfo v-if="activeApp === 'UserInfo'" />
 
           <!-- ====== 风格设置 ====== -->
-          <div v-if="activeApp === 'Style'" class="flex flex-col gap-4">
-            <div><label class="block text-sm mb-1 font-medium">壁纸地址</label>
-              <input :value="panelConfig.backgroundImageSrc" @input="(e: Event) => panelConfig.backgroundImageSrc = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图片URL" /></div>
-            <div><label class="block text-sm mb-1 font-medium">模糊度: {{ panelConfig.backgroundBlur || 0 }}</label>
-              <input :value="panelConfig.backgroundBlur" @input="(e: Event) => panelConfig.backgroundBlur = Number((e.target as HTMLInputElement).value)" type="range" min="0" max="50" class="w-full" /></div>
-            <div><label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
-              <input :value="panelConfig.backgroundMaskNumber" @input="(e: Event) => panelConfig.backgroundMaskNumber = Number((e.target as HTMLInputElement).value)" type="range" min="0" max="1" step="0.1" class="w-full" /></div>
-            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
-              <textarea :value="panelConfig.footerHtml" @input="(e: Event) => panelConfig.footerHtml = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" rows="3" placeholder="<p>&copy; 2024 Sun-Panel</p>" /></div>
-            <div class="border-t pt-2"><label class="block text-sm mb-1 font-medium">最大宽度</label>
-              <input :value="panelConfig.maxWidth" @input="(e: Event) => panelConfig.maxWidth = Number((e.target as HTMLInputElement).value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div><label class="block text-sm mb-1 font-medium">上边距</label>
-              <input :value="panelConfig.marginTop" @input="(e: Event) => panelConfig.marginTop = Number((e.target as HTMLInputElement).value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div><label class="block text-sm mb-1 font-medium">下边距</label>
-              <input :value="panelConfig.marginBottom" @input="(e: Event) => panelConfig.marginBottom = Number((e.target as HTMLInputElement).value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div class="flex justify-end gap-2 pt-2 border-t">
-              <NButton @click="resetSettings">重置</NButton>
-              <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
-            </div>
-          </div>
+          <PanelStyleSettings
+            v-if="activeApp === 'Style'"
+            :panel-config="panelConfig"
+            :on-saved="props.onSaved"
+          />
 
           <!-- ====== 公告设置 ====== -->
-          <div v-if="activeApp === 'Announce'" class="flex flex-col gap-4">
-            <div><label class="block text-sm mb-1 font-medium">公告内容</label>
-              <textarea :value="panelConfig.announcement" @input="(e: Event) => panelConfig.announcement = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" rows="3" placeholder="公告文字，留空不显示" /></div>
-            <div><label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
-              <input :value="panelConfig.announcementDuration" @input="(e: Event) => panelConfig.announcementDuration = Number((e.target as HTMLInputElement).value)" type="number" min="0" max="999" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div class="border-t pt-3">
-              <label class="block text-sm mb-1 font-medium">Logo 文字</label>
-              <input :value="panelConfig.logoText" @input="(e: Event) => panelConfig.logoText = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入 Logo 文字" /></div>
-            <div><label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
-              <input :value="panelConfig.logoImageSrc" @input="(e: Event) => panelConfig.logoImageSrc = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图片URL" /></div>
-            <div class="border-t pt-3"><label class="block text-sm mb-1 font-medium">Logo 距顶部 (px)</label>
-              <input :value="panelConfig.logoPositionTop" @input="(e: Event) => panelConfig.logoPositionTop = Number((e.target as HTMLInputElement).value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div><label class="block text-sm mb-1 font-medium">Logo 距左侧 (px)</label>
-              <input :value="panelConfig.logoPositionLeft" @input="(e: Event) => panelConfig.logoPositionLeft = Number((e.target as HTMLInputElement).value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div><label class="block text-sm mb-1 font-medium">Logo 图片高度 (px)</label>
-              <input :value="panelConfig.logoSize" @input="(e: Event) => panelConfig.logoSize = Number((e.target as HTMLInputElement).value)" type="number" class="w-full border rounded px-3 py-2 sm:text-sm text-base" /></div>
-            <div class="border-t pt-3">
-              <label class="block text-sm mb-1 font-medium">背景模糊度: {{ panelConfig.announcementBlur ?? 12 }}</label>
-              <input :value="panelConfig.announcementBlur" @input="(e: Event) => panelConfig.announcementBlur = Number((e.target as HTMLInputElement).value)" type="range" min="0" max="40" class="w-full" />
-            </div>
-            <div>
-              <label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.announcementMaskOpacity ?? 0.15 }}</label>
-              <input :value="panelConfig.announcementMaskOpacity" @input="(e: Event) => panelConfig.announcementMaskOpacity = Number((e.target as HTMLInputElement).value)" type="range" min="0" max="1" step="0.05" class="w-full" />
-            </div>
-            <p class="text-xs text-gray-400">控制侧边栏、公告弹窗、Logo 的模糊和透明度效果</p>
-            <div class="flex justify-end gap-2 pt-2 border-t">
-              <NButton type="primary" @click="handleSaveStyleSettings">保存</NButton>
-            </div>
-          </div>
+          <PanelAnnounceSettings
+            v-if="activeApp === 'Announce'"
+            :panel-config="panelConfig"
+            :on-saved="props.onSaved"
+          />
 
           <!-- ====== 分组管理 ====== -->
-          <div v-if="activeApp === 'GroupManage'" class="flex flex-col gap-4">
-            <div class="flex gap-2"><NButton type="primary" size="small" @click="openAddGroup">添加分组</NButton></div>
-            <div class="text-xs text-gray-400">拖拽分组可调整排序</div>
-            <VueDraggable v-model="localGroups" :animation="200" class="flex flex-col gap-2 max-h-[250px] sm:max-h-[340px] overflow-auto" @end="handleGroupSortEnd">
-              <div v-for="(group, gi) in localGroups" :key="group.id || gi" class="flex items-center justify-between p-3 border rounded cursor-move bg-white/50 dark:bg-gray-800/50">
-                <div class="flex items-center gap-2">
-                  <span class="text-gray-400 text-sm cursor-move">⠿</span>
-                  <span class="font-medium">{{ group.title }}</span>
-                  <span class="text-xs px-1.5 py-0.5 rounded" :class="group.publicVisible !== 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
-                    {{ group.publicVisible !== 0 ? '访客可见' : '隐藏' }}
-                  </span>
-                </div>
-                <div class="flex gap-2">
-                  <NButton size="tiny" @click="openEditGroup(group)">编辑</NButton>
-                  <NButton size="tiny" type="error" @click="handleDeleteGroup(group)">删除</NButton>
-                </div>
-              </div>
-            </VueDraggable>
-          </div>
+          <PanelGroupManage
+            v-if="activeApp === 'GroupManage'"
+            :groups="props.groups"
+            @add-group="openAddGroup"
+            @edit-group="openEditGroup"
+            @delete-group="handleDeleteGroup"
+            @saved="handleGroupSaved"
+          />
 
           <!-- ====== 导入导出 ====== -->
-          <div v-if="activeApp === 'ImportExport'" class="flex flex-col gap-4 items-center py-6">
-            <p class="text-sm text-gray-500 mb-4">导出格式为 .sun-panel.json，可跨设备备份和恢复</p>
-            <input ref="fileInputRef" type="file" accept=".sun-panel.json,.json" class="hidden" @change="handleImportFile" />
-            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <NButton type="primary" :loading="importExportLoading" @click="handleExport">导出数据</NButton>
-              <NButton :loading="importExportLoading" @click="fileInputRef?.click()">导入数据</NButton>
-            </div>
-          </div>
+          <PanelImportExport
+            v-if="activeApp === 'ImportExport'"
+            :on-saved="props.onSaved"
+          />
 
           <!-- ====== 用户管理 ====== -->
           <div v-if="activeApp === 'Users'" class="flex flex-col gap-4">
@@ -395,26 +205,11 @@ async function importData(data: ExportData) {
           </div>
 
           <!-- ====== 站点设置 ====== -->
-          <div v-if="activeApp === 'SiteSettings'" class="flex flex-col gap-4">
-            <div><label class="block text-sm mb-1 font-medium">站点标题 (浏览器标签页)</label>
-              <input :value="localSiteConfig.site_title" @input="(e: Event) => localSiteConfig.site_title = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="站点标题" /></div>
-            <div><label class="block text-sm mb-1 font-medium">网站图标 URL (favicon)</label>
-              <input :value="localSiteConfig.favicon_url" @input="(e: Event) => localSiteConfig.favicon_url = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图标URL，显示在浏览器标签页上" /></div>
-            <div><label class="block text-sm mb-1 font-medium">登录页背景图片</label>
-              <input :value="localSiteConfig.login_bg_image" @input="(e: Event) => localSiteConfig.login_bg_image = (e.target as HTMLInputElement).value" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="输入图片URL" /></div>
-            <div class="border-t pt-3">
-              <label class="block text-sm mb-1 font-medium">登录卡片背景模糊度: {{ localSiteConfig.login_blur ?? 12 }}</label>
-              <input :value="localSiteConfig.login_blur" @input="(e: Event) => localSiteConfig.login_blur = Number((e.target as HTMLInputElement).value)" type="range" min="0" max="40" class="w-full" />
-            </div>
-            <div>
-              <label class="block text-sm mb-1 font-medium">登录卡片遮罩不透明度: {{ localSiteConfig.login_mask_opacity ?? 0.15 }}</label>
-              <input :value="localSiteConfig.login_mask_opacity" @input="(e: Event) => localSiteConfig.login_mask_opacity = Number((e.target as HTMLInputElement).value)" type="range" min="0" max="1" step="0.05" class="w-full" />
-            </div>
-            <p class="text-xs text-gray-400">控制登录页卡片背景的模糊和透明度效果</p>
-            <div class="flex justify-end gap-2 pt-2 border-t">
-              <NButton type="primary" @click="handleSaveSiteSettings">保存</NButton>
-            </div>
-          </div>
+          <PanelSiteSettings
+            v-if="activeApp === 'SiteSettings'"
+            :site-config="localSiteConfig"
+            @update:site-config="handleSiteConfigUpdate"
+          />
 
         </div>
       </NLayoutContent>

@@ -65,6 +65,7 @@ settingsApp.post('/about', async (c) => {
   try {
     const service = new SettingsService(c.env.DB);
     const settings = await service.getAll();
+    c.header('Cache-Control', 'public, max-age=300');
     return ok(c, settings);
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);
