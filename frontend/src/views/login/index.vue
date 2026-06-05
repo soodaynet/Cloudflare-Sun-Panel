@@ -98,26 +98,25 @@ async function handleSkipLogin() {
         </div>
       </template>
 
-      <form @submit.prevent="handleLogin">
-        <div class="mb-4">
-          <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">用户名</label>
-          <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">密码</label>
-          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" />
-        </div>
-        <button
-          type="submit"
-          :disabled="loading"
-          class="login-btn w-full py-2.5 rounded-lg text-white font-medium text-base transition-colors"
-          :class="loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:opacity-80'"
-          style="background-color: #2080f0; touch-action: manipulation;"
-          @click="handleLogin"
-        >
-          {{ loading ? '登录中...' : '登录' }}
-        </button>
-      </form>
+      <div class="mb-4">
+        <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">用户名</label>
+        <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">密码</label>
+        <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" @keyup.enter="handleLogin" />
+      </div>
+      <button
+        type="button"
+        :disabled="loading"
+        class="login-btn w-full py-2.5 rounded-lg text-white font-medium text-base transition-colors"
+        :class="loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:opacity-80'"
+        style="background-color: #2080f0; touch-action: manipulation;"
+        @click="handleLogin"
+        @touchstart.prevent
+      >
+        {{ loading ? '登录中...' : '登录' }}
+      </button>
 
       <template v-if="hasPublicMode" #footer>
         <NDivider />
