@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h, onMounted, reactive, ref } from 'vue'
 import { NTag, NDropdown, NButton, useDialog, useMessage } from 'naive-ui'
-import type { DataTableColumns, PaginationProps } from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
 import EditUser from './EditUser/index.vue'
 import { useAuthStore } from '@/store'
 import { getPublicVisitUser, setPublicVisitUser, deleteUsers, getUserList } from '@/api/index'

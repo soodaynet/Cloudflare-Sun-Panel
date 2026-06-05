@@ -39,7 +39,8 @@ export class PanelService {
     if (groupIds.length > 0) {
       const placeholders = groupIds.map(() => '?').join(',')
       const iconRows = await queryAll<ItemIconRow>(this.db,
-        `SELECT id, icon_json, title, url, description, open_method, sort, item_icon_group_id, user_id, created_at, updated_at FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`,
+        `SELECT id, icon_json, title, url, desc
+          ription, open_method, sort, item_icon_group_id, user_id, created_at, updated_at FROM item_icons WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`,
         ...groupIds, userId)
 
       for (const row of iconRows) {

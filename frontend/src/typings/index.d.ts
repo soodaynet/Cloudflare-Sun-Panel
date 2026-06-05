@@ -101,7 +101,7 @@ declare namespace Panel {
 
   interface userConfig {
     panel: panelConfig
-    searchEngine?: any
+    searchEngine?: Record<string, unknown>
   }
 
   interface ItemIconSortRequest {

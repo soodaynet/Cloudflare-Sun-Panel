@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
 import { useTheme } from './hooks/useTheme'
 import { useLanguage } from './hooks/useLanguage'
 

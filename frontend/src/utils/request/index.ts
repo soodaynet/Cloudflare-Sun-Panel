@@ -9,7 +9,7 @@ export interface HttpOption {
   url: string
   data?: unknown
   method?: string
-  headers?: any
+  headers?: Record<string, string>
   signal?: GenericAbortSignal
   beforeRequest?: () => void
   afterRequest?: () => void

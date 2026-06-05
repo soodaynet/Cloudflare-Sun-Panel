@@ -55,7 +55,7 @@ const safeFooterHtml = computed(() => {
 
 // Composables
 const { announcementVisible, announcementText, startAnnouncementTimer, dismissAnnouncement } = useAnnouncement()
-const { editModalShow, editingItem, editingGroupId, openAddItem, openEditItem, handleSaveItem } = useItemEditor(loadData)
+const { editModalShow, editingItem, openAddItem, openEditItem, handleSaveItem } = useItemEditor(loadData)
 
 // 分组编辑模式（控制每个分组内是否可排序/编辑/删除）
 const editModeGroupId = ref<number | null>(null)
@@ -103,6 +103,24 @@ watch(
   () => [panelState.panelConfig.announcementBlur, panelState.panelConfig.announcementMaskOpacity],
   () => syncGlassVars()
 )
+
+// Wallpaper preload
+const effectiveBackgroundImage = computed(() => panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || '')
+
+function preloadBackgroundImage(url: string) {
+  document.querySelector('link[rel="preload"][as="image"][data-wallpaper]')?.remove()
+  if (!url) return
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'image'
+  link.href = url
+  link.setAttribute('data-wallpaper', 'true')
+  document.head.appendChild(link)
+}
+
+watch(effectiveBackgroundImage, (url) => {
+  preloadBackgroundImage(url)
+}, { immediate: true })
 
 const visibleGroups = computed(() => {
   if (!authStore.isVisitMode) return groups.value
@@ -252,19 +270,19 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
 
 <template>
   <!-- 壁纸层 - 使用 img 标签确保浏览器以高优先级下载 -->
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+  <div v-if="effectiveBackgroundImage" class="fixed inset-0 z-[1]" :style="{
     filter: `blur(${panelState.panelConfig.backgroundBlur || 0}px)`,
     transform: 'translateZ(0)',
     willChange: 'transform',
   }">
-    <img :src="panelState.panelConfig.backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
+    <img :src="effectiveBackgroundImage" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
   </div>
   <!-- 遮罩层 -->
-  <div v-if="panelState.panelConfig.backgroundImageSrc" class="fixed inset-0 z-[1]" :style="{
+  <div v-if="effectiveBackgroundImage" class="fixed inset-0 z-[1]" :style="{
     backgroundColor: `rgba(0,0,0,${panelState.panelConfig.backgroundMaskNumber ?? 0.3})`
   }" />
 
-  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container pt-14 sm:pt-0" :class="{ 'bg-gray-900': !panelState.panelConfig.backgroundImageSrc }" :style="glassVars">
+  <div ref="scrollContainerRef" class="min-h-screen relative transition-all flex flex-col scroll-container pt-14 sm:pt-0" :class="{ 'bg-gray-900': !effectiveBackgroundImage }" :style="glassVars">
     <!-- 侧边栏分组导航 -->
     <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" />
 

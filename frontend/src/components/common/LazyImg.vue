@@ -28,6 +28,7 @@ const errored = ref(false)
 const inView = ref(!props.lazy)
 
 let observer: IntersectionObserver | null = null
+const imgRef = ref<HTMLElement | null>(null)
 
 const showSrc = computed(() => (inView.value && !errored.value) ? props.src : '')
 
@@ -61,9 +62,9 @@ onMounted(() => {
     },
     { rootMargin: props.rootMargin }
   )
-  // 需要在 nextTick 获取元素，使用 setTimeout 作为简单替代
-  const el = document.querySelector(`[data-lazy-img="${props.src}"]`)
-  if (el) observer.observe(el)
+  // 使用模板 ref 获取元素
+  if (!imgRef.value) return
+  observer.observe(imgRef.value)
 })
 
 onUnmounted(() => {
@@ -72,7 +73,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="lazy-img-wrapper w-full h-full relative">
+  <div ref="imgRef" class="lazy-img-wrapper w-full h-full relative">
     <!-- 错误回退：显示文字图标 -->
     <div
       v-if="errored && fallbackText"

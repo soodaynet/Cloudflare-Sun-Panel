@@ -17,7 +17,7 @@ export interface ExportGroup {
 export interface ExportItem {
   title: string
   sort: number
-  icon: any
+  icon: Panel.ItemIcon | null
   url: string
   description: string
   openMethod: number
