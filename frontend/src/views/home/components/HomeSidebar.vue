@@ -49,7 +49,12 @@ function scrollToGroup(index: number) {
 
 function handleLogin() {
   sessionStorage.setItem('sun-panel-skip-redirect', '1')
-  router.push('/login')
+  mobileMenuOpen.value = false
+  // 使用 replace 避免浏览器历史记录问题，并确保导航不被拦截
+  router.replace('/login').catch(() => {
+    // 导航失败时使用 window.location 兜底
+    window.location.hash = '#/login'
+  })
 }
 
 function handleSettings() {

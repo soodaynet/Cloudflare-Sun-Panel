@@ -31,20 +31,26 @@ const loginPageStyle = computed(() => {
 })
 
 onMounted(async () => {
+  console.log('[Login] onMounted started')
   try {
     const res = await getAbout<Record<string, string>>()
+    console.log('[Login] getAbout response:', res)
     if (res.code === 0) {
       const hasPublic = !!(res.data?.panel_public_user_id || res.data?.default_guest_mode === '1')
       if (hasPublic) {
         hasPublicMode.value = true
         localStorage.setItem('sun-panel-public-mode', '1')
-        if (!localStorage.getItem('sun-panel-token')) {
-          const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
-          if (!skipAutoRedirect) {
+        const hasToken = !!localStorage.getItem('sun-panel-token')
+        const skipRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
+        console.log('[Login] hasToken:', hasToken, 'skipRedirect:', skipRedirect)
+        if (!hasToken) {
+          if (!skipRedirect) {
+            console.log('[Login] redirecting to Home (no token, no skip)')
             authStore.setGuestMode(null)
             router.push('/')
             return
           }
+          console.log('[Login] skip redirect, showing login form')
         }
       } else {
         localStorage.setItem('sun-panel-public-mode', '0')
@@ -55,7 +61,7 @@ onMounted(async () => {
       }
       if (res.data?.login_bg_image) loginBgImage.value = res.data.login_bg_image
     }
-  } catch { /* ignore */ }
+  } catch { console.log('[Login] getAbout failed') }
 })
 
 async function handleLogin() {
