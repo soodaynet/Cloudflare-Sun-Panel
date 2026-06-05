@@ -28,7 +28,7 @@ initApp.post('/init', async (c) => {
               name: user.name || '',
               role: user.role,
             },
-            visitMode: 0,
+            visitMode: user.visitMode,
           };
         }
         return { user: null, visitMode: 1 };
