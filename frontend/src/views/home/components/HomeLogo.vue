@@ -50,6 +50,8 @@ onUnmounted(() => {
         class="rounded"
         :style="logoImgStyle"
         alt="Logo"
+        fetchpriority="high"
+        loading="eager"
         decoding="async"
       />
       <span v-if="logoText" class="text-white text-base sm:text-xl font-bold">{{ logoText }}</span>

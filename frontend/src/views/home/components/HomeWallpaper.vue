@@ -15,7 +15,7 @@ const props = defineProps<{
       transform: 'translateZ(0)',
       willChange: 'transform',
     }">
-      <img :src="backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" loading="eager" decoding="async" alt="" />
+      <img :src="backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" loading="eager" decoding="sync" alt="" />
     </div>
     <!-- 遮罩层 -->
     <div class="fixed inset-0 z-[1]" :style="{

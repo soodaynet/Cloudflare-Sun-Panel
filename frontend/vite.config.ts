@@ -37,7 +37,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 500,
     sourcemap: false,
     reportCompressedSize: false,
-    assetsInlineLimit: 4096,
+    assetsInlineLimit: 8192,
     modulePreload: {
       polyfill: true,
     },
@@ -48,6 +48,7 @@ export default defineConfig({
           'draggable': ['vue-draggable-plus'],
           'vue-vendor': ['vue', 'vue-router', 'pinia', 'vue-i18n'],
           'axios': ['axios'],
+          'dompurify': ['dompurify'],
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
