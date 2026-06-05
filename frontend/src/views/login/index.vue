@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCard, NInput, useMessage, NDivider } from 'naive-ui'
+import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from 'naive-ui'
 import { login, getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
@@ -31,26 +31,20 @@ const loginPageStyle = computed(() => {
 })
 
 onMounted(async () => {
-  console.log('[Login] onMounted started')
   try {
     const res = await getAbout<Record<string, string>>()
-    console.log('[Login] getAbout response:', res)
     if (res.code === 0) {
       const hasPublic = !!(res.data?.panel_public_user_id || res.data?.default_guest_mode === '1')
       if (hasPublic) {
         hasPublicMode.value = true
         localStorage.setItem('sun-panel-public-mode', '1')
-        const hasToken = !!localStorage.getItem('sun-panel-token')
-        const skipRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
-        console.log('[Login] hasToken:', hasToken, 'skipRedirect:', skipRedirect)
-        if (!hasToken) {
-          if (!skipRedirect) {
-            console.log('[Login] redirecting to Home (no token, no skip)')
+        if (!localStorage.getItem('sun-panel-token')) {
+          const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
+          if (!skipAutoRedirect) {
             authStore.setGuestMode(null)
             router.push('/')
             return
           }
-          console.log('[Login] skip redirect, showing login form')
         }
       } else {
         localStorage.setItem('sun-panel-public-mode', '0')
@@ -61,36 +55,26 @@ onMounted(async () => {
       }
       if (res.data?.login_bg_image) loginBgImage.value = res.data.login_bg_image
     }
-  } catch { console.log('[Login] getAbout failed') }
+  } catch { /* ignore */ }
 })
 
 async function handleLogin() {
-  console.log('[Login] handleLogin called, username:', username.value, 'password length:', password.value.length)
   if (!username.value || !password.value) {
-    const msg = '请输入用户名和密码'
-    alert(msg)
-    message.warning(msg)
+    message.warning('请输入用户名和密码')
     return
   }
   loading.value = true
   try {
-    console.log('[Login] sending request...')
     const res = await login<{ token: string; userInfo: User.Info }>(username.value, password.value)
-    console.log('[Login] response:', res)
     if (res.code === 0) {
       authStore.loginSuccess(res.data.token, res.data.userInfo)
       message.success('登录成功')
       router.push('/')
     } else {
-      const msg = res.msg || '登录失败'
-      alert(msg)
-      message.error(msg)
+      message.error(res.msg || '登录失败')
     }
-  } catch (e) {
-    console.error('[Login] error:', e)
-    const msg = '网络错误，请稍后重试'
-    alert(msg)
-    message.error(msg)
+  } catch {
+    message.error('网络错误，请稍后重试')
   } finally { loading.value = false }
 }
 
@@ -114,24 +98,15 @@ async function handleSkipLogin() {
         </div>
       </template>
 
-      <div class="mb-4">
-        <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">用户名</label>
-        <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm mb-1.5 font-medium" style="color: rgba(255,255,255,0.9)">密码</label>
-        <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" @keyup.enter="handleLogin" />
-      </div>
-      <button
-        type="button"
-        :disabled="loading"
-        class="login-btn w-full py-2.5 rounded-lg text-white font-medium text-base transition-colors"
-        :class="loading ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:opacity-80'"
-        style="background-color: #2080f0; touch-action: manipulation; pointer-events: auto;"
-        @click="handleLogin"
-      >
-        {{ loading ? '登录中...' : '登录' }}
-      </button>
+      <NForm @submit.prevent="handleLogin">
+        <NFormItem label="用户名">
+          <NInput v-model:value="username" placeholder="请输入用户名" size="large" :disabled="loading" autocomplete="username" />
+        </NFormItem>
+        <NFormItem label="密码">
+          <NInput v-model:value="password" type="password" placeholder="请输入密码" size="large" :disabled="loading" autocomplete="current-password" @keyup.enter="handleLogin" />
+        </NFormItem>
+        <NButton type="primary" block size="large" :loading="loading" @click="handleLogin">登录</NButton>
+      </NForm>
 
       <template v-if="hasPublicMode" #footer>
         <NDivider />
@@ -150,13 +125,17 @@ async function handleSkipLogin() {
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
 }
 
-.login-btn {
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
+.login-card :deep(.n-button) {
+  touch-action: manipulation;
 }
 
 :deep(.login-card .n-card-header) {
   color: rgba(255, 255, 255, 0.95);
+}
+
+:deep(.login-card .n-form-item-label) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }
 
 :deep(.login-card .n-input) {
