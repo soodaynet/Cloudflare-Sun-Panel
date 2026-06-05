@@ -105,8 +105,19 @@ watch(
   () => syncGlassVars()
 )
 
-// Wallpaper preload
-const effectiveBackgroundImage = computed(() => panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || '')
+// Wallpaper - 使用 ref 避免 loadSiteConfig 中途触发壁纸切换闪烁
+const WALLPAPER_CACHE_KEY = 'sun-panel-effective-wallpaper'
+const effectiveBackgroundImage = ref(localStorage.getItem(WALLPAPER_CACHE_KEY) || '')
+
+function syncEffectiveWallpaper() {
+  const url = panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
+  if (url !== effectiveBackgroundImage.value) {
+    effectiveBackgroundImage.value = url
+  }
+  if (url) {
+    localStorage.setItem(WALLPAPER_CACHE_KEY, url)
+  }
+}
 
 function preloadBackgroundImage(url: string) {
   document.querySelector('link[rel="preload"][as="image"][data-wallpaper]')?.remove()
@@ -220,6 +231,7 @@ async function loadData() {
       if (panelConfig && Object.keys(panelConfig).length > 0) {
         panelState.updatePanelConfigFromCloud(panelConfig)
       }
+      syncEffectiveWallpaper()
     }
   } catch (e) { console.error(e) } finally { loading.value = false }
 }

@@ -55,8 +55,8 @@ onMounted(async () => {
         siteTitle.value = res.data.site_title
         document.title = res.data.site_title
       }
-      // 优先使用风格设置中的自定义壁纸，否则使用站点设置的登录页背景
-      const bgUrl = res.data?.backgroundImageSrc || res.data?.login_bg_image || ''
+      // 使用站点设置中的登录页背景图片
+      const bgUrl = res.data?.login_bg_image || ''
       if (bgUrl) {
         // 预加载壁纸图片，加载完成后才切换背景，避免闪烁
         const img = new Image()
