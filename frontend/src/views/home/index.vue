@@ -243,8 +243,8 @@ function getIconByUrl() {
   const url = editingItem.value.url
   if (!url) { message.warning('请先输入网址'); return }
   try {
-    const { hostname } = new URL(url)
-    const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
+    const parsed = new URL(url)
+    const faviconUrl = `${parsed.protocol}//${parsed.hostname}/favicon.ico`
     if (editingItem.value.icon) {
       editingItem.value.icon.src = faviconUrl
     }

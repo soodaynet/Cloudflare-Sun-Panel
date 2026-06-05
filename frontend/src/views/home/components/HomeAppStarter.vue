@@ -145,7 +145,7 @@ async function handleDeleteGroup(group: Panel.ItemIconGroup) {
 }
 
 async function handleGroupSortEnd() {
-  const sortItems = props.groups.filter((g: ItemGroup) => g.id).map((g: ItemGroup, i: number) => ({ id: g.id!, sort: i }))
+  const sortItems = localGroups.value.filter(g => g.id).map((g, i) => ({ id: g.id!, sort: i }))
   try {
     const res = await saveGroupSort(sortItems)
     if (res.code === 0) { message.success('分组排序已保存'); props.onSaved() }
