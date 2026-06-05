@@ -240,16 +240,18 @@ onMounted(async () => {
 
 // ====== 图标编辑 ======
 const getIconLoading = ref(false)
+const iconCandidates = ref<string[]>([])
 
 async function getIconByUrl() {
   const url = editingItem.value.url
   if (!url) { message.warning('请先输入网址'); return }
   getIconLoading.value = true
+  iconCandidates.value = []
   try {
-    const res = await getSiteFavicon<{ iconUrl: string }>(url)
-    if (res.code === 0 && res.data && editingItem.value.icon) {
-      editingItem.value.icon.src = res.data.iconUrl
-      message.success('图标获取成功')
+    const res = await getSiteFavicon<{ iconUrls: string[] }>(url)
+    if (res.code === 0 && res.data && res.data.iconUrls.length > 0) {
+      iconCandidates.value = res.data.iconUrls
+      message.success(`找到 ${iconCandidates.value.length} 个图标候选`)
     } else {
       message.error(res.msg || '获取图标失败')
     }
@@ -258,6 +260,14 @@ async function getIconByUrl() {
   } finally {
     getIconLoading.value = false
   }
+}
+
+function selectIcon(iconUrl: string) {
+  if (editingItem.value.icon) {
+    editingItem.value.icon.src = iconUrl
+  }
+  iconCandidates.value = []
+  message.success('已选择图标')
 }
 
 async function handleDeleteItem(item: Panel.ItemInfo) {
@@ -430,6 +440,21 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
           <div class="flex gap-2">
             <input v-model="editingItem.url" class="flex-1 border rounded px-3 py-2 text-sm" placeholder="https://" />
             <NButton :disabled="!editingItem.url" :loading="getIconLoading" @click="getIconByUrl">获取图标</NButton>
+          </div>
+          <!-- 图标候选列表 -->
+          <div v-if="iconCandidates.length > 0" class="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div class="text-xs text-gray-500 mb-2">点击选择图标：</div>
+            <div class="flex flex-wrap gap-2">
+              <div
+                v-for="(iconUrl, idx) in iconCandidates" :key="idx"
+                class="w-8 h-8 rounded cursor-pointer border-2 hover:border-blue-400 transition-colors flex items-center justify-center bg-white dark:bg-gray-700"
+                :class="editingItem.icon?.src === iconUrl ? 'border-blue-500' : 'border-gray-200 dark:border-gray-600'"
+                :title="iconUrl"
+                @click="selectIcon(iconUrl)"
+              >
+                <img :src="iconUrl" class="w-5 h-5 object-contain" alt="" @error="($event.target as HTMLImageElement).style.display='none'" />
+              </div>
+            </div>
           </div>
         </div>
         <div><label class="block text-sm mb-1">描述</label><input v-model="editingItem.description" class="w-full border rounded px-3 py-2 text-sm" placeholder="描述信息" /></div>

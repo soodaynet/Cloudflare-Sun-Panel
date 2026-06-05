@@ -38,19 +38,20 @@ function isValidUrl(urlStr: string): boolean {
   }
 }
 
-/** 从 HTML 中解析 favicon 链接 */
-function parseFaviconFromHtml(html: string, baseUrl: string): string | null {
-  // 匹配多种 favicon 格式: icon, shortcut icon, apple-touch-icon, mask-icon 等
+/** 从 HTML 中解析 favicon 链接（返回所有候选） */
+function parseFaviconFromHtml(html: string, baseUrl: string): string[] {
   const regex = /<link[^>]*\brel=["']([^"']*\b(?:icon|apple-touch-icon|mask-icon)\b[^"']*)["'][^>]*>/gi;
   let match: RegExpExecArray | null;
   const candidates: string[] = [];
+  const seen = new Set<string>();
 
   const hrefRegex = /href=["']([^"']+)["']/i;
   while ((match = regex.exec(html)) !== null) {
     const hrefMatch = match[0].match(hrefRegex);
     if (hrefMatch && hrefMatch[1]) {
       const resolved = new URL(hrefMatch[1], baseUrl).href;
-      // 优先 apple-touch-icon (通常尺寸更大)
+      if (seen.has(resolved)) continue;
+      seen.add(resolved);
       if (/apple-touch-icon/i.test(match[1])) {
         candidates.unshift(resolved);
       } else {
@@ -58,7 +59,7 @@ function parseFaviconFromHtml(html: string, baseUrl: string): string | null {
       }
     }
   }
-  return candidates.length > 0 ? candidates[0] : null;
+  return candidates;
 }
 
 /** 快速探测 favicon 路径（HEAD 请求，不下载 body） */
@@ -206,7 +207,7 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
  * 获取站点图标 (favicon)
  * POST /api/panel/itemIcon/getSiteFavicon
  *
- * 策略: 先用 HEAD 快速探测常见路径，未命中则下载 HTML 解析
+ * 策略: 先用 HEAD 快速探测常见路径，再解析 HTML，返回所有候选图标供用户选择
  */
 panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
   try {
@@ -218,6 +219,7 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
 
     const parsedUrl = new URL(url);
     const origin = parsedUrl.origin;
+    const found = new Set<string>();
 
     // 阶段 1: 快速探测常见路径（HEAD 请求，不下载 body）
     const probePaths = [
@@ -231,28 +233,38 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
     const results = await Promise.allSettled(probes);
     for (const r of results) {
       if (r.status === 'fulfilled' && r.value) {
-        return ok(c, { iconUrl: r.value });
+        found.add(r.value);
       }
     }
 
     // 阶段 2: 下载 HTML 并解析 <link> 标签
-    const htmlRes = await fetch(origin, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
-        'Accept': 'text/html',
-      },
-      redirect: 'follow',
-      cf: { cacheTtl: 3600 },
-    } as RequestInit);
+    let htmlParsed = false;
+    try {
+      const htmlRes = await fetch(origin, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
+          'Accept': 'text/html',
+        },
+        redirect: 'follow',
+        cf: { cacheTtl: 3600 },
+      } as RequestInit);
 
-    if (!htmlRes.ok) {
-      return ok(c, { iconUrl: `${origin}/favicon.ico` });
-    }
+      if (htmlRes.ok) {
+        const html = await htmlRes.text();
+        const htmlCandidates = parseFaviconFromHtml(html, origin);
+        htmlParsed = true;
+        for (const iconUrl of htmlCandidates) {
+          found.add(iconUrl);
+        }
+      }
+    } catch { /* HTML fetch failed, use probes only */ }
 
-    const html = await htmlRes.text();
-    const iconUrl = parseFaviconFromHtml(html, origin) || `${origin}/favicon.ico`;
+    // 始终包含默认 favicon.ico 作为兜底
+    const defaultFavicon = `${origin}/favicon.ico`;
+    found.add(defaultFavicon);
 
-    return ok(c, { iconUrl });
+    const iconUrls = Array.from(found).slice(0, 10);
+    return ok(c, { iconUrls });
   } catch (e: unknown) {
     return fail(c, getErrorMessage(e), 500);
   }
