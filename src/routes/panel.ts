@@ -38,27 +38,45 @@ function isValidUrl(urlStr: string): boolean {
   }
 }
 
-/** 从 HTML 中解析 favicon 链接（返回所有候选） */
+/** 从 HTML 中解析 favicon 链接（返回所有候选，去重） */
 function parseFaviconFromHtml(html: string, baseUrl: string): string[] {
-  const regex = /<link[^>]*\brel=["']([^"']*\b(?:icon|apple-touch-icon|mask-icon)\b[^"']*)["'][^>]*>/gi;
-  let match: RegExpExecArray | null;
   const candidates: string[] = [];
   const seen = new Set<string>();
 
-  const hrefRegex = /href=["']([^"']+)["']/i;
-  while ((match = regex.exec(html)) !== null) {
-    const hrefMatch = match[0].match(hrefRegex);
-    if (hrefMatch && hrefMatch[1]) {
-      const resolved = new URL(hrefMatch[1], baseUrl).href;
-      if (seen.has(resolved)) continue;
+  function addCandidate(href: string) {
+    try {
+      const resolved = new URL(href, baseUrl).href;
+      if (seen.has(resolved)) return;
       seen.add(resolved);
-      if (/apple-touch-icon/i.test(match[1])) {
-        candidates.unshift(resolved);
-      } else {
-        candidates.push(resolved);
-      }
+      candidates.push(resolved);
+    } catch { /* ignore invalid href */ }
+  }
+
+  // 1. <link rel="icon|shortcut icon|apple-touch-icon|mask-icon|fluid-icon" href="...">
+  // 支持 href 在 rel 前后、属性用单/双引号或无引号
+  const linkRegex = /<link[^>]*?>/gi;
+  let linkMatch: RegExpExecArray | null;
+  while ((linkMatch = linkRegex.exec(html)) !== null) {
+    const tag = linkMatch[0];
+    const rel = /rel=["']?([^"'\s>]+)["']?/i.exec(tag);
+    if (!rel) continue;
+    const relVal = rel[1].toLowerCase();
+    if (!/\b(?:icon|shortcut|apple-touch|mask-icon|fluid-icon)\b/i.test(relVal)) continue;
+
+    const href = /href=["']?([^"'\s>]+)["']?/i.exec(tag);
+    if (href && href[1]) {
+      addCandidate(href[1]);
     }
   }
+
+  // 2. <meta name="msapplication-TileImage" content="...">
+  const msTileRegex = /<meta\s[^>]*name=["']?msapplication-TileImage["']?[^>]*>/gi;
+  let msMatch: RegExpExecArray | null;
+  while ((msMatch = msTileRegex.exec(html)) !== null) {
+    const content = /content=["']?([^"'\s>]+)["']?/i.exec(msMatch[0]);
+    if (content && content[1]) addCandidate(content[1]);
+  }
+
   return candidates;
 }
 
@@ -207,7 +225,7 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
  * 获取站点图标 (favicon)
  * POST /api/panel/itemIcon/getSiteFavicon
  *
- * 策略: 先用 HEAD 快速探测常见路径，再解析 HTML，返回所有候选图标供用户选择
+ * 策略: 先并行 HEAD 探测常见路径，再解析 HTML <link> 标签，返回所有候选
  */
 panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
   try {
@@ -221,7 +239,7 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
     const origin = parsedUrl.origin;
     const found = new Set<string>();
 
-    // 阶段 1: 快速探测常见路径（HEAD 请求，不下载 body）
+    // 阶段 1: 并行 HEAD 探测常见路径（2s 超时，不下载 body）
     const probePaths = [
       '/favicon.ico',
       '/favicon.png',
@@ -237,22 +255,24 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
       }
     }
 
-    // 阶段 2: 下载 HTML 并解析 <link> 标签
-    let htmlParsed = false;
+    // 阶段 2: 下载 HTML 并解析 <link> / <meta> 标签（5s 超时）
     try {
+      const abort = new AbortController();
+      const timeout = setTimeout(() => abort.abort(), 5000);
       const htmlRes = await fetch(origin, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
           'Accept': 'text/html',
         },
+        signal: abort.signal,
         redirect: 'follow',
         cf: { cacheTtl: 3600 },
       } as RequestInit);
+      clearTimeout(timeout);
 
       if (htmlRes.ok) {
         const html = await htmlRes.text();
         const htmlCandidates = parseFaviconFromHtml(html, origin);
-        htmlParsed = true;
         for (const iconUrl of htmlCandidates) {
           found.add(iconUrl);
         }

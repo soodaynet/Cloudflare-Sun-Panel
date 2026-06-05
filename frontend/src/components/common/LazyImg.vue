@@ -47,7 +47,6 @@ onMounted(() => {
     inView.value = true
     return
   }
-  // 优先尝试原生 loading="lazy"，IntersectionObserver 作为增强
   if ('loading' in HTMLImageElement.prototype) {
     inView.value = true
     return
@@ -62,7 +61,6 @@ onMounted(() => {
     },
     { rootMargin: props.rootMargin }
   )
-  // 使用模板 ref 获取元素
   if (!imgRef.value) return
   observer.observe(imgRef.value)
 })
@@ -74,14 +72,37 @@ onUnmounted(() => {
 
 <template>
   <div ref="imgRef" class="lazy-img-wrapper w-full h-full relative">
+    <!-- 加载中动画 -->
+    <div
+      v-if="!loaded && !errored && inView"
+      class="absolute inset-0 rounded-lg flex items-center justify-center"
+      :style="{ backgroundColor: fallbackBg + '20' }"
+    >
+      <div class="w-4 h-4 border-2 border-white/40 border-t-white/80 rounded-full animate-spin" />
+    </div>
+
+    <!-- 错误回退：显示默认地球图标 -->
+    <div
+      v-if="errored && !fallbackText"
+      class="w-full h-full rounded-lg flex items-center justify-center"
+      :style="{ backgroundColor: fallbackBg }"
+    >
+      <svg class="w-4 h-4 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <ellipse cx="12" cy="12" rx="4" ry="10" />
+        <path d="M2 12h20" />
+      </svg>
+    </div>
+
     <!-- 错误回退：显示文字图标 -->
     <div
-      v-if="errored && fallbackText"
+      v-else-if="errored && fallbackText"
       class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
       :style="{ backgroundColor: fallbackBg }"
     >
       {{ fallbackText.charAt(0) || '?' }}
     </div>
+
     <!-- 正常图片 -->
     <img
       v-else
@@ -95,12 +116,6 @@ onUnmounted(() => {
       @load="onLoad"
       @error="onError"
     />
-    <!-- 加载骨架 -->
-    <div
-      v-if="!loaded && !errored && inView"
-      class="absolute inset-0 rounded-lg animate-pulse"
-      :style="{ backgroundColor: fallbackBg + '30' }"
-    />
   </div>
 </template>
 
@@ -112,5 +127,12 @@ onUnmounted(() => {
 
 .lazy-img {
   transition: opacity 0.3s ease;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 0.8s linear infinite;
 }
 </style>
