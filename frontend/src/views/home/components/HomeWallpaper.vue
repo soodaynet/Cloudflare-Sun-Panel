@@ -1,26 +1,10 @@
 <script setup lang="ts">
-import { watch } from 'vue'
 
 const props = defineProps<{
   backgroundImageSrc: string
   backgroundBlur: number
   backgroundMaskNumber: number
 }>()
-
-function preloadBackgroundImage(url: string) {
-  document.querySelector('link[rel="preload"][as="image"][data-wallpaper]')?.remove()
-  if (!url) return
-  const link = document.createElement('link')
-  link.rel = 'preload'
-  link.as = 'image'
-  link.href = url
-  link.setAttribute('data-wallpaper', 'true')
-  document.head.appendChild(link)
-}
-
-watch(() => props.backgroundImageSrc, (url) => {
-  preloadBackgroundImage(url)
-}, { immediate: true })
 </script>
 
 <template>
@@ -31,7 +15,7 @@ watch(() => props.backgroundImageSrc, (url) => {
       transform: 'translateZ(0)',
       willChange: 'transform',
     }">
-      <img :src="backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" decoding="async" alt="" />
+      <img :src="backgroundImageSrc" class="w-full h-full object-cover" fetchpriority="high" loading="eager" decoding="async" alt="" />
     </div>
     <!-- 遮罩层 -->
     <div class="fixed inset-0 z-[1]" :style="{

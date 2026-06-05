@@ -109,6 +109,11 @@ watch(
 const WALLPAPER_CACHE_KEY = 'sun-panel-effective-wallpaper'
 const effectiveBackgroundImage = ref(localStorage.getItem(WALLPAPER_CACHE_KEY) || '')
 
+// 立即预加载缓存的壁纸，在 Vue 挂载前就触发浏览器下载，加速首屏渲染
+if (effectiveBackgroundImage.value) {
+  preloadBackgroundImage(effectiveBackgroundImage.value)
+}
+
 function syncEffectiveWallpaper() {
   const url = panelState.panelConfig.backgroundImageSrc || siteConfig.value.login_bg_image || ''
   if (url !== effectiveBackgroundImage.value) {
@@ -120,9 +125,12 @@ function syncEffectiveWallpaper() {
 }
 
 function preloadBackgroundImage(url: string) {
-  document.querySelector('link[rel="preload"][as="image"][data-wallpaper]')?.remove()
+  let link = document.querySelector('link[rel="preload"][as="image"][data-wallpaper]') as HTMLLinkElement | null
+  // 如果同一 URL 已预加载，跳过
+  if (link && link.href === url) return
+  link?.remove()
   if (!url) return
-  const link = document.createElement('link')
+  link = document.createElement('link')
   link.rel = 'preload'
   link.as = 'image'
   link.href = url
