@@ -16,16 +16,27 @@ function preloadLoginBg(url: string) {
   document.head.appendChild(link)
 }
 
-// 立即预加载缓存的登录背景，在 Vue 挂载前触发浏览器下载
+// 模块级：同步检查缓存图片是否已就绪，避免先显示渐变再切换
 const cachedLoginBg = localStorage.getItem(LOGIN_BG_CACHE_KEY) || ''
+let initialBg = ''
+
 if (cachedLoginBg) {
-  const link = document.createElement('link')
-  link.rel = 'preload'
-  link.as = 'image'
-  link.href = cachedLoginBg
-  link.setAttribute('data-login-bg', 'true')
-  document.head.appendChild(link)
+  // 同步探测：如果图片已在浏览器缓存中，img.complete 为 true
+  const probe = new Image()
+  probe.src = cachedLoginBg
+  if (probe.complete && probe.naturalWidth > 0) {
+    initialBg = cachedLoginBg
+  } else {
+    // 图片未缓存，设置 onload 在加载完成后切换
+    probe.onload = () => { loginBgImageRef.value = cachedLoginBg }
+    probe.onerror = () => { /* 保持渐变 */ }
+  }
+  // 同时添加 preload 提示浏览器提前下载
+  preloadLoginBg(cachedLoginBg)
 }
+
+// 模块级 ref 引用，供 probe.onload 回调使用
+const loginBgImageRef = ref(initialBg)
 
 export function useLoginPage() {
   const router = useRouter()
@@ -34,8 +45,8 @@ export function useLoginPage() {
   const hasPublicMode = ref(false)
   const siteTitle = ref('Sun-Panel')
 
-  // 如果有缓存的背景 URL，立即显示，避免先显示渐变再切换
-  const loginBgImage = ref(cachedLoginBg || '')
+  // 使用模块级 ref，确保 probe.onload 能正确更新
+  const loginBgImage = loginBgImageRef
 
   const loginPageStyle = computed(() => {
     const bgImage = loginBgImage.value
