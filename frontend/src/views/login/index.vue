@@ -18,6 +18,7 @@ const loading = ref(false)
 const {
   hasPublicMode,
   siteTitle,
+  loginBgImage,
   loginPageStyle,
   loginCardStyle,
   initLoginPage,
@@ -57,7 +58,8 @@ async function handleSkipLogin() {
 
 <template>
   <div
-    class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600"
+    class="flex items-center justify-center min-h-screen"
+    :class="{ 'bg-gradient-to-br from-blue-500 to-purple-600': !loginBgImage }"
     :style="loginPageStyle"
   >
     <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false" :style="loginCardStyle">
