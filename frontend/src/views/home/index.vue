@@ -13,7 +13,6 @@ import { useItemEditor } from './composables/useItemEditor'
 import HomeAppStarter from './components/HomeAppStarter.vue'
 import HomeSidebar from './components/HomeSidebar.vue'
 import HomeLogo from './components/HomeLogo.vue'
-import LazyImg from '@/components/common/LazyImg.vue'
 
 interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
@@ -362,7 +361,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                 class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                 @click="openUrl(item)">
                 <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                  <LazyImg v-if="item.icon?.src" :src="item.icon.src" :alt="item.title" :fallback-text="item.icon?.text || item.title" :fallback-bg="item.icon?.backgroundColor" />
+                  <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
                   <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                     :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                     {{ item.icon?.text || item.title?.charAt(0) || '?' }}
@@ -391,7 +390,7 @@ function handleSiteConfigUpdate(config: Panel.SiteConfig) {
                   <div class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
                     @click="openUrl(item)">
                     <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
-                      <LazyImg v-if="item.icon?.src" :src="item.icon.src" :alt="item.title" :fallback-text="item.icon?.text || item.title" :fallback-bg="item.icon?.backgroundColor" />
+                      <img v-if="item.icon?.src" :src="item.icon.src" class="w-full h-full object-cover" :alt="item.title" loading="lazy" decoding="async" />
                       <div v-else class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
                         :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }">
                         {{ item.icon?.text || item.title?.charAt(0) || '?' }}

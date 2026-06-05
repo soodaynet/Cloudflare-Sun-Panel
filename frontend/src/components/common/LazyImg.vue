@@ -30,7 +30,7 @@ const inView = ref(!props.lazy)
 let observer: IntersectionObserver | null = null
 const imgRef = ref<HTMLElement | null>(null)
 
-const showSrc = computed(() => (inView.value && !errored.value) ? props.src : '')
+const showSrc = computed(() => (!errored.value) ? props.src : '')
 
 function onLoad() {
   loaded.value = true
@@ -40,6 +40,14 @@ function onLoad() {
 function onError() {
   errored.value = true
   emit('error')
+}
+
+/** 处理图片元素：检查是否已缓存完成，否则绑定事件 */
+function handleImg(el: unknown) {
+  if (!el || !(el instanceof HTMLImageElement)) return
+  if (el.complete && el.naturalWidth > 0) {
+    loaded.value = true
+  }
 }
 
 onMounted(() => {
@@ -106,6 +114,7 @@ onUnmounted(() => {
     <!-- 正常图片 -->
     <img
       v-else
+      :ref="handleImg"
       :src="showSrc"
       :alt="alt"
       :data-lazy-img="src"
