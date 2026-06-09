@@ -29,24 +29,6 @@ export function isValidUrl(urlStr: string): boolean {
   }
 }
 
-/** 规范化用户输入的 URL，提取标准化 origin 和 domain */
-export function normalizeInputUrl(rawUrl: string): { origin: string; domain: string } | null {
-  let urlStr = rawUrl.trim()
-  if (!urlStr) return null
-  
-  // 自动补全协议
-  if (!/^https?:\/\//i.test(urlStr)) {
-    urlStr = 'https://' + urlStr
-  }
-  
-  try {
-    const url = new URL(urlStr)
-    return { origin: url.origin, domain: url.hostname }
-  } catch {
-    return null
-  }
-}
-
 /** 从 HTML 中解析 favicon 链接（返回候选列表，按尺寸降序） */
 export function parseFaviconFromHtml(html: string, baseUrl: string): FaviconCandidate[] {
   const candidates: FaviconCandidate[] = []
@@ -141,25 +123,4 @@ export async function probeFavicon(origin: string, path: string): Promise<Favico
     /* probe failed */
   }
   return null
-}
-
-/** 创建 favicon 流程专用 logger */
-export function createFaviconLogger(domain: string) {
-  const startTime = Date.now()
-  return {
-    log(phase: string, detail?: string) {
-      console.log(`[Favicon] domain=${domain} phase=${phase}${detail ? ' ' + detail : ''}`)
-    },
-    done(probes: number, html: number, fallback: number, total: number) {
-      const elapsed = Date.now() - startTime
-      console.log(`[Favicon] domain=${domain} cache=miss probes=${probes} html=${html} fallback=${fallback} candidates=${total} time=${elapsed}ms`)
-    },
-    hit(total: number) {
-      console.log(`[Favicon] domain=${domain} cache=hit candidates=${total}`)
-    },
-    error(phase: string, err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`[Favicon] domain=${domain} phase=${phase} error=${msg}`)
-    },
-  }
 }
