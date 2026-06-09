@@ -62,10 +62,11 @@ export function useWallpaper(
 
   watch(
     effectiveBackgroundImage,
-    (url) => {
-      preloadBackgroundImage(url)
+    (newUrl, oldUrl) => {
+      if (newUrl && newUrl !== oldUrl) {
+        preloadBackgroundImage(newUrl)
+      }
     },
-    { immediate: true },
   )
 
   return {

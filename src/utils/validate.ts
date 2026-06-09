@@ -33,7 +33,6 @@ export {
   sortSchema,
   getListByGroupIdSchema,
   faviconSchema,
-  proxyIconSchema,
 } from '../validators/panel'
 export {
   userConfigSchema,

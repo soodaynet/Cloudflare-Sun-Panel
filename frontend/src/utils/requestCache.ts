@@ -14,7 +14,7 @@ interface CacheEntry<T> {
 const cache = new Map<string, CacheEntry<unknown>>()
 
 /** 请求去重 + 内存缓存：同一 key 在 maxAge 秒内只发一次请求 */
-export function cachedRequest<T>(key: string, requestFn: () => Promise<T>, maxAge: number = 30): Promise<T> {
+export function cachedRequest<T>(key: string, requestFn: () => Promise<T>, maxAge: number = 60): Promise<T> {
   const now = Date.now()
   const existing = cache.get(key) as CacheEntry<T> | undefined
 

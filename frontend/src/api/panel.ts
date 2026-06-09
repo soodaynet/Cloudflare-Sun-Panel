@@ -47,6 +47,3 @@ export function getSiteFavicon<T>(url: string) {
   return post<T>({ url: '/panel/itemIcon/getSiteFavicon', data: { url } })
 }
 
-export function proxyIcon<T>(url: string) {
-  return post<T>({ url: '/panel/itemIcon/proxyIcon', data: { url } })
-}

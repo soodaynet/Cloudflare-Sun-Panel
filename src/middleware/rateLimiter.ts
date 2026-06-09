@@ -1,6 +1,6 @@
 import type { Context, Next } from 'hono'
 
-const MAX_STORE_SIZE = 1000
+const MAX_STORE_SIZE = 500
 
 export function createRateLimiter(options?: { maxRequests?: number; windowMs?: number }) {
   const maxRequests = options?.maxRequests ?? 10

@@ -1,5 +1,5 @@
 export { login, register } from './auth'
-export { getAllData, getGroupList, saveGroup, deleteGroups, saveGroupSort, addItems, editItem, getItemsByGroup, deleteItems, saveItemSort, getSiteFavicon, proxyIcon } from './panel'
+export { getAllData, getGroupList, saveGroup, deleteGroups, saveGroupSort, addItems, editItem, getItemsByGroup, deleteItems, saveItemSort, getSiteFavicon } from './panel'
 export { getUserConfig, setUserConfig, getAuthInfo, updateUserInfo, updatePassword, getUserList, createUser, updateUser, deleteUsers, getPublicVisitUser, setPublicVisitUser } from './user'
 export type { UserFormData } from './user'
 export { getSystemSetting, setSystemSetting, getAbout, saveSiteSettings, getInit } from './settings'

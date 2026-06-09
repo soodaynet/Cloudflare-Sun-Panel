@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = withDefaults(defineProps<{
   src: string
@@ -15,8 +15,6 @@ const props = withDefaults(defineProps<{
   fallbackBg?: string
   /** 是否使用 IntersectionObserver 懒加载（默认 true） */
   lazy?: boolean
-  /** 距离视口的提前加载距离 (px) */
-  rootMargin?: string
 }>(), {
   alt: '',
   srcset: '',
@@ -24,7 +22,6 @@ const props = withDefaults(defineProps<{
   fetchpriority: 'auto',
   fallbackBg: '#4a90d9',
   lazy: true,
-  rootMargin: '200px',
 })
 
 const emit = defineEmits<{
@@ -34,10 +31,6 @@ const emit = defineEmits<{
 
 const loaded = ref(false)
 const errored = ref(false)
-const inView = ref(!props.lazy)
-
-let observer: IntersectionObserver | null = null
-const imgRef = ref<HTMLElement | null>(null)
 
 const showSrc = computed(() => (!errored.value) ? props.src : '')
 
@@ -57,43 +50,13 @@ function handleImg(el: unknown) {
     loaded.value = true
   }
 }
-
-onMounted(() => {
-  if (!props.lazy) {
-    inView.value = true
-    return
-  }
-  // 浏览器原生支持 loading="lazy"，无需 IntersectionObserver
-  if ('loading' in HTMLImageElement.prototype) {
-    inView.value = true
-    return
-  }
-  // 降级方案：IntersectionObserver
-  observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0]?.isIntersecting) {
-        inView.value = true
-        observer?.disconnect()
-        observer = null
-      }
-    },
-    { rootMargin: props.rootMargin },
-  )
-  if (imgRef.value) {
-    observer.observe(imgRef.value)
-  }
-})
-
-onUnmounted(() => {
-  observer?.disconnect()
-})
 </script>
 
 <template>
-  <div ref="imgRef" class="lazy-img-wrapper w-full h-full relative">
+  <div class="lazy-img-wrapper w-full h-full relative">
     <!-- 加载中骨架屏 -->
     <div
-      v-if="!loaded && !errored && inView"
+      v-if="!loaded && !errored"
       class="absolute inset-0 rounded-lg flex items-center justify-center"
       :style="{ backgroundColor: fallbackBg + '20' }"
     >

@@ -9,12 +9,11 @@ import {
   sortSchema,
   getListByGroupIdSchema,
   faviconSchema,
-  proxyIconSchema,
 } from '../utils/validate'
 import { PanelService } from '../services/PanelService'
 import { ok, fail, getErrorMessage } from '../utils/response'
 import { AppError } from '../utils/errors'
-import { isValidUrl, normalizeInputUrl, parseFaviconFromHtml, probeFavicon, createFaviconLogger, type FaviconCandidate } from '../utils/favicon'
+import { isValidUrl, normalizeInputUrl, parseFaviconFromHtml, probeFavicon, type FaviconCandidate } from '../utils/favicon'
 
 // Favicon 发现结果缓存 (key: origin, TTL: 1小时)
 const faviconCache = new Map<string, { candidates: FaviconCandidate[]; ts: number }>()
@@ -39,7 +38,7 @@ panelApp.post('/getAllData', async (c) => {
     const service = new PanelService(c.env.DB)
     const result = await service.getAllData(userId)
 
-    c.header('Cache-Control', 'private, max-age=30')
+    c.header('Cache-Control', 'private, max-age=60')
     return ok(c, result)
   } catch (e: unknown) {
     if (e instanceof AppError) {
@@ -182,9 +181,9 @@ panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
  * 1. 检查内存缓存 (TTL 1h)
  * 2. 规范化输入 URL
  * 3. 并发执行 HEAD 探测 + HTML 解析
- * 4. 附加第三方服务兜底 (Google, DuckDuckGo)
- * 5. 智能排序: 大尺寸 > SVG > HEAD确认 > HTML声明 > 第三方 > 兜底
- * 6. 8 秒硬超时
+ * 4. 第三方服务兜底
+ * 5. 排序: HTML 解析(按尺寸) > HEAD 探测 > 兜底
+ * 6. 5 秒硬超时
  */
 panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => {
   const startTime = Date.now()
@@ -198,9 +197,6 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
     }
     const { origin, domain } = normalized
 
-    const logger = createFaviconLogger(domain)
-    logger.log('start')
-
     // 2. 安全检查 (复用原有 isValidUrl)
     if (!isValidUrl(origin)) {
       return fail(c, 'URL 不合法或包含内网地址', 400)
@@ -209,17 +205,13 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
     // 3. 检查缓存
     const cached = faviconCache.get(origin)
     if (cached && (Date.now() - cached.ts) < FAVICON_CACHE_TTL) {
-      logger.hit(cached.candidates.length)
+      console.log(`[Favicon] domain=${domain} cache=hit candidates=${cached.candidates.length}`)
       return ok(c, { iconUrls: cached.candidates.map(c => c.url) })
     }
 
     // 4. 并发执行 HEAD 探测 + HTML 解析
     const probePaths = [
       '/favicon.ico',
-      '/favicon.png',
-      '/favicon.svg',
-      '/apple-touch-icon.png',
-      '/apple-touch-icon-precomposed.png',
     ]
 
     const probesPromise = Promise.allSettled(
@@ -253,10 +245,10 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
       }
     })()
 
-    // 5. 8 秒硬超时控制
+    // 5. 5 秒硬超时控制
     let timedOut = false
     const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => { timedOut = true; resolve(null) }, 8000)
+      setTimeout(() => { timedOut = true; resolve(null) }, 5000)
     })
 
     // 等待并发结果（或超时）
@@ -267,13 +259,10 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
 
     // 收集 HEAD 探测结果
     const probeCandidates: FaviconCandidate[] = []
-    const failedProbePaths = new Set<string>()
     for (let i = 0; i < probeResults.length; i++) {
       const r = probeResults[i]
       if (r.status === 'fulfilled' && r.value) {
         probeCandidates.push(r.value)
-      } else {
-        failedProbePaths.add(`${origin}${probePaths[i]}`)
       }
     }
 
@@ -286,8 +275,6 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
       }
     }
 
-    logger.log('collected', `probes=${probeCandidates.length} html=${htmlCandidates.length}`)
-
     // 6. 构建去重集合
     const seen = new Set<string>()
     const allCandidates: FaviconCandidate[] = []
@@ -298,49 +285,19 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
       allCandidates.push(c)
     }
 
-    // 按优先级排序后加入
-    const sortCandidates = (list: FaviconCandidate[]) => {
-      list.sort((a, b) => {
-        // SVG 优先
-        const aIsSvg = a.url.endsWith('.svg')
-        const bIsSvg = b.url.endsWith('.svg')
-        if (aIsSvg && !bIsSvg) return -1
-        if (!aIsSvg && bIsSvg) return 1
-        // 大尺寸优先
-        const aSize = a.size || 0
-        const bSize = b.size || 0
-        if (aSize >= 32 && bSize < 32) return -1
-        if (bSize >= 32 && aSize < 32) return 1
-        return bSize - aSize
-      })
-    }
-
-    // 1) HEAD 探测确认有效
-    sortCandidates(probeCandidates)
+    // 排序: HTML 解析(按 size 降序) > HEAD 探测 > 兜底
+    // HTML 解析结果已按 size 降序排列（在 parseFaviconFromHtml 中完成）
+    for (const c of htmlCandidates) add(c)
     for (const c of probeCandidates) add(c)
 
-    // 2) HTML 显式声明
-    sortCandidates(htmlCandidates)
-    for (const c of htmlCandidates) add(c)
-
-    // 3) 第三方兜底 - 国内可访问源 (参考 getFavicon-master)
+    // 第三方兜底
     const fallbackCandidates: FaviconCandidate[] = [
-      { url: `https://t3.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
-      { url: `https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
-      { url: `https://t1.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
       { url: `https://t0.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`, source: 'fallback' },
       { url: `https://api.iowen.cn/favicon/?url=${domain}`, source: 'fallback' },
     ]
     for (const c of fallbackCandidates) add(c)
 
-    // 4) 兜底 /favicon.ico（仅当未被 HEAD 探测失败时添加）
-    const defaultFavicon = `${origin}/favicon.ico`
-    if (!failedProbePaths.has(defaultFavicon)) {
-      add({ url: defaultFavicon, source: 'default' })
-    }
-
-    const fallbackCount = fallbackCandidates.filter(c => seen.has(c.url)).length + (failedProbePaths.has(defaultFavicon) ? 0 : 1)
-    logger.done(probeCandidates.length, htmlCandidates.length, fallbackCount, allCandidates.length)
+    console.log(`[Favicon] domain=${domain} cache=miss probes=${probeCandidates.length} html=${htmlCandidates.length} fallback=${fallbackCandidates.length} candidates=${allCandidates.length} time=${Date.now() - startTime}ms`)
 
     // 7. 缓存结果
     faviconCache.set(origin, { candidates: allCandidates, ts: Date.now() })
@@ -348,73 +305,6 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
     return ok(c, { iconUrls: allCandidates.map(c => c.url) })
   } catch (e: unknown) {
     console.error(`[Favicon] unhandled error`, e)
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
-})
-
-/**
- * 代理获取外部图标
- * POST /api/panel/itemIcon/proxyIcon
- *
- * 当外部图标因 Referrer-Policy 等原因无法在前端直接加载时，通过后端代理获取
- * 并返回 base64 编码的图片数据
- */
-panelApp.post('/itemIcon/proxyIcon', validate(proxyIconSchema), async (c) => {
-  try {
-    const { url } = c.var.validatedBody as { url: string }
-
-    if (!isValidUrl(url)) {
-      return fail(c, 'URL 不合法或包含内网地址', 400)
-    }
-
-    const abort = new AbortController()
-    const timeout = setTimeout(() => abort.abort(), 8000)
-
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SunPanel/1.0)',
-        Accept: 'image/*',
-      },
-      signal: abort.signal,
-      redirect: 'follow',
-      cf: { cacheTtl: 86400 },
-    } as RequestInit)
-    clearTimeout(timeout)
-
-    if (!res.ok) {
-      return fail(c, '代理图标失败: 目标服务器返回错误', 502)
-    }
-
-    const contentType = res.headers.get('content-type') || ''
-    if (!contentType.startsWith('image/')) {
-      return fail(c, '代理图标失败: 返回内容不是图片', 502)
-    }
-
-    const arrayBuffer = await res.arrayBuffer()
-
-    // 限制最大 500KB
-    const MAX_SIZE = 500 * 1024
-    if (arrayBuffer.byteLength > MAX_SIZE) {
-      return fail(c, '代理图标失败: 图片过大', 413)
-    }
-    if (arrayBuffer.byteLength === 0) {
-      return fail(c, '代理图标失败: 图片为空', 502)
-    }
-
-    const base64 = btoa(
-      Array.from(new Uint8Array(arrayBuffer))
-        .map((b) => String.fromCharCode(b))
-        .join(''),
-    )
-
-    return ok(c, {
-      base64: `data:${contentType};base64,${base64}`,
-      contentType,
-    })
-  } catch (e: unknown) {
     if (e instanceof AppError) {
       return fail(c, e.message, e.code, e.httpStatus)
     }
