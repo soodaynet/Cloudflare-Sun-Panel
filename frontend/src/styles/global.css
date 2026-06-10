@@ -98,3 +98,10 @@ html, body, #app {
 .n-popover:not(.n-popover--no-glass) .n-popover-arrow-wrapper .n-popover-arrow {
   background-color: var(--glass-bg-hover) !important;
 }
+
+/* ========== 性能优化: CSS 内容可见性 ========== */
+/* 对分组卡片区域应用 content-visibility，延迟渲染屏幕外内容 */
+.group-section:nth-child(n+3) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}

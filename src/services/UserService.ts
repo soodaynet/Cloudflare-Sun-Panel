@@ -24,7 +24,7 @@ export class UserService {
     )
   }
 
-  async authenticate(username: string, password: string) {
+  async authenticate(username: string, password: string, jwtSecret?: string) {
     const user = await this.findByUsername(username)
     if (!user) throw AppError.unauthorized('用户名或密码错误')
 
@@ -33,7 +33,10 @@ export class UserService {
 
     if (user.status !== 1) throw AppError.forbidden('账号已被禁用')
 
-    const token = await signToken({ userId: user.id, username: user.username, role: user.role })
+    const token = await signToken(
+      { userId: user.id, username: user.username, role: user.role },
+      { secret: jwtSecret },
+    )
 
     return {
       token,

@@ -24,6 +24,14 @@ const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 
+// 首屏预加载策略：前 2 个分组的前 6 个图标使用 eager 加载
+const EAGER_COUNT_PER_GROUP = 6
+const MAX_EAGER_GROUPS = 2
+
+function isEagerLoad(groupIndex: number, itemIndex: number): boolean {
+  return groupIndex < MAX_EAGER_GROUPS && itemIndex < EAGER_COUNT_PER_GROUP
+}
+
 const safeFooterHtml = computed(() => {
   return DOMPurify.sanitize(panelState.panelConfig.footerHtml || '')
 })
@@ -253,6 +261,7 @@ onMounted(async () => {
                 :item="item"
                 :editable="true"
                 :is-edit-mode="true"
+                :eager-load="isEagerLoad(gi, ii)"
                 @click="openUrl"
                 @edit="openEditItem"
                 @delete="handleDeleteItem"
@@ -267,7 +276,13 @@ onMounted(async () => {
                 placement="bottom"
               >
                 <template #trigger>
-                  <HomeItemCard :item="item" :editable="false" :is-edit-mode="false" @click="openUrl" />
+                  <HomeItemCard
+                    :item="item"
+                    :editable="false"
+                    :is-edit-mode="false"
+                    :eager-load="isEagerLoad(gi, ii)"
+                    @click="openUrl"
+                  />
                 </template>
                 <span>{{ item.description }}</span>
               </NTooltip>

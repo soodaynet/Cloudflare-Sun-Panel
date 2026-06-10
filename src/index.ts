@@ -17,6 +17,7 @@ import initRoutes from './routes/init'
 type Bindings = {
   DB: D1Database
   ASSETS: Fetcher
+  JWT_SECRET?: string
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -78,6 +79,7 @@ app.use('*', bodyLimitMiddleware)
 
 // 健康检查
 app.get('/api/health', (c) => {
+  c.header('Cache-Control', 'no-cache')
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } })
 })
 

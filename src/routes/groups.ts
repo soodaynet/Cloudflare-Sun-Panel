@@ -21,7 +21,7 @@ groupsApp.post('/itemIconGroup/getList', async (c) => {
     const user = getAuthUser(c)!
 
     const list = await svc.getGroups(user.userId)
-    c.header('Cache-Control', 'public, max-age=60')
+    c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
     return ok(c, list)
   } catch (e: unknown) {
     if (e instanceof AppError) {

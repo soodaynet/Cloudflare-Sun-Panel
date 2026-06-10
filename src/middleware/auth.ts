@@ -10,11 +10,21 @@ export interface AuthUser {
   visitMode: number // 0=登录, 1=公开/访客
 }
 
+interface AuthBindings {
+  DB: D1Database
+  JWT_SECRET?: string
+}
+
 // ========== 辅助函数 ==========
 
 /** 获取 D1 数据库实例 */
 function getDB(c: Context): D1Database {
   return (c.env as { DB: D1Database }).DB
+}
+
+/** 获取 JWT_SECRET（从 Cloudflare Worker bindings） */
+function getJwtSecret(c: Context): string | undefined {
+  return (c.env as AuthBindings).JWT_SECRET
 }
 
 // ========== 登录鉴权中间件 ==========
@@ -31,7 +41,8 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
   }
 
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
-  const payload = await verifyToken(token)
+  const jwtSecret = getJwtSecret(c)
+  const payload = await verifyToken(token, jwtSecret)
 
   if (!payload) {
     c.status(401)
@@ -60,7 +71,8 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
 
   if (authHeader) {
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
-    const payload = await verifyToken(token)
+    const jwtSecret = getJwtSecret(c)
+    const payload = await verifyToken(token, jwtSecret)
     if (payload) {
       c.set('authUser', {
         userId: payload.userId as number,

@@ -54,6 +54,9 @@ export default defineConfig({
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
       },
+      treeshake: {
+        preset: 'recommended',
+      },
     },
   },
 })

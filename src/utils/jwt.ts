@@ -1,22 +1,16 @@
 /**
  * JWT 工具 - 使用 Web Crypto API
- * 可通过环境变量 JWT_SECRET 或 wrangler secret 设置密钥
+ *
+ * Cloudflare Workers 中 process 对象不存在，JWT_SECRET 需要通过 c.env.JWT_SECRET 获取。
+ * 调用方应将 secret 通过 signToken/verifyToken 的 options/secret 参数传入。
  */
 
 const DEFAULT_SECRET = 'sun-panel-jwt-secret-key-change-in-production'
 
 function getSecretKey(customSecret?: string): string {
+  // 优先使用调用方传入的 secret（从 c.env.JWT_SECRET 获取）
   if (customSecret) return customSecret
-
-  // In wrangler dev, process.env is available via polyfill
-  // In production Cloudflare Workers, process is not available
-  if (typeof process !== 'undefined' && process.env?.JWT_SECRET) {
-    return process.env.JWT_SECRET
-  }
-
-  // Fallback: use default secret (works in both wrangler dev and production)
-  // For production security, set JWT_SECRET via wrangler secret and pass it
-  // through the Hono context bindings to signToken/verifyToken
+  // 回退到默认值，仅用于开发环境
   return DEFAULT_SECRET
 }
 

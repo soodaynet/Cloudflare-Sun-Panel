@@ -6,6 +6,8 @@ defineProps<{
   item: Panel.ItemInfo
   editable: boolean
   isEditMode: boolean
+  /** 是否在首屏可见，预加载图标 */
+  eagerLoad?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -28,8 +30,9 @@ const errored = ref(false)
         :src="item.icon.src"
         class="w-full h-full object-cover"
         :alt="item.title"
-        loading="lazy"
-        decoding="async"
+        :loading="eagerLoad ? 'eager' : 'lazy'"
+        :decoding="eagerLoad ? 'sync' : 'async'"
+        :fetchpriority="eagerLoad ? 'high' : 'auto'"
         referrerpolicy="no-referrer"
         @error="errored = true"
       />

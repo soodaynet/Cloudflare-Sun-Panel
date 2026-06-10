@@ -75,7 +75,7 @@ settingsApp.post('/about', async (c) => {
   try {
     const service = new SettingsService(c.env.DB)
     const settings = await service.getAll()
-    c.header('Cache-Control', 'public, max-age=300')
+    c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
     return ok(c, settings)
   } catch (e: unknown) {
     if (e instanceof AppError) {

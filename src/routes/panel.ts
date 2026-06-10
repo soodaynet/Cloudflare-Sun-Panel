@@ -34,7 +34,7 @@ panelApp.post('/getAllData', async (c) => {
     const service = new PanelService(c.env.DB)
     const result = await service.getAllData(userId)
 
-    c.header('Cache-Control', 'private, max-age=60')
+    c.header('Cache-Control', 'private, max-age=60, stale-while-revalidate=120')
     return ok(c, result)
   } catch (e: unknown) {
     if (e instanceof AppError) {

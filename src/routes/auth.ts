@@ -11,7 +11,7 @@ type Variables = {
   validatedBody: unknown
 }
 
-const authApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>()
+const authApp = new Hono<{ Bindings: { DB: D1Database; JWT_SECRET?: string }; Variables: Variables }>()
 
 const loginLimiter = createRateLimiter({ maxRequests: 10, windowMs: 60000 })
 
@@ -23,8 +23,9 @@ authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
   try {
     const body = c.get('validatedBody') as { username: string; password: string }
     const userService = new UserService(c.env.DB)
+    const jwtSecret = c.env.JWT_SECRET
 
-    const result = await userService.authenticate(body.username, body.password)
+    const result = await userService.authenticate(body.username, body.password, jwtSecret)
 
     return ok(c, { token: result.token, userInfo: result.userInfo })
   } catch (e: unknown) {
@@ -53,7 +54,11 @@ authApp.post('/register', validate(registerSchema), async (c) => {
     const userId = await userService.createUser(body.username, body.password, body.name || body.username)
 
     const { signToken } = await import('../utils/jwt')
-    const token = await signToken({ userId, username: body.username, role: 2 })
+    const jwtSecret = c.env.JWT_SECRET
+    const token = await signToken(
+      { userId, username: body.username, role: 2 },
+      { secret: jwtSecret },
+    )
 
     const userInfo: UserInfo = {
       id: userId,

@@ -15,6 +15,8 @@ const props = withDefaults(defineProps<{
   fallbackBg?: string
   /** 是否使用 IntersectionObserver 懒加载（默认 true） */
   lazy?: boolean
+  /** 原生 loading 属性: eager(立即加载) / lazy(延迟加载) */
+  nativeLoading?: 'eager' | 'lazy'
 }>(), {
   alt: '',
   srcset: '',
@@ -22,6 +24,7 @@ const props = withDefaults(defineProps<{
   fetchpriority: 'auto',
   fallbackBg: '#4a90d9',
   lazy: true,
+  nativeLoading: undefined,
 })
 
 const emit = defineEmits<{
@@ -94,7 +97,7 @@ function handleImg(el: unknown) {
       :sizes="sizes"
       :alt="alt"
       :fetchpriority="fetchpriority"
-      loading="lazy"
+      :loading="nativeLoading || 'lazy'"
       decoding="async"
       referrerpolicy="no-referrer"
       class="lazy-img w-full h-full object-cover"
