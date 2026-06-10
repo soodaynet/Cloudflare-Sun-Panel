@@ -60,16 +60,7 @@ export class UserService {
   async getUserInfo(id: number) {
     const row = await this.findById(id)
     if (!row) return null
-    return {
-      id: row.id,
-      username: row.username,
-      name: row.name || '',
-      headImage: row.head_image || '',
-      status: row.status,
-      role: row.role,
-      mail: row.mail || '',
-      created_at: row.created_at,
-    }
+    return this.formatUserInfo(row)
   }
 
   async updateName(userId: number, name: string) {

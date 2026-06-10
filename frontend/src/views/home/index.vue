@@ -5,7 +5,7 @@ import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
 import { deleteItems, saveItemSort } from '@/api/index'
-import { invalidateCacheByPrefix } from '@/utils/requestCache'
+import { invalidateCache, invalidateCacheByPrefix } from '@/utils/requestCache'
 import { useAnnouncement } from './composables/useAnnouncement'
 import { useItemEditor } from './composables/useItemEditor'
 import { useSiteConfig, SITE_CACHE_KEY } from './composables/useSiteConfig'
@@ -126,7 +126,7 @@ function openUrl(item: Panel.ItemInfo) {
   }
 }
 
-function handWindowIframeIdLoad() {
+function handleWindowIframeLoaded() {
   windowIframeIsLoad.value = false
 }
 
@@ -367,7 +367,7 @@ watch(() => authStore.isLoggedIn, (val) => {
       :icon-candidates="iconCandidates"
       @save="handleSaveItem"
       @get-favicon="getIconByUrl(editingItem.url)"
-      @select-icon="(url: string) => selectIcon(url, editingItem)"
+      @select-icon="(url: string) => { if (editingItem.icon) editingItem.icon.src = selectIcon(url) }"
     />
 
     <!-- ========== 弹窗（iframe 内嵌页面） ========== -->
@@ -376,7 +376,7 @@ watch(() => authStore.isLoggedIn, (val) => {
       :src="windowSrc"
       :title="windowTitle"
       :is-loading="windowIframeIsLoad"
-      @loaded="handWindowIframeIdLoad"
+      @loaded="handleWindowIframeLoaded"
     />
   </div>
 </template>

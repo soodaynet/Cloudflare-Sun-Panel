@@ -90,22 +90,6 @@ export class SettingsService {
     const user = await this.db.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first()
     if (!user) throw new Error('用户不存在')
 
-    const existing = await this.db
-      .prepare("SELECT id FROM system_settings WHERE config_name = 'panel_public_user_id'")
-      .first()
-
-    if (existing) {
-      await this.db
-        .prepare(
-          "UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = 'panel_public_user_id'",
-        )
-        .bind(String(userId))
-        .run()
-    } else {
-      await this.db
-        .prepare("INSERT INTO system_settings (config_name, config_value) VALUES ('panel_public_user_id', ?)")
-        .bind(String(userId))
-        .run()
-    }
+    await this.upsertSetting('panel_public_user_id', String(userId))
   }
 }

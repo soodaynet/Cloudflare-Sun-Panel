@@ -9,7 +9,7 @@ import { AppError } from './utils/errors'
 import authRoutes from './routes/auth'
 import panelRoutes from './routes/panel'
 import groupsRoutes from './routes/groups'
-import usersRoutes from './routes/users'
+import usersRoutes, { usersAdminApp as usersAdminRoutes } from './routes/users'
 import userConfigRoutes from './routes/userConfig'
 import settingsRoutes from './routes/settings'
 import initRoutes from './routes/init'
@@ -55,7 +55,7 @@ async function initDatabase(db: D1Database): Promise<void> {
 app.use('*', async (c, next) => {
   if (!dbInitialized) {
     // Validate environment on first request
-    validateEnv(c.env as unknown as Record<string, unknown>)
+    validateEnv(c.env)
     if (!dbInitPromise) {
       dbInitPromise = initDatabase(c.env.DB).catch((err) => {
         console.error('[DB] Init failed:', err)
@@ -91,7 +91,8 @@ app.route('/', authRoutes)            // /login, /register
 app.route('/', initRoutes)            // /init
 app.route('/panel', panelRoutes)      // /panel/getAllData, /panel/itemIcon/*
 app.route('/panel', groupsRoutes)     // /panel/itemIconGroup/*
-app.route('/panel', userConfigRoutes) // /panel/userConfig/*, /panel/users/*
+app.route('/panel', userConfigRoutes) // /panel/userConfig/*
+app.route('/panel/users', usersAdminRoutes) // /panel/users/getList, /panel/users/create, ...
 app.route('/', usersRoutes)           // /user/*
 app.route('/', settingsRoutes)        // /system/*, /about
 app.route('/api/upload', uploadRoutes)// /api/upload/image

@@ -1,19 +1,10 @@
 import { Hono } from 'hono'
 import type { D1Database } from '@cloudflare/workers-types'
 import type { z } from 'zod'
-import { authMiddleware, adminMiddleware, publicModeMiddleware, getAuthUser } from '../middleware/auth'
+import { publicModeMiddleware, getAuthUser } from '../middleware/auth'
 import { UserService } from '../services/UserService'
-import { SettingsService } from '../services/SettingsService'
 import { ok, fail } from '../utils/response'
-import {
-  validate,
-  userConfigSchema,
-  userAdminCreateSchema,
-  userAdminUpdateSchema,
-  userDeleteSchema,
-  paginationSchema,
-  publicVisitUserSchema,
-} from '../utils/validate'
+import { validate, userConfigSchema } from '../utils/validate'
 
 type Variables = {
   validatedBody: unknown
@@ -70,66 +61,5 @@ userConfigApp.post('/userConfig/set', publicModeMiddleware, validate(userConfigS
 
   return ok(c, null)
 })
-
-userConfigApp.post('/users/getList', authMiddleware, adminMiddleware, validate(paginationSchema), async (c) => {
-  const svc = new UserService(c.env.DB)
-  const { page, pageSize } = c.get('validatedBody') as z.infer<typeof paginationSchema>
-
-  const data = await svc.getList(page, pageSize)
-  return ok(c, data)
-})
-
-userConfigApp.post('/users/create', authMiddleware, adminMiddleware, validate(userAdminCreateSchema), async (c) => {
-  const svc = new UserService(c.env.DB)
-  const { username, password, name, role, status } = c.get('validatedBody') as z.infer<typeof userAdminCreateSchema>
-
-  await svc.adminCreate(username, password, name || username, role, status)
-
-  return ok(c, null)
-})
-
-userConfigApp.post('/users/update', authMiddleware, adminMiddleware, validate(userAdminUpdateSchema), async (c) => {
-  const svc = new UserService(c.env.DB)
-  const { id, ...data } = c.get('validatedBody') as z.infer<typeof userAdminUpdateSchema>
-
-  await svc.adminUpdate(id, data)
-
-  return ok(c, null)
-})
-
-userConfigApp.post('/users/deletes', authMiddleware, adminMiddleware, validate(userDeleteSchema), async (c) => {
-  const svc = new UserService(c.env.DB)
-  const authUser = getAuthUser(c)!
-  const { userIds } = c.get('validatedBody') as z.infer<typeof userDeleteSchema>
-
-  await svc.adminDelete(userIds, authUser.userId)
-
-  return ok(c, null)
-})
-
-userConfigApp.post('/users/getPublicVisitUser', authMiddleware, adminMiddleware, async (c) => {
-  const svc = new SettingsService(c.env.DB)
-  const data = await svc.getPublicVisitUser()
-  return ok(c, data)
-})
-
-userConfigApp.post(
-  '/users/setPublicVisitUser',
-  authMiddleware,
-  adminMiddleware,
-  validate(publicVisitUserSchema),
-  async (c) => {
-    const svc = new SettingsService(c.env.DB)
-    const { userId } = c.get('validatedBody') as z.infer<typeof publicVisitUserSchema>
-
-    if (userId === null || userId === undefined) {
-      await svc.setPublicVisitUser(null)
-      return ok(c, null)
-    }
-
-    await svc.setPublicVisitUser(userId)
-    return ok(c, null)
-  },
-)
 
 export default userConfigApp

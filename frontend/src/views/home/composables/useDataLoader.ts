@@ -39,6 +39,15 @@ export function useDataLoader(options: {
     return groups.value.filter((g) => g.publicVisible !== 0)
   })
 
+  function mapGroups(rawGroups: Panel.ItemIconGroup[], itemsMap: Record<number, Panel.ItemInfo[]>) {
+    return (rawGroups || []).map((g) => ({
+      ...g,
+      hoverStatus: false,
+      sortStatus: false,
+      items: g.id && itemsMap[g.id] ? itemsMap[g.id] : [],
+    })) as ItemGroup[]
+  }
+
   /** 统一加载分组 + 图标 + 面板配置（缓存 5 分钟） */
   async function loadData() {
     loading.value = true
@@ -55,12 +64,7 @@ export function useDataLoader(options: {
       if (res.code === 0 && res.data) {
         const { groups: rawGroups, itemsMap, panelConfig } = res.data
 
-        groups.value = (rawGroups || []).map((g) => ({
-          ...g,
-          hoverStatus: false,
-          sortStatus: false,
-          items: g.id && itemsMap[g.id] ? itemsMap[g.id] : [],
-        })) as ItemGroup[]
+        groups.value = mapGroups(rawGroups, itemsMap)
 
         if (panelConfig && Object.keys(panelConfig).length > 0) {
           panelState.updatePanelConfigFromCloud(panelConfig)
@@ -110,12 +114,7 @@ export function useDataLoader(options: {
         }
 
         // 3. 面板数据
-        groups.value = (rawGroups || []).map((g) => ({
-          ...g,
-          hoverStatus: false,
-          sortStatus: false,
-          items: g.id && itemsMap[g.id] ? itemsMap[g.id] : [],
-        })) as ItemGroup[]
+        groups.value = mapGroups(rawGroups, itemsMap)
 
         if (panelConfig && Object.keys(panelConfig).length > 0) {
           panelState.updatePanelConfigFromCloud(panelConfig)

@@ -45,5 +45,3 @@ function http<T = unknown>({ url, data, signal, beforeRequest, afterRequest }: H
 export function post<T = unknown>(opt: HttpOption): Promise<Response<T>> {
   return http<T>(opt)
 }
-
-export default post

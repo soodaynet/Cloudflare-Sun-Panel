@@ -29,12 +29,10 @@ export function useFavicon() {
     }
   }
 
-  function selectIcon(iconUrl: string, editingItem: Panel.ItemInfo) {
-    if (editingItem.icon) {
-      editingItem.icon.src = iconUrl
-    }
+  function selectIcon(iconUrl: string): string {
     iconCandidates.value = []
     message.success('已选择图标')
+    return iconUrl
   }
 
   return {
