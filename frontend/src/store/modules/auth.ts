@@ -76,7 +76,9 @@ export const useAuthStore = defineStore('auth', {
     removeToken() {
       this.token = null
       this.userInfo = null
-      this.visitMode = VisitMode.VISIT_MODE_LOGIN
+      // 根据公开模式可用性设置访客状态：可用则进入访客模式，否则标记为需登录
+      const publicModeAvailable = localStorage.getItem('sun-panel-public-mode') === '1'
+      this.visitMode = publicModeAvailable ? VisitMode.VISIT_MODE_PUBLIC : VisitMode.VISIT_MODE_LOGIN
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
       localStorage.removeItem(VISIT_MODE_KEY)
