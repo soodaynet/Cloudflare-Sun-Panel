@@ -76,6 +76,7 @@
 4. **创建 Cloudflare API Token**：
    - 进入 [API Tokens 页面](https://dash.cloudflare.com/profile/api-tokens)
    - 创建令牌 → 使用「Edit Cloudflare Workers」模板
+   - **重要**：在权限配置中需额外添加 **D1 编辑权限**（`Account` → `D1` → `Edit`），否则 `db:init` 步骤将失败
    - 保存生成的 Token（只显示一次）
 
 ---
@@ -213,9 +214,10 @@ npx wrangler deploy
 3. 左侧菜单选择 **「API 令牌」(API Tokens)**
 4. 点击 **「创建令牌」(Create Token)**
 5. 选择 **「编辑 Cloudflare Workers」(Edit Cloudflare Workers)** 模板
-6. 权限配置（默认即可）：
+6. 权限配置（Worker 默认权限 + 额外添加 D1 权限）：
    - **账户资源**：包括你的账户
    - **区域资源**：包括所有区域
+   - **额外权限**：点击「+ 添加更多」，添加 `Account` → `D1` → `Edit`（用于工作流中的 `db:init` 步骤初始化 D1 数据库表）
 7. 点击 **「继续以显示摘要」→「创建令牌」**
 8. **立即复制生成的 Token**（只显示一次，关闭后无法再次查看）
 
