@@ -1,21 +1,16 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = withDefaults(defineProps<{
   src: string
   alt?: string
-  /** 响应式图片源集 (用于不同分辨率) */
   srcset?: string
-  /** 响应式尺寸 (配合 srcset 使用) */
   sizes?: string
-  /** 图片加载优先级: high / low / auto */
   fetchpriority?: 'high' | 'low' | 'auto'
-  /** 图片加载失败后是否显示文字回退 */
   fallbackText?: string
   fallbackBg?: string
-  /** 是否使用 IntersectionObserver 懒加载（默认 true） */
+  /** IntersectionObserver 懒加载，rootMargin=300px，未入镜时不设 src */
   lazy?: boolean
-  /** 原生 loading 属性: eager(立即加载) / lazy(延迟加载) */
   nativeLoading?: 'eager' | 'lazy'
 }>(), {
   alt: '',
@@ -34,8 +29,34 @@ const emit = defineEmits<{
 
 const loaded = ref(false)
 const errored = ref(false)
+const shouldLoad = ref(!props.lazy)
 
-const showSrc = computed(() => (!errored.value) ? props.src : '')
+const wrapperRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+
+onMounted(() => {
+  if (!props.lazy || shouldLoad.value) return
+
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        shouldLoad.value = true
+        observer?.disconnect()
+      }
+    },
+    { rootMargin: '300px' },
+  )
+
+  if (wrapperRef.value) {
+    observer.observe(wrapperRef.value)
+  }
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+})
+
+const showSrc = computed(() => (!errored.value && shouldLoad.value) ? props.src : '')
 
 function onLoad() {
   loaded.value = true
@@ -46,17 +67,10 @@ function onError() {
   errored.value = true
   emit('error')
 }
-
-function handleImg(el: unknown) {
-  if (!el || !(el instanceof HTMLImageElement)) return
-  if (el.complete && el.naturalWidth > 0) {
-    loaded.value = true
-  }
-}
 </script>
 
 <template>
-  <div class="lazy-img-wrapper w-full h-full relative">
+  <div ref="wrapperRef" class="lazy-img-wrapper w-full h-full relative">
     <!-- 加载中骨架屏 -->
     <div
       v-if="!loaded && !errored"
@@ -66,7 +80,7 @@ function handleImg(el: unknown) {
       <div class="w-4 h-4 border-2 border-white/40 border-t-white/80 rounded-full animate-spin" />
     </div>
 
-    <!-- 错误回退：显示默认图标 -->
+    <!-- 错误回退：默认图标 -->
     <div
       v-if="errored && !fallbackText"
       class="w-full h-full rounded-lg flex items-center justify-center"
@@ -79,7 +93,7 @@ function handleImg(el: unknown) {
       </svg>
     </div>
 
-    <!-- 错误回退：显示文字图标 -->
+    <!-- 错误回退：文字图标 -->
     <div
       v-else-if="errored && fallbackText"
       class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
@@ -88,16 +102,15 @@ function handleImg(el: unknown) {
       {{ fallbackText.charAt(0) || '?' }}
     </div>
 
-    <!-- 正常图片 -->
+    <!-- 正常图片：shouldLoad 为 true 时才设置 src（IntersectionObserver 触发） -->
     <img
-      v-else
-      :ref="handleImg"
+      v-if="shouldLoad"
       :src="showSrc"
       :srcset="srcset"
       :sizes="sizes"
       :alt="alt"
       :fetchpriority="fetchpriority"
-      :loading="nativeLoading || 'lazy'"
+      :loading="nativeLoading || (lazy ? 'lazy' : 'eager')"
       decoding="async"
       referrerpolicy="no-referrer"
       class="lazy-img w-full h-full object-cover"

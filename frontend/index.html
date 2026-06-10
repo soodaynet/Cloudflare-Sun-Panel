@@ -27,6 +27,35 @@
             -moz-osx-font-smoothing: grayscale;
         }
     </style>
+
+    <!-- 壁纸预加载：在 Vue 挂载前立即触发，加速首屏背景渲染 -->
+    <script>
+    (function() {
+      var key = 'sun-panel-effective-wallpaper';
+      var wallpaper = localStorage.getItem(key);
+      if (!wallpaper) return;
+
+      // 1. <link rel="preload"> 触发浏览器预加载
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = wallpaper;
+      link.setAttribute('data-wallpaper-preload', 'true');
+      document.head.appendChild(link);
+
+      // 2. 外部域名添加 preconnect，节省 TLS/连接时间
+      try {
+        var url = new URL(wallpaper);
+        if (url.hostname !== location.hostname) {
+          var pc = document.createElement('link');
+          pc.rel = 'preconnect';
+          pc.href = url.origin;
+          pc.crossOrigin = 'anonymous';
+          document.head.appendChild(pc);
+        }
+      } catch(e) {}
+    })();
+    </script>
 </head>
 <body class="bg-gray-50 dark:bg-gray-900">
     <div id="app"></div>
