@@ -1,30 +1,8 @@
 import { type Context, type Next } from 'hono'
+import { isAllowedOrigin } from '../utils/origin'
 
 const ALLOWED_METHODS = 'GET, POST, PUT, DELETE, OPTIONS'
 const ALLOWED_HEADERS = 'Content-Type, Authorization'
-
-function getAllowedOrigin(origin: string | undefined, host: string): string | undefined {
-  if (!origin) return undefined
-
-  try {
-    const originUrl = new URL(origin)
-    const originHost = originUrl.hostname
-
-    // Allow localhost with any port (development)
-    if (originHost === 'localhost' || originHost === '127.0.0.1') {
-      return origin
-    }
-
-    // Allow same origin (production)
-    if (originHost === host) {
-      return origin
-    }
-
-    return undefined
-  } catch {
-    return undefined
-  }
-}
 
 function applyCorsHeaders(c: Context, allowedOrigin: string | undefined) {
   if (allowedOrigin) {
@@ -42,7 +20,7 @@ function applyCorsHeaders(c: Context, allowedOrigin: string | undefined) {
 export async function corsMiddleware(c: Context, next: Next) {
   const origin = c.req.header('Origin')
   const host = new URL(c.req.url).hostname
-  const allowedOrigin = getAllowedOrigin(origin, host)
+  const allowedOrigin = origin && isAllowedOrigin(origin, host) ? origin : undefined
 
   if (c.req.method === 'OPTIONS') {
     applyCorsHeaders(c, allowedOrigin)

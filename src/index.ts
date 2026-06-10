@@ -29,7 +29,7 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.onError((err, c) => {
   if (err instanceof AppError) {
     console.error(`[${err.name}] ${err.code} ${err.message}`)
-    return c.json({ code: err.code, msg: err.message, data: null }, err.httpStatus as any)
+    return c.json({ code: err.code, msg: err.message, data: null }, err.httpStatus as 400 | 401 | 403 | 404 | 409 | 500)
   }
   console.error('[Global Error]', err)
   return c.json({ code: 500, msg: '服务器内部错误', data: null }, 500)

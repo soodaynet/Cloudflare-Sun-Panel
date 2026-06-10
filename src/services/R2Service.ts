@@ -36,24 +36,6 @@ export class R2Service {
     return this.bucket.get(key)
   }
 
-  /** 根据媒体代理 URL 删除 R2 文件 */
-  async deleteByUrl(url: string, userId: number): Promise<void> {
-    if (!this.bucket) return
-    const key = this.urlToKey(url)
-    if (!key) return
-
-    const obj = await this.bucket.head(key)
-    if (!obj) return
-
-    // 验证所有权
-    const ownerId = obj.customMetadata?.userId
-    if (ownerId && Number(ownerId) !== userId) {
-      throw new Error('无权删除此文件')
-    }
-
-    await this.bucket.delete(key)
-  }
-
   // ========== 辅助方法 ==========
 
   private validateFile(file: File) {
@@ -76,10 +58,5 @@ export class R2Service {
       'image/bmp': 'bmp',
     }
     return mimeMap[file.type] || 'png'
-  }
-
-  private urlToKey(url: string): string | null {
-    const match = url.match(/\/media\/(.+)/)
-    return match ? match[1] : null
   }
 }

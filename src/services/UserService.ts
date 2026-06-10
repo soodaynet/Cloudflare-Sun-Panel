@@ -24,6 +24,19 @@ export class UserService {
     )
   }
 
+  private formatUserInfo(row: UserRow) {
+    return {
+      id: row.id,
+      username: row.username,
+      name: row.name || '',
+      headImage: row.head_image || '',
+      status: row.status,
+      role: row.role,
+      mail: row.mail || '',
+      created_at: row.created_at,
+    }
+  }
+
   async authenticate(username: string, password: string, jwtSecret?: string) {
     const user = await this.findByUsername(username)
     if (!user) throw AppError.unauthorized('用户名或密码错误')
@@ -40,30 +53,8 @@ export class UserService {
 
     return {
       token,
-      userInfo: {
-        id: user.id,
-        username: user.username,
-        name: user.name || '',
-        headImage: user.head_image || '',
-        status: user.status,
-        role: user.role,
-        mail: user.mail || '',
-        created_at: user.created_at,
-      },
+      userInfo: this.formatUserInfo(user),
     }
-  }
-
-  async createUser(username: string, password: string, name: string, role = 2) {
-    const hashed = await hashPassword(password)
-    const result = await this.db
-      .prepare('INSERT INTO users (username, password, name, role, status) VALUES (?, ?, ?, ?, 1)')
-      .bind(username, hashed, name, role)
-      .run()
-
-    const userId = Number(result.meta.last_row_id)
-    await this.db.prepare('INSERT OR IGNORE INTO user_configs (user_id) VALUES (?)').bind(userId).run()
-
-    return userId
   }
 
   async getUserInfo(id: number) {
@@ -235,21 +226,12 @@ export class UserService {
     const userId = Number(result.meta.last_row_id)
     await this.db.prepare('INSERT OR IGNORE INTO user_configs (user_id) VALUES (?)').bind(userId).run()
 
+    // Query the newly created user
+    const user = await this.findById(userId)
+
     // Sign JWT token
     const token = await signToken({ userId, username, role: 2 }, { secret: jwtSecret })
 
-    // Build user info
-    const userInfo = {
-      id: userId,
-      username,
-      name: name || username,
-      headImage: '',
-      status: 1,
-      role: 2,
-      mail: mail || '',
-      created_at: new Date().toISOString(),
-    }
-
-    return { token, userInfo }
+    return { token, userInfo: this.formatUserInfo(user!) }
   }
 }

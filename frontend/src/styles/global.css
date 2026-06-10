@@ -86,9 +86,9 @@ html, body, #app {
 
 /* ========== Naive UI 全局玻璃覆盖 ========== */
 .n-popover:not(.n-popover--no-glass) {
-  background-color: var(--glass-bg-hover) !important;
-  backdrop-filter: blur(var(--glass-blur)) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
+  backdrop-filter: blur(var(--ann-blur, 12px)) !important;
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px)) !important;
 }
 
 .n-popover:not(.n-popover--no-glass) .n-popover__content {
@@ -96,7 +96,7 @@ html, body, #app {
 }
 
 .n-popover:not(.n-popover--no-glass) .n-popover-arrow-wrapper .n-popover-arrow {
-  background-color: var(--glass-bg-hover) !important;
+  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
 }
 
 /* ========== 性能优化: CSS 内容可见性 ========== */

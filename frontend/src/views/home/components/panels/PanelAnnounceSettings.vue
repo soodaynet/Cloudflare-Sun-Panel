@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { NButton } from 'naive-ui'
 import { useMessage } from 'naive-ui'
 import { usePanelState } from '@/store'
@@ -16,8 +17,12 @@ const emit = defineEmits<{
 const message = useMessage()
 const panelState = usePanelState()
 
+const localConfig = ref<Panel.panelConfig>({})
+
+watch(() => props.panelConfig, (val) => { localConfig.value = { ...val } }, { immediate: true, deep: true })
+
 async function handleSave() {
-  const config = { ...props.panelConfig }
+  const config = { ...localConfig.value }
   try {
     const res = await setUserConfig({ panel: config })
     if (res.code === 0) {
@@ -33,13 +38,12 @@ async function handleSave() {
 </script>
 
 <template>
-  <!-- eslint-disable vue/no-mutating-props -->
   <div class="flex flex-col gap-4">
     <div>
       <label class="block text-sm mb-1 font-medium">公告内容</label>
       <textarea
-        :value="panelConfig.announcement"
-        @input="(e: Event) => (panelConfig.announcement = (e.target as HTMLInputElement).value)"
+        :value="localConfig.announcement"
+        @input="(e: Event) => (localConfig.announcement = (e.target as HTMLInputElement).value)"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
         rows="3"
         placeholder="公告文字，留空不显示"
@@ -48,8 +52,8 @@ async function handleSave() {
     <div>
       <label class="block text-sm mb-1 font-medium">公告停留时间 (秒，0为不自动消失)</label>
       <input
-        :value="panelConfig.announcementDuration"
-        @input="(e: Event) => (panelConfig.announcementDuration = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.announcementDuration"
+        @input="(e: Event) => (localConfig.announcementDuration = Number((e.target as HTMLInputElement).value))"
         type="number"
         min="0"
         max="999"
@@ -59,8 +63,8 @@ async function handleSave() {
     <div class="border-t pt-3">
       <label class="block text-sm mb-1 font-medium">Logo 文字</label>
       <input
-        :value="panelConfig.logoText"
-        @input="(e: Event) => (panelConfig.logoText = (e.target as HTMLInputElement).value)"
+        :value="localConfig.logoText"
+        @input="(e: Event) => (localConfig.logoText = (e.target as HTMLInputElement).value)"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
         placeholder="输入 Logo 文字"
       />
@@ -68,8 +72,8 @@ async function handleSave() {
     <div>
       <label class="block text-sm mb-1 font-medium">Logo 图片 URL</label>
       <input
-        :value="panelConfig.logoImageSrc"
-        @input="(e: Event) => (panelConfig.logoImageSrc = (e.target as HTMLInputElement).value)"
+        :value="localConfig.logoImageSrc"
+        @input="(e: Event) => (localConfig.logoImageSrc = (e.target as HTMLInputElement).value)"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
         placeholder="输入图片URL"
       />
@@ -77,8 +81,8 @@ async function handleSave() {
     <div class="border-t pt-3">
       <label class="block text-sm mb-1 font-medium">Logo 距顶部 (px)</label>
       <input
-        :value="panelConfig.logoPositionTop"
-        @input="(e: Event) => (panelConfig.logoPositionTop = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.logoPositionTop"
+        @input="(e: Event) => (localConfig.logoPositionTop = Number((e.target as HTMLInputElement).value))"
         type="number"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
       />
@@ -86,8 +90,8 @@ async function handleSave() {
     <div>
       <label class="block text-sm mb-1 font-medium">Logo 距左侧 (px)</label>
       <input
-        :value="panelConfig.logoPositionLeft"
-        @input="(e: Event) => (panelConfig.logoPositionLeft = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.logoPositionLeft"
+        @input="(e: Event) => (localConfig.logoPositionLeft = Number((e.target as HTMLInputElement).value))"
         type="number"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
       />
@@ -95,17 +99,17 @@ async function handleSave() {
     <div>
       <label class="block text-sm mb-1 font-medium">Logo 图片高度 (px)</label>
       <input
-        :value="panelConfig.logoSize"
-        @input="(e: Event) => (panelConfig.logoSize = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.logoSize"
+        @input="(e: Event) => (localConfig.logoSize = Number((e.target as HTMLInputElement).value))"
         type="number"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
       />
     </div>
     <div class="border-t pt-3">
-      <label class="block text-sm mb-1 font-medium">背景模糊度: {{ panelConfig.announcementBlur ?? 12 }}</label>
+      <label class="block text-sm mb-1 font-medium">背景模糊度: {{ localConfig.announcementBlur ?? 12 }}</label>
       <input
-        :value="panelConfig.announcementBlur"
-        @input="(e: Event) => (panelConfig.announcementBlur = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.announcementBlur"
+        @input="(e: Event) => (localConfig.announcementBlur = Number((e.target as HTMLInputElement).value))"
         type="range"
         min="0"
         max="40"
@@ -114,11 +118,11 @@ async function handleSave() {
     </div>
     <div>
       <label class="block text-sm mb-1 font-medium"
-        >遮罩不透明度: {{ panelConfig.announcementMaskOpacity ?? 0.15 }}</label
+        >遮罩不透明度: {{ localConfig.announcementMaskOpacity ?? 0.15 }}</label
       >
       <input
-        :value="panelConfig.announcementMaskOpacity"
-        @input="(e: Event) => (panelConfig.announcementMaskOpacity = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.announcementMaskOpacity"
+        @input="(e: Event) => (localConfig.announcementMaskOpacity = Number((e.target as HTMLInputElement).value))"
         type="range"
         min="0"
         max="1"
@@ -131,5 +135,4 @@ async function handleSave() {
       <NButton type="primary" @click="handleSave">保存</NButton>
     </div>
   </div>
-  <!-- eslint-enable vue/no-mutating-props -->
 </template>

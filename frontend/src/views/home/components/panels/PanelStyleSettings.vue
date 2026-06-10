@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { NButton } from 'naive-ui'
 import { useMessage } from 'naive-ui'
 import { usePanelState } from '@/store'
@@ -18,8 +19,12 @@ const emit = defineEmits<{
 const message = useMessage()
 const panelState = usePanelState()
 
+const localConfig = ref<Panel.panelConfig>({})
+
+watch(() => props.panelConfig, (val) => { localConfig.value = { ...val } }, { immediate: true, deep: true })
+
 async function handleSave() {
-  const config = { ...props.panelConfig }
+  const config = { ...localConfig.value }
   try {
     const res = await setUserConfig({ panel: config })
     if (res.code === 0) {
@@ -41,27 +46,26 @@ function handleReset() {
 </script>
 
 <template>
-  <!-- eslint-disable vue/no-mutating-props -->
   <div class="flex flex-col gap-4">
     <div>
       <label class="block text-sm mb-1 font-medium">壁纸地址</label>
       <input
-        :value="panelConfig.backgroundImageSrc"
-        @input="(e: Event) => (panelConfig.backgroundImageSrc = (e.target as HTMLInputElement).value)"
+        :value="localConfig.backgroundImageSrc"
+        @input="(e: Event) => (localConfig.backgroundImageSrc = (e.target as HTMLInputElement).value)"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base mb-2"
         placeholder="输入图片URL"
       />
       <ImageUpload
-        :model-value="panelConfig.backgroundImageSrc"
+        :model-value="localConfig.backgroundImageSrc"
         label="上传壁纸"
-        @update:model-value="(url: string) => (panelConfig.backgroundImageSrc = url)"
+        @update:model-value="(url: string) => (localConfig.backgroundImageSrc = url)"
       />
     </div>
     <div>
-      <label class="block text-sm mb-1 font-medium">模糊度: {{ panelConfig.backgroundBlur || 0 }}</label>
+      <label class="block text-sm mb-1 font-medium">模糊度: {{ localConfig.backgroundBlur || 0 }}</label>
       <input
-        :value="panelConfig.backgroundBlur"
-        @input="(e: Event) => (panelConfig.backgroundBlur = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.backgroundBlur"
+        @input="(e: Event) => (localConfig.backgroundBlur = Number((e.target as HTMLInputElement).value))"
         type="range"
         min="0"
         max="50"
@@ -69,10 +73,10 @@ function handleReset() {
       />
     </div>
     <div>
-      <label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ panelConfig.backgroundMaskNumber ?? 0.3 }}</label>
+      <label class="block text-sm mb-1 font-medium">遮罩不透明度: {{ localConfig.backgroundMaskNumber ?? 0.3 }}</label>
       <input
-        :value="panelConfig.backgroundMaskNumber"
-        @input="(e: Event) => (panelConfig.backgroundMaskNumber = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.backgroundMaskNumber"
+        @input="(e: Event) => (localConfig.backgroundMaskNumber = Number((e.target as HTMLInputElement).value))"
         type="range"
         min="0"
         max="1"
@@ -83,8 +87,8 @@ function handleReset() {
     <div class="border-t pt-3">
       <label class="block text-sm mb-1 font-medium">自定义页脚 (支持 HTML)</label>
       <textarea
-        :value="panelConfig.footerHtml"
-        @input="(e: Event) => (panelConfig.footerHtml = (e.target as HTMLInputElement).value)"
+        :value="localConfig.footerHtml"
+        @input="(e: Event) => (localConfig.footerHtml = (e.target as HTMLInputElement).value)"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
         rows="3"
         placeholder="<p>&copy; 2024 Sun-Panel</p>"
@@ -93,8 +97,8 @@ function handleReset() {
     <div class="border-t pt-2">
       <label class="block text-sm mb-1 font-medium">最大宽度</label>
       <input
-        :value="panelConfig.maxWidth"
-        @input="(e: Event) => (panelConfig.maxWidth = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.maxWidth"
+        @input="(e: Event) => (localConfig.maxWidth = Number((e.target as HTMLInputElement).value))"
         type="number"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
       />
@@ -102,8 +106,8 @@ function handleReset() {
     <div>
       <label class="block text-sm mb-1 font-medium">上边距</label>
       <input
-        :value="panelConfig.marginTop"
-        @input="(e: Event) => (panelConfig.marginTop = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.marginTop"
+        @input="(e: Event) => (localConfig.marginTop = Number((e.target as HTMLInputElement).value))"
         type="number"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
       />
@@ -111,8 +115,8 @@ function handleReset() {
     <div>
       <label class="block text-sm mb-1 font-medium">下边距</label>
       <input
-        :value="panelConfig.marginBottom"
-        @input="(e: Event) => (panelConfig.marginBottom = Number((e.target as HTMLInputElement).value))"
+        :value="localConfig.marginBottom"
+        @input="(e: Event) => (localConfig.marginBottom = Number((e.target as HTMLInputElement).value))"
         type="number"
         class="w-full border rounded px-3 py-2 sm:text-sm text-base"
       />
@@ -122,5 +126,4 @@ function handleReset() {
       <NButton type="primary" @click="handleSave">保存</NButton>
     </div>
   </div>
-  <!-- eslint-enable vue/no-mutating-props -->
 </template>

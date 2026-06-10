@@ -372,18 +372,4 @@ onMounted(async () => {
 }
 </style>
 
-<style>
-.n-popover:not(.n-popover--no-glass) {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
-  backdrop-filter: blur(var(--ann-blur, 12px)) !important;
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px)) !important;
-}
 
-.n-popover:not(.n-popover--no-glass) .n-popover__content {
-  background-color: transparent !important;
-}
-
-.n-popover:not(.n-popover--no-glass) .n-popover-arrow-wrapper .n-popover-arrow {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
-}
-</style>

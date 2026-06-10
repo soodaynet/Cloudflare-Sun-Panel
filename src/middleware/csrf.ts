@@ -1,27 +1,5 @@
 import type { Context, Next } from 'hono'
-
-function isAllowedOrigin(origin: string, host: string): boolean {
-  if (!origin) return false
-
-  try {
-    const originUrl = new URL(origin)
-    const originHost = originUrl.hostname
-
-    // Allow localhost with any port (development)
-    if (originHost === 'localhost' || originHost === '127.0.0.1') {
-      return true
-    }
-
-    // Allow same origin (production)
-    if (originHost === host) {
-      return true
-    }
-
-    return false
-  } catch {
-    return false
-  }
-}
+import { isAllowedOrigin } from '../utils/origin'
 
 /**
  * CSRF 防护中间件 - 对写操作验证 Origin/Referer 头
