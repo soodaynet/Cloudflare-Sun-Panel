@@ -1,10 +1,8 @@
 import { Hono } from 'hono'
 import type { D1Database } from '@cloudflare/workers-types'
-import type { UserInfo } from '../models/types'
 import { UserService } from '../services/UserService'
 import { validate, loginSchema, registerSchema } from '../utils/validate'
-import { ok, fail, getErrorMessage } from '../utils/response'
-import { AppError } from '../utils/errors'
+import { ok } from '../utils/response'
 import { createRateLimiter } from '../middleware/rateLimiter'
 
 type Variables = {
@@ -20,20 +18,13 @@ const loginLimiter = createRateLimiter({ maxRequests: 10, windowMs: 60000 })
  * POST /api/login
  */
 authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
-  try {
-    const body = c.get('validatedBody') as { username: string; password: string }
-    const userService = new UserService(c.env.DB)
-    const jwtSecret = c.env.JWT_SECRET
+  const body = c.get('validatedBody') as { username: string; password: string }
+  const userService = new UserService(c.env.DB)
+  const jwtSecret = c.env.JWT_SECRET
 
-    const result = await userService.authenticate(body.username, body.password, jwtSecret)
+  const result = await userService.authenticate(body.username, body.password, jwtSecret)
 
-    return ok(c, { token: result.token, userInfo: result.userInfo })
-  } catch (e: unknown) {
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
+  return ok(c, { token: result.token, userInfo: result.userInfo })
 })
 
 /**
@@ -41,43 +32,13 @@ authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
  * POST /api/register
  */
 authApp.post('/register', validate(registerSchema), async (c) => {
-  try {
-    const body = c.get('validatedBody') as { username: string; password: string; name?: string; mail?: string }
-    const userService = new UserService(c.env.DB)
+  const body = c.get('validatedBody') as { username: string; password: string; name?: string; mail?: string }
+  const userService = new UserService(c.env.DB)
+  const jwtSecret = c.env.JWT_SECRET
 
-    const db = c.env.DB
-    const existing = await db.prepare('SELECT id FROM users WHERE username = ?').bind(body.username).first()
-    if (existing) {
-      return fail(c, '该用户名已被注册')
-    }
+  const result = await userService.register(body.username, body.password, body.name, body.mail, jwtSecret)
 
-    const userId = await userService.createUser(body.username, body.password, body.name || body.username)
-
-    const { signToken } = await import('../utils/jwt')
-    const jwtSecret = c.env.JWT_SECRET
-    const token = await signToken(
-      { userId, username: body.username, role: 2 },
-      { secret: jwtSecret },
-    )
-
-    const userInfo: UserInfo = {
-      id: userId,
-      username: body.username,
-      name: body.name || body.username,
-      headImage: '',
-      status: 1,
-      role: 2,
-      mail: body.mail || '',
-      created_at: new Date().toISOString(),
-    }
-
-    return ok(c, { token, userInfo })
-  } catch (e: unknown) {
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
+  return ok(c, { token: result.token, userInfo: result.userInfo })
 })
 
 export default authApp

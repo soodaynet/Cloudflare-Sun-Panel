@@ -71,6 +71,10 @@ CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);
 CREATE INDEX IF NOT EXISTS idx_item_icons_group_id ON item_icons(item_icon_group_id);
 CREATE INDEX IF NOT EXISTS idx_item_icons_user_id ON item_icons(user_id);
 CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id);
+-- 复合索引：按分组查询图标 + 按用户隔离
+CREATE INDEX IF NOT EXISTS idx_item_icons_group_user ON item_icons(item_icon_group_id, user_id);
+-- 复合索引：按用户排序图标
+CREATE INDEX IF NOT EXISTS idx_item_icons_user_sort ON item_icons(user_id, sort, id);
 
 -- 默认管理员 (密码: admin123)，仅在 users 表为空时插入
 INSERT INTO users (id, username, password, name, role, status)

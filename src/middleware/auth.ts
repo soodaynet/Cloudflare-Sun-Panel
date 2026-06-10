@@ -1,6 +1,7 @@
 import type { Context, Next } from 'hono'
 import type { D1Database } from '@cloudflare/workers-types'
 import { verifyToken } from '../utils/jwt'
+import { AppError } from '../utils/errors'
 
 export interface AuthUser {
   userId: number
@@ -31,13 +32,13 @@ function getJwtSecret(c: Context): string | undefined {
 
 /**
  * 登录鉴权中间件 - 从 Authorization header 解析 JWT token
+ * 认证失败抛出 AppError，由全局错误处理器统一捕获
  */
-export async function authMiddleware(c: Context, next: Next): Promise<Response | void> {
+export async function authMiddleware(c: Context, next: Next): Promise<void> {
   const authHeader = c.req.header('Authorization')
 
   if (!authHeader) {
-    c.status(401)
-    return c.json({ code: 401, msg: '未登录', data: null })
+    throw AppError.unauthorized('未登录')
   }
 
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
@@ -45,8 +46,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
   const payload = await verifyToken(token, jwtSecret)
 
   if (!payload) {
-    c.status(401)
-    return c.json({ code: 401, msg: 'token已失效，请重新登录', data: null })
+    throw AppError.unauthorized('token已失效，请重新登录')
   }
 
   c.set('authUser', {
@@ -65,7 +65,7 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
 /**
  * 公开模式中间件 - 优先使用登录 token，无 token 时使用公开访问账号
  */
-export async function publicModeMiddleware(c: Context, next: Next): Promise<Response | void> {
+export async function publicModeMiddleware(c: Context, next: Next): Promise<void> {
   const authHeader = c.req.header('Authorization')
   const db = getDB(c)
 
@@ -122,8 +122,7 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
     return
   }
 
-  c.status(401)
-  return c.json({ code: 401, msg: '未登录且未启用公开模式', data: null })
+  throw AppError.unauthorized('未登录且未启用公开模式')
 }
 
 // ========== 管理员鉴权中间件 ==========
@@ -131,12 +130,11 @@ export async function publicModeMiddleware(c: Context, next: Next): Promise<Resp
 /**
  * 管理员鉴权中间件 - 需要先通过 authMiddleware 或 publicModeMiddleware
  */
-export async function adminMiddleware(c: Context, next: Next): Promise<Response | void> {
+export async function adminMiddleware(c: Context, next: Next): Promise<void> {
   const user = c.get('authUser') as AuthUser | undefined
 
   if (!user || user.role !== 1) {
-    c.status(403)
-    return c.json({ code: 403, msg: '无权限', data: null })
+    throw AppError.forbidden('无权限')
   }
 
   await next()

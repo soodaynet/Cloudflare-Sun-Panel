@@ -3,8 +3,7 @@ import type { D1Database } from '@cloudflare/workers-types'
 import { authMiddleware, adminMiddleware } from '../middleware/auth'
 import { validate, settingGetSchema, settingSetSchema, saveAllSchema } from '../utils/validate'
 import { SettingsService } from '../services/SettingsService'
-import { ok, fail, getErrorMessage } from '../utils/response'
-import { AppError } from '../utils/errors'
+import { ok } from '../utils/response'
 
 type Variables = {
   validatedBody: unknown
@@ -17,17 +16,10 @@ const settingsApp = new Hono<{ Bindings: { DB: D1Database }; Variables: Variable
  * POST /api/system/setting/get
  */
 settingsApp.post('/system/setting/get', validate(settingGetSchema), async (c) => {
-  try {
-    const { configName } = c.var.validatedBody as { configName: string }
-    const service = new SettingsService(c.env.DB)
-    const value = await service.get(configName)
-    return ok(c, value)
-  } catch (e: unknown) {
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
+  const { configName } = c.var.validatedBody as { configName: string }
+  const service = new SettingsService(c.env.DB)
+  const value = await service.get(configName)
+  return ok(c, value)
 })
 
 /**
@@ -35,17 +27,10 @@ settingsApp.post('/system/setting/get', validate(settingGetSchema), async (c) =>
  * POST /api/system/setting/set
  */
 settingsApp.post('/system/setting/set', authMiddleware, adminMiddleware, validate(settingSetSchema), async (c) => {
-  try {
-    const { configName, configValue } = c.var.validatedBody as { configName: string; configValue?: string }
-    const service = new SettingsService(c.env.DB)
-    await service.set(configName, configValue ?? '')
-    return ok(c, null)
-  } catch (e: unknown) {
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
+  const { configName, configValue } = c.var.validatedBody as { configName: string; configValue?: string }
+  const service = new SettingsService(c.env.DB)
+  await service.set(configName, configValue ?? '')
+  return ok(c, null)
 })
 
 /**
@@ -53,18 +38,11 @@ settingsApp.post('/system/setting/set', authMiddleware, adminMiddleware, validat
  * POST /api/system/settings/saveAll
  */
 settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, validate(saveAllSchema), async (c) => {
-  try {
-    const body = c.var.validatedBody as Record<string, string>
+  const body = c.var.validatedBody as Record<string, string>
 
-    const service = new SettingsService(c.env.DB)
-    await service.saveAll(body)
-    return ok(c, null)
-  } catch (e: unknown) {
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
+  const service = new SettingsService(c.env.DB)
+  await service.saveAll(body)
+  return ok(c, null)
 })
 
 /**
@@ -72,17 +50,10 @@ settingsApp.post('/system/settings/saveAll', authMiddleware, adminMiddleware, va
  * POST /api/about
  */
 settingsApp.post('/about', async (c) => {
-  try {
-    const service = new SettingsService(c.env.DB)
-    const settings = await service.getAll()
-    c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
-    return ok(c, settings)
-  } catch (e: unknown) {
-    if (e instanceof AppError) {
-      return fail(c, e.message, e.code, e.httpStatus)
-    }
-    return fail(c, getErrorMessage(e), 500)
-  }
+  const service = new SettingsService(c.env.DB)
+  const settings = await service.getAll()
+  c.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+  return ok(c, settings)
 })
 
 export default settingsApp
