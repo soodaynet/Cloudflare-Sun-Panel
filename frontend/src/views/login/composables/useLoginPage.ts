@@ -59,6 +59,7 @@ export function useLoginPage() {
         backgroundImage: `url(${bgImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        backgroundColor: '#1e3a5f', // 深蓝兜底色，图片加载期间避免白屏
         transform: 'translateZ(0)',
         willChange: 'transform',
       }
