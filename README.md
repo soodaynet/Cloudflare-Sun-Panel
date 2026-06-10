@@ -357,7 +357,7 @@ npx wrangler deploy
 ## 项目目录结构
 
 ```
-sun-panel/
+Cloudflare-Sun-Panel/
 ├── .github/workflows/
 │   └── deploy-worker.yml     # GitHub Actions 自动部署配置
 ├── frontend/                  # Vue 3 前端
@@ -365,14 +365,16 @@ sun-panel/
 │   │   ├── api/               # API 请求封装 (auth, panel, settings, user, upload)
 │   │   ├── components/        # 公用组件 (apps, common)
 │   │   │   ├── apps/Users/    # 用户管理组件
-│   │   │   └── common/        # 通用组件 (ImageUpload, LazyImg)
+│   │   │   └── common/        # 通用组件 (ImageUpload)
 │   │   ├── hooks/             # 组合式函数 (useTheme, useLanguage)
 │   │   ├── locales/           # 国际化 (zh-CN, en-US)
 │   │   ├── router/            # Vue Router 配置 (Hash 模式)
 │   │   ├── store/             # Pinia 状态管理 (app, auth, panel)
 │   │   ├── styles/            # 全局样式
 │   │   ├── typings/           # TypeScript 类型声明
-│   │   ├── utils/             # 工具函数 (axios, importExport, requestCache)
+│   │   ├── utils/             # 工具函数
+│   │   │   ├── importExport.ts # 数据导入导出
+│   │   │   ├── requestCache.ts # 请求缓存
 │   │   │   └── request/       # HTTP 请求封装 (axios 实例)
 │   │   ├── views/             # 页面组件
 │   │   │   ├── home/
@@ -416,7 +418,8 @@ sun-panel/
 │   │   ├── db.ts              # 数据库查询辅助
 │   │   ├── env.ts             # 环境变量校验
 │   │   ├── errors.ts          # 统一错误类 (AppError)
-│   │   ├── favicon.ts         # Favicon 探测/解析
+│   │   ├── favicon.ts         # Favicon 探测/解析 (含 SSRF 防护)
+│   │   ├── origin.ts          # 请求来源校验 (CORS/CSRF)
 │   │   ├── response.ts        # 统一响应格式
 │   │   └── validate.ts        # Zod 校验 + 中间件适配
 │   ├── validators/            # Zod Schema 定义
@@ -428,6 +431,8 @@ sun-panel/
 ├── schema.sql                 # D1 数据库 DDL + 默认数据
 ├── wrangler.toml              # Cloudflare Workers 配置
 ├── package.json               # 根 workspace 配置
+├── eslint.config.js           # ESLint 配置
+├── .prettierrc                # Prettier 配置
 ├── pnpm-workspace.yaml        # pnpm workspace 定义
 └── tsconfig.json
 ```
