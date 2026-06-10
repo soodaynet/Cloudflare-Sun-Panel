@@ -26,18 +26,21 @@ const errored = ref(false)
   >
     <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
       <img
-        v-if="item.icon?.src && !errored"
+        v-if="item.icon?.src"
+        v-show="!errored"
         :src="item.icon.src"
         class="w-full h-full object-cover rounded-lg"
         :alt="item.title"
-        loading="eager"
+        width="40"
+        height="40"
+        :loading="eagerLoad ? 'eager' : 'lazy'"
         decoding="async"
         :fetchpriority="eagerLoad ? 'high' : 'auto'"
         referrerpolicy="no-referrer"
         @error="errored = true"
       />
       <div
-        v-else
+        v-if="!item.icon?.src || errored"
         class="w-full h-full rounded-lg flex items-center justify-center text-white font-bold text-lg"
         :style="{ backgroundColor: item.icon?.backgroundColor || '#4a90d9' }"
       >

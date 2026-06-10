@@ -42,19 +42,28 @@ export function useWallpaper(
     }
   }
 
-  /** 预加载首屏图标（前 N 个有图标的图标），加速首屏渲染 */
-  function preloadIconImages(groups: PreloadGroup[], count: number = 6) {
+  /** 预加载首屏图标（前 N 个），加速图标渲染 */
+  function preloadIconImages(groups: PreloadGroup[], count: number = 18) {
     let loaded = 0
+    const preDecode = typeof createImageBitmap !== 'undefined'
     for (const group of groups) {
       for (const item of group.items || []) {
         if (loaded >= count) return
         if (!item.icon?.src) continue
+        // 1. <link rel="preload"> 触发浏览器预下载
         const link = document.createElement('link')
         link.rel = 'preload'
         link.as = 'image'
         link.href = item.icon.src
         link.setAttribute('data-icon-preload', 'true')
         document.head.appendChild(link)
+        // 2. pre-decode 图片（后台线程解码，不会阻塞主线程渲染）
+        if (preDecode) {
+          fetch(item.icon.src, { mode: 'cors' })
+            .then((r) => r.blob())
+            .then((blob) => createImageBitmap(blob))
+            .catch(() => {})
+        }
         loaded++
       }
     }

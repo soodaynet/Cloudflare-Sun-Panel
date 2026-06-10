@@ -17,9 +17,9 @@ const logoStyle = computed(() => {
 })
 
 const logoImgStyle = computed(() => {
-  const size = panelState.panelConfig.logoSize
-  return size ? { height: `${size}px` } : { height: '32px' }
-})
+    const size = panelState.panelConfig.logoSize
+    return size ? { height: `${size}px`, width: 'auto' } : { height: '32px', width: 'auto' }
+  })
 
 const isMobile = ref(false)
 
@@ -47,13 +47,15 @@ onUnmounted(() => {
       <img
         v-if="panelState.panelConfig.logoImageSrc"
         :src="panelState.panelConfig.logoImageSrc"
-        class="rounded"
         :style="logoImgStyle"
         alt="Logo"
+        width="128"
+        height="32"
         fetchpriority="high"
         loading="eager"
         decoding="async"
         referrerpolicy="no-referrer"
+        @error="($event.target as HTMLImageElement).style.display = 'none'"
       />
       <span v-if="logoText" class="text-white text-base sm:text-xl font-bold">{{ logoText }}</span>
       <span

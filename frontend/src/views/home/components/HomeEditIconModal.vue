@@ -55,6 +55,10 @@ const show = computed({
                 :src="iconUrl"
                 class="w-5 h-5 object-contain"
                 alt=""
+                width="20"
+                height="20"
+                loading="eager"
+                decoding="async"
                 referrerpolicy="no-referrer"
                 @error="($event.target as HTMLImageElement).style.display = 'none'"
               />
