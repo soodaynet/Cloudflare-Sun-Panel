@@ -3,6 +3,7 @@ import { NButton } from 'naive-ui'
 import { useMessage } from 'naive-ui'
 import { usePanelState } from '@/store'
 import { setUserConfig } from '@/api/index'
+import ImageUpload from '@/components/common/ImageUpload.vue'
 
 const props = defineProps<{
   panelConfig: Panel.panelConfig
@@ -47,8 +48,13 @@ function handleReset() {
       <input
         :value="panelConfig.backgroundImageSrc"
         @input="(e: Event) => (panelConfig.backgroundImageSrc = (e.target as HTMLInputElement).value)"
-        class="w-full border rounded px-3 py-2 sm:text-sm text-base"
+        class="w-full border rounded px-3 py-2 sm:text-sm text-base mb-2"
         placeholder="输入图片URL"
+      />
+      <ImageUpload
+        :model-value="panelConfig.backgroundImageSrc"
+        label="上传壁纸"
+        @update:model-value="(url: string) => (panelConfig.backgroundImageSrc = url)"
       />
     </div>
     <div>

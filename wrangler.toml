@@ -13,3 +13,9 @@ head_sampling_rate = 0.1
 binding = "DB"
 database_name = "sun-panel-db"
 database_id = "__D1_DATABASE_ID__"
+
+# ---- R2 存储 (可选) ----
+# 取消下面的注释并创建 R2 存储桶后，即可将图标/壁纸上传到 R2 获得更快加载速度
+# [[r2_buckets]]
+# binding = "MEDIA_BUCKET"
+# bucket_name = "sun-panel-media"

@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { D1Database, Fetcher } from '@cloudflare/workers-types'
+import type { D1Database, Fetcher, R2Bucket } from '@cloudflare/workers-types'
 import { corsMiddleware } from './middleware/cors'
 import { csrfMiddleware } from './middleware/csrf'
 import { securityHeadersMiddleware } from './middleware/securityHeaders'
@@ -13,11 +13,14 @@ import usersRoutes from './routes/users'
 import userConfigRoutes from './routes/userConfig'
 import settingsRoutes from './routes/settings'
 import initRoutes from './routes/init'
+import uploadRoutes from './routes/upload'
+import { R2Service } from './services/R2Service'
 
 type Bindings = {
   DB: D1Database
   ASSETS: Fetcher
   JWT_SECRET?: string
+  MEDIA_BUCKET?: R2Bucket
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -91,6 +94,32 @@ app.route('/panel', groupsRoutes)     // /panel/itemIconGroup/*
 app.route('/panel', userConfigRoutes) // /panel/userConfig/*, /panel/users/*
 app.route('/', usersRoutes)           // /user/*
 app.route('/', settingsRoutes)        // /system/*, /about
+app.route('/api/upload', uploadRoutes)// /api/upload/image
+
+// R2 媒体代理：GET /media/* -> R2 存储桶（仅在配置了 MEDIA_BUCKET 时有效）
+app.get('/media/*', async (c) => {
+  const r2 = new R2Service(c.env.MEDIA_BUCKET)
+  if (!r2.isAvailable()) {
+    return c.json({ code: 404, msg: 'R2 未配置', data: null }, 404)
+  }
+
+  const key = c.req.path.replace('/media/', '')
+  if (!key || key.includes('..')) {
+    return c.json({ code: 400, msg: '无效路径', data: null }, 400)
+  }
+
+  const obj = await r2.getObject(key)
+  if (!obj) {
+    return c.json({ code: 404, msg: '文件不存在', data: null }, 404)
+  }
+
+  const headers = new Headers()
+  obj.writeHttpMetadata(headers)
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+  headers.set('Access-Control-Allow-Origin', '*')
+
+  return new Response(obj.body, { headers })
+})
 
 // SPA 前端回退：未匹配的 GET 请求返回 index.html（Vue Router hash 模式兜底）
 app.get('*', async (c) => {

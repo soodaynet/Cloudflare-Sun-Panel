@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NButton, NModal } from 'naive-ui'
+import ImageUpload from '@/components/common/ImageUpload.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -81,9 +82,10 @@ const show = computed({
         <label class="block text-sm mb-1">图标图片 URL</label
         ><input
           v-model="editingItem.icon!.src"
-          class="w-full border rounded px-3 py-2 text-sm"
+          class="w-full border rounded px-3 py-2 text-sm mb-2"
           placeholder="输入图标图片URL，留空使用文字图标"
         />
+        <ImageUpload v-if="editingItem" :model-value="editingItem.icon?.src" label="上传图标" @update:model-value="(url: string) => { if (editingItem) editingItem.icon!.src = url }" />
       </div>
       <div>
         <label class="block text-sm mb-1">图标背景色</label

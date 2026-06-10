@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { NButton } from 'naive-ui'
 import { useMessage } from 'naive-ui'
 import { saveSiteSettings } from '@/api/index'
+import ImageUpload from '@/components/common/ImageUpload.vue'
 
 const props = defineProps<{
   siteConfig: Panel.SiteConfig
@@ -61,8 +62,13 @@ async function handleSave() {
       <input
         :value="localSiteConfig.favicon_url"
         @input="(e: Event) => (localSiteConfig.favicon_url = (e.target as HTMLInputElement).value)"
-        class="w-full border rounded px-3 py-2 sm:text-sm text-base"
+        class="w-full border rounded px-3 py-2 sm:text-sm text-base mb-2"
         placeholder="输入图标URL，显示在浏览器标签页上"
+      />
+      <ImageUpload
+        :model-value="localSiteConfig.favicon_url"
+        label="上传 Favicon"
+        @update:model-value="(url: string) => (localSiteConfig.favicon_url = url)"
       />
     </div>
     <div>
@@ -70,8 +76,13 @@ async function handleSave() {
       <input
         :value="localSiteConfig.login_bg_image"
         @input="(e: Event) => (localSiteConfig.login_bg_image = (e.target as HTMLInputElement).value)"
-        class="w-full border rounded px-3 py-2 sm:text-sm text-base"
+        class="w-full border rounded px-3 py-2 sm:text-sm text-base mb-2"
         placeholder="输入图片URL"
+      />
+      <ImageUpload
+        :model-value="localSiteConfig.login_bg_image"
+        label="上传背景图"
+        @update:model-value="(url: string) => (localSiteConfig.login_bg_image = url)"
       />
     </div>
     <div class="border-t pt-3">
