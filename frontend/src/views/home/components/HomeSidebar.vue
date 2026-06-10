@@ -144,7 +144,7 @@ onUnmounted(() => {
       </div>
       <!-- 移动端操作按钮 -->
       <div class="mobile-divider" />
-      <template v-if="!authStore.isVisitMode">
+      <template v-if="authStore.isLoggedIn">
         <div class="mobile-nav-item mobile-action-item" @click="handleSettings">设 置</div>
         <div class="mobile-nav-item mobile-action-item" @click="handleLogout">退出登录</div>
       </template>

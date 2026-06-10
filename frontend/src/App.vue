@@ -17,7 +17,11 @@ const { language, dateLocale } = useLanguage()
   >
     <NMessageProvider>
       <NDialogProvider>
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="page-fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </RouterView>
       </NDialogProvider>
     </NMessageProvider>
   </NConfigProvider>

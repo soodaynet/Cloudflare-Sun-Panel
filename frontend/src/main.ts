@@ -10,8 +10,8 @@ async function bootstrap() {
   setupStore(app)
   setupI18n(app)
   
-  // 等待路由就绪后再挂载，确保首次导航完成（避免空白页）
-  await setupRouter(app)
+  // 立即挂载，不等待路由就绪，消除首屏白屏等待
+  setupRouter(app)
   app.mount('#app')
 }
 
