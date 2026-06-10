@@ -15,6 +15,7 @@
   - [4. 构建前端](#4-构建前端)
   - [5. 部署 Worker](#5-部署-worker)
   - [6. 设置 JWT 密钥（推荐）](#6-设置-jwt-密钥推荐)
+  - [7. 配置 R2 对象存储（可选）](#7-配置-r2-对象存储可选)
 - [CI/CD 自动部署](#cicd-自动部署)
 - [环境变量说明](#环境变量说明)
 - [项目目录结构](#项目目录结构)
@@ -33,16 +34,23 @@
 ```
 浏览器 ──→ Cloudflare Worker (Hono)
                │
+               ├── 中间件链 (CORS → CSRF → SecurityHeaders → BodyLimit)
+               │
                ├── API 路由 (/login, /panel/*, /user/*, /system/*)
                │      └── D1 数据库 (SQLite)
                │
-               └── 静态资源 (Vue 3 SPA) ── 由 Worker Assets 直接返回
+               ├── 静态资源 (Vue 3 SPA) ── 由 Worker Assets 直接返回
+               │
+               └── R2 对象存储 (可选) ── 图片上传 / 媒体代理
 ```
 
 - **后端**: TypeScript + [Hono](https://hono.dev/) 运行在 Cloudflare Workers
 - **数据库**: Cloudflare D1 (SQLite)
+- **对象存储**: Cloudflare R2（可选）
 - **前端**: Vue 3 + Vite + Naive UI + Tailwind CSS
 - **认证**: 自签名 JWT（HMAC-SHA256），7 天过期
+- **安全**: CSRF 防护、安全响应头、请求体大小限制、登录频率限制
+- **密码**: SHA-256 + 随机盐值哈希
 
 ---
 
@@ -86,7 +94,7 @@
 ```bash
 # 1. 克隆项目
 git clone <repository-url>
-cd 1
+cd Cloudflare-Sun-Panel
 
 # 2. 安装后端依赖
 npm install
@@ -145,7 +153,7 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # 替换这里
 ### 3. 初始化数据库表
 
 ```bash
-npm run db:init
+npx wrangler d1 execute sun-panel-db --remote --file=./schema.sql
 ```
 
 这将在远程 D1 数据库中创建所有表、索引和默认管理员账号。
@@ -187,6 +195,34 @@ npx wrangler deploy
 
 > 不设置 JWT_SECRET 将使用代码中的默认密钥，**生产环境强烈建议更换**。
 
+### 7. 配置 R2 对象存储（可选）
+
+项目支持将图标和壁纸图片上传到 Cloudflare R2，获得更快的加载速度和更可靠的存储。
+
+#### 7.1 创建 R2 存储桶
+
+```bash
+wrangler r2 bucket create sun-panel-media
+```
+
+#### 7.2 启用 R2 绑定
+
+编辑 `wrangler.toml`，取消 R2 配置的注释：
+
+```toml
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "sun-panel-media"
+```
+
+#### 7.3 重新部署
+
+```bash
+npx wrangler deploy
+```
+
+配置完成后，在图标编辑器和站点设置中将出现图片上传按钮，上传的图片通过 `/media/*` 路径代理访问。
+
 ---
 
 ## CI/CD 自动部署
@@ -204,7 +240,7 @@ npx wrangler deploy
 | 属性 | 值 |
 |------|-----|
 | **作用** | 用于 `wrangler deploy` 认证，将 Worker 部署到 Cloudflare |
-| **使用位置** | `deploy-worker.yml` 第 42、48 行 |
+| **使用位置** | `deploy-worker.yml` deploy 与 init 步骤 |
 | **必填** | 是 |
 
 **获取方式：**
@@ -230,7 +266,7 @@ npx wrangler deploy
 | 属性 | 值 |
 |------|-----|
 | **作用** | 指定部署目标账户，`wrangler deploy` 需要此 ID 定位账户 |
-| **使用位置** | `deploy-worker.yml` 第 43、49 行 |
+| **使用位置** | `deploy-worker.yml` deploy 与 init 步骤 |
 | **必填** | 是 |
 
 **获取方式：**
@@ -246,7 +282,7 @@ npx wrangler deploy
 | 属性 | 值 |
 |------|-----|
 | **作用** | 注入到 `wrangler.toml` 替换占位符 `__D1_DATABASE_ID__`，绑定正确的 D1 数据库 |
-| **使用位置** | `deploy-worker.yml` 第 37 行（sed 替换） |
+| **使用位置** | `deploy-worker.yml` Inject D1 database_id 步骤 |
 | **必填** | 是 |
 
 **获取方式：**
@@ -292,12 +328,12 @@ npx wrangler deploy
 | 步骤 | 操作 | 使用的 Secret |
 |------|------|-------------|
 | 1 | Checkout 代码 | — |
-| 2 | 安装 Worker 依赖 (`npm install`) | — |
-| 3 | 安装前端依赖 (`cd frontend && npm install`) | — |
+| 2 | 安装 Worker 依赖 (`npm ci`) | — |
+| 3 | 安装前端依赖 (`cd frontend && npm ci`) | — |
 | 4 | 构建前端 (`npm run build`) | — |
 | 5 | 替换 `wrangler.toml` 中 D1 ID 占位符 | `CF_D1_DATABASE_ID` |
 | 6 | 部署 Worker + 静态资源 (`wrangler deploy`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
-| 7 | 初始化 D1 数据库表 (`db:init`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
+| 7 | 初始化 D1 数据库表 (`wrangler d1 execute ... --remote`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
 
 ---
 
@@ -326,16 +362,25 @@ sun-panel/
 │   └── deploy-worker.yml     # GitHub Actions 自动部署配置
 ├── frontend/                  # Vue 3 前端
 │   ├── src/
-│   │   ├── api/               # API 请求封装
-│   │   ├── components/        # 公用组件
+│   │   ├── api/               # API 请求封装 (auth, panel, settings, user, upload)
+│   │   ├── components/        # 公用组件 (apps, common)
+│   │   │   ├── apps/Users/    # 用户管理组件
+│   │   │   └── common/        # 通用组件 (ImageUpload, LazyImg)
 │   │   ├── hooks/             # 组合式函数 (useTheme, useLanguage)
 │   │   ├── locales/           # 国际化 (zh-CN, en-US)
-│   │   ├── router/            # Vue Router 配置
-│   │   ├── store/             # Pinia 状态管理
+│   │   ├── router/            # Vue Router 配置 (Hash 模式)
+│   │   ├── store/             # Pinia 状态管理 (app, auth, panel)
 │   │   ├── styles/            # 全局样式
 │   │   ├── typings/           # TypeScript 类型声明
-│   │   ├── utils/             # 工具函数 (axios, importExport)
+│   │   ├── utils/             # 工具函数 (axios, importExport, requestCache)
+│   │   │   └── request/       # HTTP 请求封装 (axios 实例)
 │   │   ├── views/             # 页面组件
+│   │   │   ├── home/
+│   │   │   │   ├── components/  # 主页子组件 (卡片、侧栏、壁纸等)
+│   │   │   │   │   └── panels/  # 设置面板组件
+│   │   │   │   └── composables/ # 主页逻辑 (公告、数据加载、站点配置等)
+│   │   │   ├── login/          # 登录页
+│   │   │   └── exception/404/  # 404 页面
 │   │   ├── App.vue
 │   │   └── main.ts
 │   ├── index.html
@@ -343,14 +388,47 @@ sun-panel/
 │   ├── tailwind.config.js
 │   └── package.json
 ├── src/                       # Cloudflare Worker 后端
-│   ├── middleware/             # 中间件 (auth, cors)
+│   ├── middleware/             # 中间件
+│   │   ├── auth.ts            # 鉴权（JWT 验证、公开/访客模式、管理员）
+│   │   ├── cors.ts            # CORS 跨域
+│   │   ├── csrf.ts            # CSRF 防护
+│   │   ├── securityHeaders.ts # 安全响应头
+│   │   ├── bodyLimit.ts       # 请求体大小限制 (1MB)
+│   │   └── rateLimiter.ts     # 频率限制（登录接口）
 │   ├── models/                # 类型定义
-│   ├── routes/                # 路由处理 (auth, panel, groups, users, settings)
-│   ├── utils/                 # 工具函数 (jwt, password)
+│   ├── routes/                # API 路由处理
+│   │   ├── auth.ts            # /login, /register
+│   │   ├── init.ts            # /init（统一初始化接口）
+│   │   ├── panel.ts           # /panel/itemIcon/* + /panel/getAllData
+│   │   ├── groups.ts          # /panel/itemIconGroup/*
+│   │   ├── userConfig.ts      # /panel/userConfig/* + /panel/users/*
+│   │   ├── users.ts           # /user/*
+│   │   ├── settings.ts        # /system/*, /about
+│   │   └── upload.ts          # /api/upload/image
+│   ├── services/              # 业务服务层
+│   │   ├── PanelService.ts    # 图标、分组 CRUD
+│   │   ├── UserService.ts     # 用户认证、管理
+│   │   ├── SettingsService.ts # 系统设置
+│   │   └── R2Service.ts       # R2 图片上传/代理
+│   ├── utils/                 # 工具函数
+│   │   ├── jwt.ts             # JWT 签名/验证 (HMAC-SHA256)
+│   │   ├── password.ts        # 密码哈希 (SHA-256 + 盐值)
+│   │   ├── db.ts              # 数据库查询辅助
+│   │   ├── env.ts             # 环境变量校验
+│   │   ├── errors.ts          # 统一错误类 (AppError)
+│   │   ├── favicon.ts         # Favicon 探测/解析
+│   │   ├── response.ts        # 统一响应格式
+│   │   └── validate.ts        # Zod 校验 + 中间件适配
+│   ├── validators/            # Zod Schema 定义
+│   │   ├── auth.ts
+│   │   ├── panel.ts
+│   │   ├── settings.ts
+│   │   └── user.ts
 │   └── index.ts               # 入口文件
 ├── schema.sql                 # D1 数据库 DDL + 默认数据
 ├── wrangler.toml              # Cloudflare Workers 配置
 ├── package.json               # 根 workspace 配置
+├── pnpm-workspace.yaml        # pnpm workspace 定义
 └── tsconfig.json
 ```
 
@@ -367,7 +445,9 @@ sun-panel/
 | 路径 | 方法 | 认证 | 说明 |
 |------|------|------|------|
 | `/login` | POST | 无 | 用户登录，返回 JWT token |
-| `/register` | POST | 无 | 用户注册 |
+| `/register` | POST | 无 | 用户注册，返回 JWT token |
+| `/init` | POST | 公开模式 | 统一初始化，一次性获取面板数据、系统设置和认证信息 |
+| `/panel/getAllData` | POST | 公开模式 | 统一获取全部数据（分组 + 图标 + 用户配置） |
 | `/user/getAuthInfo` | POST | 公开模式 | 获取当前认证信息和访客模式状态 |
 | `/user/updateInfo` | POST | 需登录 | 更新昵称 |
 | `/user/updatePassword` | POST | 需登录 | 修改密码 |
@@ -376,6 +456,7 @@ sun-panel/
 | `/panel/itemIconGroup/deletes` | POST | 公开模式 | 删除分组及图标 |
 | `/panel/itemIconGroup/saveSort` | POST | 公开模式 | 保存分组排序 |
 | `/panel/itemIcon/getListByGroupId` | POST | 公开模式 | 获取分组下图标列表 |
+| `/panel/itemIcon/getSiteFavicon` | POST | 公开模式 | 获取站点 favicon 图标 |
 | `/panel/itemIcon/addMultiple` | POST | 公开模式 | 批量添加图标 |
 | `/panel/itemIcon/edit` | POST | 公开模式 | 新增/编辑图标 |
 | `/panel/itemIcon/deletes` | POST | 公开模式 | 批量删除图标 |
@@ -393,6 +474,8 @@ sun-panel/
 | `/system/settings/saveAll` | POST | 管理员 | 批量保存系统设置 |
 | `/about` | POST | 无 | 获取所有系统设置 |
 | `/api/health` | GET | 无 | 健康检查 |
+| `/api/upload/image` | POST | 需登录 | 上传图片到 R2（需 R2 配置） |
+| `/media/*` | GET | 无 | R2 媒体文件代理（需 R2 配置） |
 
 ---
 
@@ -604,12 +687,17 @@ curl -X POST https://<your-worker>.workers.dev/about \
 - **运行时**：Cloudflare Workers
 - **框架**：Hono ^4.7
 - **数据库**：Cloudflare D1 (SQLite)
+- **对象存储**：Cloudflare R2（可选，用于图标/壁纸上传）
 - **前端框架**：Vue 3.5 + TypeScript
 - **构建工具**：Vite 6
 - **UI 组件**：Naive UI 2.43
 - **CSS 框架**：Tailwind CSS 3.4
 - **状态管理**：Pinia 2.3
 - **国际化**：vue-i18n 9.14
+- **拖拽排序**：vue-draggable-plus 0.6
+- **安全过滤**：DOMPurify 3.4
+- **数据校验**：Zod 3.24
+- **包管理**：npm / pnpm（workspace monorepo）
 ## 致谢
 
 本项目基于以下优秀项目构建，特别感谢：
