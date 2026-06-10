@@ -20,7 +20,7 @@ type Bindings = {
   DB: D1Database
   ASSETS: Fetcher
   JWT_SECRET?: string
-  MEDIA_BUCKET?: R2Bucket
+  R2?: R2Bucket
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -96,9 +96,9 @@ app.route('/', usersRoutes)           // /user/*
 app.route('/', settingsRoutes)        // /system/*, /about
 app.route('/api/upload', uploadRoutes)// /api/upload/image
 
-// R2 媒体代理：GET /media/* -> R2 存储桶（仅在配置了 MEDIA_BUCKET 时有效）
+// R2 媒体代理：GET /media/* -> R2 存储桶（仅在配置了 R2 绑定时有效）
 app.get('/media/*', async (c) => {
-  const r2 = new R2Service(c.env.MEDIA_BUCKET)
+  const r2 = new R2Service(c.env.R2)
   if (!r2.isAvailable()) {
     return c.json({ code: 404, msg: 'R2 未配置', data: null }, 404)
   }

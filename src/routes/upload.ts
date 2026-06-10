@@ -4,7 +4,7 @@ import { authMiddleware, type AuthUser } from '../middleware/auth'
 import { R2Service } from '../services/R2Service'
 import { ok, fail } from '../utils/response'
 
-const uploadApp = new Hono<{ Bindings: { DB: D1Database; MEDIA_BUCKET?: R2Bucket }; Variables: { authUser: AuthUser } }>()
+const uploadApp = new Hono<{ Bindings: { DB: D1Database; R2?: R2Bucket }; Variables: { authUser: AuthUser } }>()
 
 /**
  * 上传图片到 R2
@@ -13,7 +13,7 @@ const uploadApp = new Hono<{ Bindings: { DB: D1Database; MEDIA_BUCKET?: R2Bucket
  * Body: file=<image>
  */
 uploadApp.post('/image', authMiddleware, async (c) => {
-  const r2 = new R2Service(c.env.MEDIA_BUCKET)
+  const r2 = new R2Service(c.env.R2)
 
   if (!r2.isAvailable()) {
     return fail(c, 'R2 存储未配置，请在 Cloudflare 控制台创建 R2 存储桶并在 wrangler.toml 中添加绑定', 501)

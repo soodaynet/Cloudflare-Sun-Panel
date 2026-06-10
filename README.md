@@ -211,7 +211,7 @@ wrangler r2 bucket create sun-panel-media
 
 ```toml
 [[r2_buckets]]
-binding = "MEDIA_BUCKET"
+binding = "R2"
 bucket_name = "sun-panel-media"
 ```
 
