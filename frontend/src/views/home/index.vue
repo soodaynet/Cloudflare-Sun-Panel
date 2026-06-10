@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
-import { NBackTop, NButton, NSpin, NTooltip, useMessage } from 'naive-ui'
+import { NBackTop, NButton, NTooltip, useMessage } from 'naive-ui'
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useAuthStore, usePanelState } from '@/store'
@@ -183,6 +183,11 @@ onMounted(async () => {
 onUnmounted(() => {
   document.documentElement.style.overflow = ''
 })
+
+// 监听登录状态变化（退出登录 → 自动切换为访客视图，无刷新重新加载）
+watch(() => authStore.isAuthenticated, () => {
+  loadData()
+})
 </script>
 
 <template>
@@ -226,7 +231,19 @@ onUnmounted(() => {
 
     <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
-      <NSpin :show="loading">
+
+      <!-- 自定义加载动画 -->
+      <Transition name="loader-fade">
+        <div v-if="loading" class="loader-overlay">
+          <div class="loader-ring">
+            <div class="loader-ring-inner" />
+          </div>
+          <p class="loader-text">加载中...</p>
+        </div>
+      </Transition>
+
+      <!-- 内容（加载中时降低可见度） -->
+      <div :class="{ 'opacity-0': loading, 'transition-opacity duration-300': !loading }">
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
@@ -300,7 +317,7 @@ onUnmounted(() => {
             </div>
           </div>
         </template>
-      </NSpin>
+      </div>
     </div>
 
     <!-- 自定义页脚 -->

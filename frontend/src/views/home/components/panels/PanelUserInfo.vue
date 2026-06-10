@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { NButton, NInput, useMessage } from 'naive-ui'
 import { useAuthStore, useAppStore } from '@/store'
 import { updateUserInfo, updatePassword } from '@/api/index'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 const message = useMessage()
@@ -64,7 +66,7 @@ async function handleSavePassword() {
     if (res.code === 0) {
       message.success('密码已修改，请重新登录')
       editingPassword.value = false
-      setTimeout(() => { authStore.removeToken(); window.location.reload() }, 1500)
+      setTimeout(() => { authStore.removeToken(); router.push('/login') }, 1500)
     } else {
       message.error(res.msg || '修改失败')
     }
@@ -77,7 +79,7 @@ async function handleSavePassword() {
 
 function handleLogout() {
   authStore.removeToken()
-  window.location.reload()
+  router.push('/')
 }
 </script>
 

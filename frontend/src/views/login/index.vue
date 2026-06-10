@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NButton, NCard, NForm, NFormItem, NInput, NSpin, useMessage, NDivider } from 'naive-ui'
+import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from 'naive-ui'
 import { login } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
@@ -56,8 +56,16 @@ async function handleSkipLogin() {
     class="flex items-center justify-center min-h-screen"
     :style="loginPageStyle"
   >
-    <NSpin :show="pageLoading" :stroke-width="10">
-      <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false" :style="loginCardStyle">
+    <!-- 加载动画 -->
+    <Transition name="loader-fade">
+      <div v-if="pageLoading" class="loader-overlay" style="position:fixed;inset:0;z-index:50;">
+        <div class="loader-ring">
+          <div class="loader-ring-inner" />
+        </div>
+        <p class="loader-text">加载中...</p>
+      </div>
+    </Transition>
+    <NCard class="w-[92vw] sm:w-full max-w-sm shadow-xl login-card mx-4" :bordered="false" :style="loginCardStyle" :class="{ 'opacity-0': pageLoading, 'transition-opacity duration-300': !pageLoading }">
       <template #header>
         <div class="text-center text-xl font-bold text-gray-700 dark:text-gray-200">
           {{ siteTitle }}
@@ -93,7 +101,6 @@ async function handleSkipLogin() {
         <NButton block size="large" secondary @click="handleSkipLogin">以访客身份浏览</NButton>
       </template>
     </NCard>
-    </NSpin>
   </div>
 </template>
 
