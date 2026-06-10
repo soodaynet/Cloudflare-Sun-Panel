@@ -189,6 +189,14 @@ watch(() => authStore.isAuthenticated, () => {
   invalidateCache('site:about')
   loadInitData()
 })
+
+// 退出登录时立刻清理所有登录态 UI 状态（编辑模式、设置面板等）
+watch(() => authStore.isLoggedIn, (val) => {
+  if (!val) {
+    editModeGroupId.value = null
+    starterShow.value = false
+  }
+})
 </script>
 
 <template>
