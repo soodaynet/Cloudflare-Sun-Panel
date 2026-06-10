@@ -131,15 +131,9 @@ export function useLoginPage() {
       localStorage.setItem(LOGIN_BG_CACHE_KEY, bgUrl)
       // 添加 <link rel="preload"> 提示浏览器提前下载
       preloadLoginBg(bgUrl)
-      // 用 Image 对象预加载，确保图片就绪后再切换背景，避免闪烁
-      const img = new Image()
-      img.onload = () => {
-        loginBgImage.value = bgUrl
-      }
-      img.onerror = () => {
-        /* 加载失败，保持渐变背景 */
-      }
-      img.src = bgUrl
+      // 立即设置背景 URL，不要等图片加载完再切换（否则会闪现默认渐变）
+      // CSS background-image 会自然地在图片下载完成后显示，无需手动 onload
+      loginBgImage.value = bgUrl
     }
     // 读取登录卡片模糊度和遮罩不透明度设置
     if (data.login_blur !== undefined) {
