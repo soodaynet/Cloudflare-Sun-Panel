@@ -109,14 +109,3 @@ body::-webkit-scrollbar {
   content-visibility: auto;
   contain-intrinsic-size: auto 300px;
 }
-
-/* ========== 页面切换过渡动画 ========== */
-.page-fade-enter-active,
-.page-fade-leave-active {
-  transition: opacity 0.25s ease;
-}
-
-.page-fade-enter-from,
-.page-fade-leave-to {
-  opacity: 0;
-}

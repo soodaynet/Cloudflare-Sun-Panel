@@ -78,64 +78,84 @@ export function useLoginPage() {
   })
 
   async function initLoginPage() {
+    // 优先使用缓存：若已知公开模式可用且无 token，直接跳转，消除 API 等待延迟
+    if (localStorage.getItem('sun-panel-public-mode') === '1' && !localStorage.getItem('sun-panel-token')) {
+      const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
+      if (!skipAutoRedirect) {
+        authStore.setGuestMode(null)
+        router.push('/')
+        // 后台异步更新最新配置（不阻塞跳转）
+        getAbout<Record<string, string>>().then((res) => {
+          if (res.code === 0 && res.data) {
+            applyAboutResponse(res.data)
+          }
+        }).catch(() => {})
+        return
+      }
+    }
+
     try {
       const res = await getAbout<Record<string, string>>()
-      if (res.code === 0) {
-        const hasPublic = !!(res.data?.panel_public_user_id || res.data?.default_guest_mode === '1')
-        if (hasPublic) {
-          hasPublicMode.value = true
-          localStorage.setItem('sun-panel-public-mode', '1')
-          if (!localStorage.getItem('sun-panel-token')) {
-            const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
-            if (!skipAutoRedirect) {
-              authStore.setGuestMode(null)
-              router.push('/')
-              return
-            }
-          }
-        } else {
-          localStorage.setItem('sun-panel-public-mode', '0')
-        }
-        if (res.data?.site_title) {
-          siteTitle.value = res.data.site_title
-          document.title = res.data.site_title
-        }
-        // 使用站点设置中的登录页背景图片
-        const bgUrl = res.data?.login_bg_image || ''
-        if (bgUrl) {
-          // 缓存 URL 用于下次访问
-          localStorage.setItem(LOGIN_BG_CACHE_KEY, bgUrl)
-          // 添加 <link rel="preload"> 提示浏览器提前下载
-          preloadLoginBg(bgUrl)
-          // 用 Image 对象预加载，确保图片就绪后再切换背景，避免闪烁
-          const img = new Image()
-          img.onload = () => {
-            loginBgImage.value = bgUrl
-          }
-          img.onerror = () => {
-            /* 加载失败，保持渐变背景 */
-          }
-          img.src = bgUrl
-        }
-        // 读取登录卡片模糊度和遮罩不透明度设置
-        if (res.data?.login_blur !== undefined) {
-          loginBlur.value = Number(res.data.login_blur)
-        }
-        if (res.data?.login_mask_opacity !== undefined) {
-          loginMaskOpacity.value = Number(res.data.login_mask_opacity)
-        }
-        // 缓存样式用于下次访问
-        localStorage.setItem(
-          LOGIN_STYLE_CACHE_KEY,
-          JSON.stringify({
-            blur: loginBlur.value,
-            opacity: loginMaskOpacity.value,
-          }),
-        )
+      if (res.code === 0 && res.data) {
+        applyAboutResponse(res.data)
       }
     } catch {
       /* ignore */
     }
+  }
+
+  function applyAboutResponse(data: Record<string, string>) {
+    const hasPublic = !!(data.panel_public_user_id || data.default_guest_mode === '1')
+    if (hasPublic) {
+      hasPublicMode.value = true
+      localStorage.setItem('sun-panel-public-mode', '1')
+      if (!localStorage.getItem('sun-panel-token')) {
+        const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
+        if (!skipAutoRedirect) {
+          authStore.setGuestMode(null)
+          router.push('/')
+          return
+        }
+      }
+    } else {
+      localStorage.setItem('sun-panel-public-mode', '0')
+    }
+    if (data.site_title) {
+      siteTitle.value = data.site_title
+      document.title = data.site_title
+    }
+    // 使用站点设置中的登录页背景图片
+    const bgUrl = data.login_bg_image || ''
+    if (bgUrl) {
+      // 缓存 URL 用于下次访问
+      localStorage.setItem(LOGIN_BG_CACHE_KEY, bgUrl)
+      // 添加 <link rel="preload"> 提示浏览器提前下载
+      preloadLoginBg(bgUrl)
+      // 用 Image 对象预加载，确保图片就绪后再切换背景，避免闪烁
+      const img = new Image()
+      img.onload = () => {
+        loginBgImage.value = bgUrl
+      }
+      img.onerror = () => {
+        /* 加载失败，保持渐变背景 */
+      }
+      img.src = bgUrl
+    }
+    // 读取登录卡片模糊度和遮罩不透明度设置
+    if (data.login_blur !== undefined) {
+      loginBlur.value = Number(data.login_blur)
+    }
+    if (data.login_mask_opacity !== undefined) {
+      loginMaskOpacity.value = Number(data.login_mask_opacity)
+    }
+    // 缓存样式用于下次访问
+    localStorage.setItem(
+      LOGIN_STYLE_CACHE_KEY,
+      JSON.stringify({
+        blur: loginBlur.value,
+        opacity: loginMaskOpacity.value,
+      }),
+    )
   }
 
   return {

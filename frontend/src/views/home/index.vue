@@ -181,7 +181,7 @@ onMounted(async () => {
 
 // 离开首页时清理侧边栏可能遗留的 overflow 锁定
 onUnmounted(() => {
-  document.body.style.overflow = ''
+  document.documentElement.style.overflow = ''
 })
 </script>
 
@@ -199,7 +199,7 @@ onUnmounted(() => {
     :style="glassVars"
   >
     <!-- 侧边栏分组导航 -->
-    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" @sidebar-expanded="(val: boolean) => { document.body.style.overflow = val ? 'hidden' : '' }" />
+    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" @sidebar-expanded="(val: boolean) => { document.documentElement.style.overflow = val ? 'hidden' : '' }" />
 
     <!-- Logo + 访客标识（独立固定定位组件） -->
     <HomeLogo />
