@@ -14,7 +14,7 @@ defineProps<{
       alt=""
       fetchpriority="high"
       decoding="sync"
-      class="fixed inset-0 z-[1] w-full h-full object-cover"
+      class="fixed inset-0 z-[1] w-full min-h-full object-cover"
       :style="{
         filter: `blur(${backgroundBlur}px)`,
         transform: 'translateZ(0)',

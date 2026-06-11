@@ -45,11 +45,13 @@ if (cachedLoginBg) {
 
 // 从站点缓存恢复标题和图标
 const cachedSiteConfig = getCachedSiteConfig()
-const cachedTitle = cachedSiteConfig.site_title || 'Sun-Panel'
+const cachedTitle = cachedSiteConfig.site_title
 const cachedFavicon = cachedSiteConfig.favicon_url || ''
 
 // 立即应用缓存的标题和图标（浏览器标签页）
-document.title = cachedTitle
+if (cachedTitle) {
+  document.title = cachedTitle
+}
 updateFavicon(cachedFavicon)
 
 export function useLoginPage() {
@@ -57,7 +59,7 @@ export function useLoginPage() {
   const authStore = useAuthStore()
 
   const hasPublicMode = ref(false)
-  const siteTitle = ref(cachedTitle)
+  const siteTitle = ref(cachedTitle || '')
   const pageLoading = ref(true)
 
   const loginPageStyle = computed(() => {
