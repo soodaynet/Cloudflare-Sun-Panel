@@ -14,11 +14,6 @@ export function useWallpaper(
   const ps = panelState || usePanelState()
   const effectiveBackgroundImage = ref(localStorage.getItem(WALLPAPER_CACHE_KEY) || '')
 
-  // 立即预加载缓存的壁纸，在 Vue 挂载前就触发浏览器下载，加速首屏渲染
-  if (effectiveBackgroundImage.value) {
-    preloadBackgroundImage(effectiveBackgroundImage.value)
-  }
-
   function preloadBackgroundImage(url: string) {
     let link = document.querySelector('link[rel="preload"][as="image"][data-wallpaper]') as HTMLLinkElement | null
     if (link && link.href === url) return
