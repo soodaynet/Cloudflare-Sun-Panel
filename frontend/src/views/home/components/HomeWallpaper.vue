@@ -61,5 +61,5 @@ const displaySrc = computed(() => {
     />
   </template>
   <!-- 无壁纸时的渐变背景 -->
-  <div v-else class="fixed inset-0 z-[1]" style="background: linear-gradient(135deg, #f5f7fa 0%, #e4eaf5 100%); contain: strict" />
+  <div v-else class="fixed inset-0 z-[1]" style="background: #dce2e8; contain: strict" />
 </template>

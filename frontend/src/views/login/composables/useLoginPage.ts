@@ -69,14 +69,14 @@ export function useLoginPage() {
         backgroundImage: `url(${bgImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundColor: '#0d1b2a', // 深色兜底，图片加载期间不闪白
+        backgroundColor: '#dce2e8', // 中性色兜底，图片加载期间不闪白
         transform: 'translateZ(0)',
         willChange: 'transform',
       }
     }
     // 无自定义背景时显示渐变（与首页壁纸风格一致）
     return {
-      background: 'linear-gradient(to bottom right, #0d1b2a, #1a1a2e)',
+      background: '#dce2e8',
     }
   })
 
