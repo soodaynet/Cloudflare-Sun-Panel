@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 
 const props = defineProps<{
   backgroundImageSrc: string
@@ -10,6 +10,36 @@ const props = defineProps<{
 
 const isVideo = computed(() => /\.(mp4|webm|ogg)(\?.*)?$/i.test(props.backgroundImageSrc))
 const isDynamicApi = computed(() => /(\/random|\.php|api\.)/i.test(props.backgroundImageSrc) && !isVideo.value)
+
+const proxyImageUrl = ref('')
+
+watchEffect(async (onCleanup) => {
+  if (!isDynamicApi.value || !props.backgroundImageSrc) {
+    proxyImageUrl.value = ''
+    return
+  }
+  let aborted = false
+  onCleanup(() => { aborted = true })
+  try {
+    const res = await fetch('/api/proxy-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: props.backgroundImageSrc }),
+    })
+    if (aborted) return
+    if (res.ok) {
+      const blob = await res.blob()
+      if (!aborted) proxyImageUrl.value = URL.createObjectURL(blob)
+    }
+  } catch { /* 代理获取失败，回退到直接使用原 URL */ }
+})
+
+const displaySrc = computed(() => {
+  if (!props.backgroundImageSrc) return ''
+  if (isVideo.value) return props.backgroundImageSrc
+  if (isDynamicApi.value && proxyImageUrl.value) return proxyImageUrl.value
+  return props.backgroundImageSrc
+})
 </script>
 
 <template>
@@ -31,14 +61,13 @@ const isDynamicApi = computed(() => /(\/random|\.php|api\.)/i.test(props.backgro
         contentVisibility: 'auto',
       }"
     />
-    <!-- 静态图片（含动态 API） -->
+    <!-- 静态图片（含动态 API 代理） -->
     <img
       v-else
-      :src="backgroundImageSrc"
+      :src="displaySrc"
       alt=""
       fetchpriority="high"
       decoding="async"
-      :data-proxy="isDynamicApi ? 'true' : undefined"
       class="fixed inset-0 z-[1] w-full h-full object-cover"
       :style="{
         filter: `blur(${backgroundBlur}px)`,
