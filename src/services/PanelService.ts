@@ -33,27 +33,21 @@ export class PanelService {
   }
 
   async getAllData(userId: number) {
-    const groups = await queryAll<ItemIconGroupRow>(this.db,
-      `${GROUP_SELECT} WHERE user_id = ? ORDER BY sort ASC, id ASC`, userId)
+    const [groups, iconRows, configRow] = await Promise.all([
+      queryAll<ItemIconGroupRow>(this.db,
+        `${GROUP_SELECT} WHERE user_id = ? ORDER BY sort ASC, id ASC`, userId),
+      queryAll<ItemIconRow>(this.db,
+        `${ICON_SELECT} WHERE user_id = ? ORDER BY sort ASC, id ASC`, userId),
+      queryFirst<{ panel_json: string }>(this.db,
+        'SELECT panel_json FROM user_configs WHERE user_id = ?', userId),
+    ])
 
-    const groupIds = groups.map(g => g.id)
     const itemsMap: Record<number, ReturnType<typeof this.formatIcon>[]> = {}
-
-    if (groupIds.length > 0) {
-      const placeholders = groupIds.map(() => '?').join(',')
-      const iconRows = await queryAll<ItemIconRow>(this.db,
-        `${ICON_SELECT} WHERE item_icon_group_id IN (${placeholders}) AND user_id = ? ORDER BY sort ASC, id ASC`,
-        ...groupIds, userId)
-
-      for (const row of iconRows) {
-        const gid = row.item_icon_group_id
-        if (!itemsMap[gid]) itemsMap[gid] = []
-        itemsMap[gid].push(this.formatIcon(row))
-      }
+    for (const row of iconRows) {
+      const gid = row.item_icon_group_id
+      if (!itemsMap[gid]) itemsMap[gid] = []
+      itemsMap[gid].push(this.formatIcon(row))
     }
-
-    const configRow = await queryFirst<{ panel_json: string }>(this.db,
-      'SELECT panel_json FROM user_configs WHERE user_id = ?', userId)
 
     return {
       groups: groups.map(g => this.formatGroup(g)),

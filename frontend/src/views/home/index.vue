@@ -252,18 +252,18 @@ watch(() => authStore.isLoggedIn, (val) => {
     <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
 
-      <!-- 加载动画 -->
+      <!-- 加载指示器（不阻塞内容渲染） -->
       <Transition name="loader-fade">
-        <div v-if="loading" class="loader-overlay">
+        <div v-if="loading" class="flex items-center justify-center py-6">
           <div class="loader-ring">
             <div class="loader-ring-inner" />
           </div>
-          <p class="loader-text">加载中...</p>
+          <span class="ml-3 text-white/60 text-sm">加载中...</span>
         </div>
       </Transition>
 
-      <!-- 内容区域 -->
-      <div v-show="!loading">
+      <!-- 内容区域（始终渲染，loading 结束后图标自动填充） -->
+      <div>
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
