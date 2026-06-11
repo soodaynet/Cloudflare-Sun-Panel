@@ -21,7 +21,9 @@ const errored = ref(false)
 
 <template>
   <div
+    v-memo="[item.id, item.icon?.src, item.title]"
     class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
+    style="contain: layout style; content-visibility: auto; contain-intrinsic-size: 96px"
     @click="emit('click', item)"
   >
     <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">

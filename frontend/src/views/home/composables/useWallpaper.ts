@@ -3,6 +3,11 @@ import { usePanelState } from '@/store'
 
 const WALLPAPER_CACHE_KEY = 'sun-panel-effective-wallpaper'
 
+/** 检测 URL 是否为动态图片 API（含 random/php/api. 等关键词） */
+export function isDynamicApiUrl(url: string): boolean {
+  return /(\/random|\.php|api\.)/i.test(url)
+}
+
 interface PreloadGroup {
   items?: Array<{ icon?: { src?: string } | null }>
 }

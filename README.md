@@ -15,7 +15,6 @@
   - [4. 构建前端](#4-构建前端)
   - [5. 部署 Worker](#5-部署-worker)
   - [6. 设置 JWT 密钥（推荐）](#6-设置-jwt-密钥推荐)
-  - [7. 配置 R2 对象存储（可选）](#7-配置-r2-对象存储可选)
 - [CI/CD 自动部署](#cicd-自动部署)
 - [环境变量说明](#环境变量说明)
 - [项目目录结构](#项目目录结构)
@@ -39,14 +38,13 @@
                ├── API 路由 (/login, /panel/*, /user/*, /system/*)
                │      └── D1 数据库 (SQLite)
                │
-               ├── 静态资源 (Vue 3 SPA) ── 由 Worker Assets 直接返回
+               ├── 静态资源 (Vue 3 SPA, History 模式) ── 由 Worker Assets 直接返回
                │
-               └── R2 对象存储 (可选) ── 图片上传 / 媒体代理
+               └── 图片代理 (/api/proxy-image) ── 随机图片 API 代理
 ```
 
 - **后端**: TypeScript + [Hono](https://hono.dev/) 运行在 Cloudflare Workers
 - **数据库**: Cloudflare D1 (SQLite)
-- **对象存储**: Cloudflare R2（可选）
 - **前端**: Vue 3 + Vite + Naive UI + Tailwind CSS
 - **认证**: 自签名 JWT（HMAC-SHA256），7 天过期
 - **安全**: CSRF 防护、安全响应头、请求体大小限制、登录频率限制
@@ -195,34 +193,6 @@ npx wrangler deploy
 
 > 不设置 JWT_SECRET 将使用代码中的默认密钥，**生产环境强烈建议更换**。
 
-### 7. 配置 R2 对象存储（可选）
-
-项目支持将图标和壁纸图片上传到 Cloudflare R2，获得更快的加载速度和更可靠的存储。
-
-#### 7.1 创建 R2 存储桶
-
-```bash
-wrangler r2 bucket create sun-panel-media
-```
-
-#### 7.2 启用 R2 绑定
-
-编辑 `wrangler.toml`，取消 R2 配置的注释：
-
-```toml
-[[r2_buckets]]
-binding = "R2"
-bucket_name = "sun-panel-media"
-```
-
-#### 7.3 重新部署
-
-```bash
-npx wrangler deploy
-```
-
-配置完成后，在图标编辑器和站点设置中将出现图片上传按钮，上传的图片通过 `/media/*` 路径代理访问。
-
 ---
 
 ## CI/CD 自动部署
@@ -362,13 +332,13 @@ Cloudflare-Sun-Panel/
 │   └── deploy-worker.yml     # GitHub Actions 自动部署配置
 ├── frontend/                  # Vue 3 前端
 │   ├── src/
-│   │   ├── api/               # API 请求封装 (auth, panel, settings, user, upload)
+│   │   ├── api/               # API 请求封装 (auth, panel, settings, user)
 │   │   ├── components/        # 公用组件 (apps, common)
 │   │   │   ├── apps/Users/    # 用户管理组件
-│   │   │   └── common/        # 通用组件 (ImageUpload)
+│   │   │   └── common/        # 通用组件
 │   │   ├── hooks/             # 组合式函数 (useTheme, useLanguage)
 │   │   ├── locales/           # 国际化 (zh-CN, en-US)
-│   │   ├── router/            # Vue Router 配置 (Hash 模式)
+│   │   ├── router/            # Vue Router 配置 (History 模式)
 │   │   ├── store/             # Pinia 状态管理 (app, auth, panel)
 │   │   ├── styles/            # 全局样式
 │   │   ├── typings/           # TypeScript 类型声明
@@ -406,12 +376,10 @@ Cloudflare-Sun-Panel/
 │   │   ├── userConfig.ts      # /panel/userConfig/* + /panel/users/*
 │   │   ├── users.ts           # /user/*
 │   │   ├── settings.ts        # /system/*, /about
-│   │   └── upload.ts          # /api/upload/image
 │   ├── services/              # 业务服务层
 │   │   ├── PanelService.ts    # 图标、分组 CRUD
 │   │   ├── UserService.ts     # 用户认证、管理
 │   │   ├── SettingsService.ts # 系统设置
-│   │   └── R2Service.ts       # R2 图片上传/代理
 │   ├── utils/                 # 工具函数
 │   │   ├── jwt.ts             # JWT 签名/验证 (HMAC-SHA256)
 │   │   ├── password.ts        # 密码哈希 (SHA-256 + 盐值)
@@ -479,8 +447,7 @@ Cloudflare-Sun-Panel/
 | `/system/settings/saveAll` | POST | 管理员 | 批量保存系统设置 |
 | `/about` | POST | 无 | 获取所有系统设置 |
 | `/api/health` | GET | 无 | 健康检查 |
-| `/api/upload/image` | POST | 需登录 | 上传图片到 R2（需 R2 配置） |
-| `/media/*` | GET | 无 | R2 媒体文件代理（需 R2 配置） |
+| `/api/proxy-image` | POST | 无 | 代理获取外部图片（支持 JSON API 解析） |
 
 ---
 
@@ -559,9 +526,9 @@ Cloudflare-Sun-Panel/
 
 ### 5. 前端资源 404（直接访问子页面）
 
-**现象**：刷新 `/login` 以外的页面返回 404。
+**现象**：直接访问 `/login` 等子页面返回 404。
 
-**原因**和**解决**：前端使用 Hash 路由模式（`createWebHashHistory`），所有页面通过 `/#/path` 访问。Worker 已配置 SPA 回退逻辑，应返回 `index.html`。
+**原因**和**解决**：前端使用 History 路由模式，直接通过 `/login`、`/settings` 等路径访问。Worker 已配置 SPA 回退逻辑，所有非 API / 非静态资源请求自动返回 `index.html`，由前端路由接管。
 
 ### 6. 构建失败
 
@@ -692,7 +659,6 @@ curl -X POST https://<your-worker>.workers.dev/about \
 - **运行时**：Cloudflare Workers
 - **框架**：Hono ^4.7
 - **数据库**：Cloudflare D1 (SQLite)
-- **对象存储**：Cloudflare R2（可选，用于图标/壁纸上传）
 - **前端框架**：Vue 3.5 + TypeScript
 - **构建工具**：Vite 6
 - **UI 组件**：Naive UI 2.43

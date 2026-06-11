@@ -183,3 +183,8 @@ body::-webkit-scrollbar {
   opacity: 0;
 }
 
+/* Rendering optimization: limit layout recalculation scope for cards */
+.card-container {
+  contain: layout style;
+}
+

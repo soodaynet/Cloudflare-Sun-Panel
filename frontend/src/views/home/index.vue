@@ -275,7 +275,7 @@ watch(() => authStore.isLoggedIn, (val) => {
       <!-- 内容区域（始终渲染，loading 结束后图标自动填充） -->
       <div>
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
-          <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
+          <div class="mb-6 group-section" :class="`item-group-index-${gi}`" style="content-visibility: auto; contain-intrinsic-size: auto 200px">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
               <h3 class="text-white text-base sm:text-lg font-medium">{{ group.title }}</h3>
               <div class="group-title-btns opacity-0 transition-opacity duration-200 flex items-center gap-1">

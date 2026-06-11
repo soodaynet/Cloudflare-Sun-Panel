@@ -4,7 +4,7 @@ import { NButton } from 'naive-ui'
 import { useMessage } from 'naive-ui'
 import { usePanelState } from '@/store'
 import { setUserConfig } from '@/api/index'
-import ImageUpload from '@/components/common/ImageUpload.vue'
+
 
 const props = defineProps<{
   panelConfig: Panel.panelConfig
@@ -55,11 +55,7 @@ function handleReset() {
         class="w-full border rounded px-3 py-2 sm:text-sm text-base mb-2"
         placeholder="输入图片URL"
       />
-      <ImageUpload
-        :model-value="localConfig.backgroundImageSrc"
-        label="上传壁纸"
-        @update:model-value="(url: string) => (localConfig.backgroundImageSrc = url)"
-      />
+      
     </div>
     <div>
       <label class="block text-sm mb-1 font-medium">模糊度: {{ localConfig.backgroundBlur || 0 }}</label>

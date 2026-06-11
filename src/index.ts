@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import type { D1Database, Fetcher, R2Bucket } from '@cloudflare/workers-types'
+import type { D1Database, Fetcher } from '@cloudflare/workers-types'
 import { corsMiddleware } from './middleware/cors'
 import { csrfMiddleware } from './middleware/csrf'
 import { securityHeadersMiddleware } from './middleware/securityHeaders'
@@ -13,14 +13,11 @@ import usersRoutes, { usersAdminApp as usersAdminRoutes } from './routes/users'
 import userConfigRoutes from './routes/userConfig'
 import settingsRoutes from './routes/settings'
 import initRoutes from './routes/init'
-import uploadRoutes from './routes/upload'
-import { R2Service } from './services/R2Service'
 
 type Bindings = {
   DB: D1Database
   ASSETS: Fetcher
   JWT_SECRET?: string
-  R2?: R2Bucket
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -95,34 +92,59 @@ app.route('/panel', userConfigRoutes) // /panel/userConfig/*
 app.route('/panel/users', usersAdminRoutes) // /panel/users/getList, /panel/users/create, ...
 app.route('/', usersRoutes)           // /user/*
 app.route('/', settingsRoutes)        // /system/*, /about
-app.route('/api/upload', uploadRoutes)// /api/upload/image
 
-// R2 媒体代理：GET /media/* -> R2 存储桶（仅在配置了 R2 绑定时有效）
-app.get('/media/*', async (c) => {
-  const r2 = new R2Service(c.env.R2)
-  if (!r2.isAvailable()) {
-    return c.json({ code: 404, msg: 'R2 未配置', data: null }, 404)
+// 图片代理接口
+app.post('/api/proxy-image', async (c) => {
+  try {
+    const body = await c.req.json<{ url: string }>()
+    const { url } = body
+
+    if (!url || typeof url !== 'string') {
+      return c.json({ code: 400, msg: '缺少 url 参数', data: null }, 400)
+    }
+
+    try {
+      new URL(url)
+    } catch {
+      return c.json({ code: 400, msg: '无效的 URL', data: null }, 400)
+    }
+
+    const fetchImage = async (targetUrl: string): Promise<Response> => {
+      const response = await fetch(targetUrl)
+      const contentType = response.headers.get('Content-Type') || ''
+
+      if (contentType.includes('image/')) {
+        const headers = new Headers()
+        headers.set('Content-Type', contentType)
+        headers.set('Cache-Control', 'public, max-age=3600')
+        return new Response(response.body, { headers })
+      }
+
+      if (contentType.includes('application/json')) {
+        const json = await response.json<any>()
+        const imageUrl = json.url || json.data || json.src
+        if (imageUrl && typeof imageUrl === 'string') {
+          try {
+            new URL(imageUrl)
+          } catch {
+            return c.json({ code: 400, msg: 'JSON 中的图片地址无效', data: null }, 400)
+          }
+          return fetchImage(imageUrl)
+        }
+        return c.json({ code: 400, msg: 'JSON 中未找到图片地址', data: null }, 400)
+      }
+
+      return c.json({ code: 400, msg: '无法获取图片', data: null }, 400)
+    }
+
+    return await fetchImage(url)
+  } catch (err) {
+    console.error('[proxy-image] Error:', err)
+    return c.json({ code: 400, msg: '无法获取图片', data: null }, 400)
   }
-
-  const key = c.req.path.replace('/media/', '')
-  if (!key || key.includes('..')) {
-    return c.json({ code: 400, msg: '无效路径', data: null }, 400)
-  }
-
-  const obj = await r2.getObject(key)
-  if (!obj) {
-    return c.json({ code: 404, msg: '文件不存在', data: null }, 404)
-  }
-
-  const headers = new Headers()
-  obj.writeHttpMetadata(headers)
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable')
-  headers.set('Access-Control-Allow-Origin', '*')
-
-  return new Response(obj.body, { headers })
 })
 
-// SPA 前端回退：未匹配的 GET 请求返回 index.html（Vue Router hash 模式兜底）
+// SPA 前端回退：未匹配的 GET 请求返回 index.html（Vue Router History 模式兜底）
 app.get('*', async (c) => {
   try {
     const assetReq = new Request(new URL('/index.html', c.req.url), c.req.raw)
