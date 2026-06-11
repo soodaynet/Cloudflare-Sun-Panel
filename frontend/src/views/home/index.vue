@@ -140,7 +140,16 @@ async function handleDeleteItem(item: Panel.ItemInfo) {
     if (res.code === 0) {
       message.success('删除成功')
       invalidateCacheByPrefix('panel:')
-      await loadData()
+      // 直接从本地 groups 中移除该 item，不发起额外请求
+      for (const group of groups.value) {
+        if (group.items) {
+          const idx = group.items.findIndex((i: Panel.ItemInfo) => i.id === item.id)
+          if (idx !== -1) {
+            group.items.splice(idx, 1)
+            break
+          }
+        }
+      }
     } else message.error(res.msg || '删除失败')
   } catch {
     message.error('网络错误')
@@ -155,7 +164,7 @@ async function saveItemSortOrder(group: ItemGroup) {
     if (res.code === 0) {
       message.success('排序已保存')
       invalidateCacheByPrefix('panel:')
-      await loadData()
+      // 排序结果已在拖拽时本地更新，无需重新请求
     } else message.error(res.msg || '排序保存失败')
   } catch {
     message.error('网络错误')
@@ -241,16 +250,18 @@ watch(() => authStore.isLoggedIn, (val) => {
     <!-- 主内容区域 -->
     <div class="relative z-10 mx-auto flex-1 w-full" :style="containerStyle">
 
-      <!-- 骨架屏加载 -->
+      <!-- 加载动画 -->
       <Transition name="loader-fade">
-        <div v-if="loading" class="flex flex-wrap gap-2 sm:gap-3 justify-center py-4">
-          <div v-for="n in 12" :key="n" class="skeleton-card" />
+        <div v-if="loading" class="loader-overlay">
+          <div class="loader-ring">
+            <div class="loader-ring-inner" />
+          </div>
+          <p class="loader-text">加载中...</p>
         </div>
       </Transition>
 
-      <!-- 内容（淡入） -->
-      <Transition name="content-fade">
-      <div v-if="!loading">
+      <!-- 内容区域 -->
+      <div v-show="!loading">
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
           <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
@@ -325,7 +336,6 @@ watch(() => authStore.isLoggedIn, (val) => {
           </div>
         </template>
       </div>
-      </Transition>
     </div>
 
     <!-- 自定义页脚 -->

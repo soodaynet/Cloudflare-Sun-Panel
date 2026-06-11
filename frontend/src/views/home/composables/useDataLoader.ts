@@ -58,7 +58,7 @@ export function useDataLoader(options: {
           itemsMap: Record<number, Panel.ItemInfo[]>
           panelConfig: Panel.panelConfig
         }>(),
-        300,
+        600,
       )
 
       if (res.code === 0 && res.data) {

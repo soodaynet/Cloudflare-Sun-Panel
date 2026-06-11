@@ -34,7 +34,7 @@ initApp.post('/init', async (c) => {
     })(),
   ])
 
-  c.header('Cache-Control', 'private, max-age=30, stale-while-revalidate=300')
+  c.header('Cache-Control', 'private, max-age=60, stale-while-revalidate=300')
   return ok(c, {
     ...panelData,
     about: aboutData,

@@ -8,11 +8,14 @@ defineProps<{
 
 <template>
   <template v-if="backgroundImageSrc">
-    <!-- CSS background-image 方式渲染壁纸：浏览器预加载扫描器可立即发现，无需等 JS 渲染 -->
-    <div
-      class="fixed inset-0 z-[1] bg-[#1a1a2e] bg-cover bg-center"
+    <!-- img 标签渲染壁纸：支持 fetchpriority="high" 优先加载 -->
+    <img
+      :src="backgroundImageSrc"
+      alt=""
+      fetchpriority="high"
+      decoding="sync"
+      class="fixed inset-0 z-[1] w-full h-full object-cover"
       :style="{
-        backgroundImage: `url(${backgroundImageSrc})`,
         filter: `blur(${backgroundBlur}px)`,
         transform: 'translateZ(0)',
         willChange: 'transform',

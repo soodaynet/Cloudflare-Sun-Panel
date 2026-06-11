@@ -96,12 +96,16 @@ export function useLoginPage() {
       if (!skipAutoRedirect) {
         authStore.setGuestMode(null)
         router.push('/')
-        // 后台异步更新最新配置（不阻塞跳转）
-        getAbout<Record<string, string>>().then((res) => {
-          if (res.code === 0 && res.data) {
-            applyAboutResponse(res.data)
-          }
-        }).catch(() => {})
+        // 检查站点配置缓存是否在 5 分钟内，若是则跳过后台请求
+        const siteCacheTs = localStorage.getItem('sun-panel-site-config-ts')
+        const cacheFresh = siteCacheTs && (Date.now() - Number(siteCacheTs)) < 300000
+        if (!cacheFresh) {
+          getAbout<Record<string, string>>().then((res) => {
+            if (res.code === 0 && res.data) {
+              applyAboutResponse(res.data)
+            }
+          }).catch(() => {})
+        }
         return
       }
     }
@@ -145,6 +149,7 @@ export function useLoginPage() {
         JSON.stringify({ ...JSON.parse(localStorage.getItem(SITE_CACHE_KEY) || '{}'), favicon_url: data.favicon_url }),
       )
       updateFavicon(data.favicon_url || '')
+      localStorage.setItem('sun-panel-site-config-ts', String(Date.now()))
     }
     // 使用站点设置中的登录页背景图片
     const bgUrl = data.login_bg_image || ''
