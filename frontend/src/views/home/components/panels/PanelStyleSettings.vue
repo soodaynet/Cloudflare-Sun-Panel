@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { toRef } from 'vue'
 import { NButton } from 'naive-ui'
 import { useMessage } from 'naive-ui'
-import { usePanelState } from '@/store'
-import { setUserConfig } from '@/api/index'
-
+import { useConfigEditor } from '../../composables/useConfigEditor'
 
 const props = defineProps<{
   panelConfig: Panel.panelConfig
@@ -17,26 +15,12 @@ const emit = defineEmits<{
 }>()
 
 const message = useMessage()
-const panelState = usePanelState()
 
-const localConfig = ref<Panel.panelConfig>({})
-
-watch(() => props.panelConfig, (val) => { localConfig.value = { ...val } }, { immediate: true, deep: true })
-
-async function handleSave() {
-  const config = { ...localConfig.value }
-  try {
-    const res = await setUserConfig({ panel: config })
-    if (res.code === 0) {
-      panelState.updatePanelConfigFromCloud(config)
-      message.success('配置已保存')
-      emit('save', config)
-      props.onSaved()
-    }
-  } catch {
-    message.error('保存失败')
-  }
-}
+const { localConfig, handleSave, panelState } = useConfigEditor({
+  config: toRef(props, 'panelConfig'),
+  onSaved: props.onSaved,
+  onSave: (config) => emit('save', config),
+})
 
 function handleReset() {
   panelState.setPanelConfig({})
