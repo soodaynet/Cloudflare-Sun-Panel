@@ -10,5 +10,6 @@ export async function securityHeadersMiddleware(c: Context, next: Next) {
   c.header('X-Frame-Options', 'DENY')
   c.header('X-XSS-Protection', '1; mode=block')
   c.header('Referrer-Policy', 'no-referrer-when-downgrade')
-  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), ch-viewport-width=*, ch-viewport-height=*')
+  c.header('Accept-CH', 'Sec-CH-Viewport-Width, Sec-CH-Viewport-Height')
 }
