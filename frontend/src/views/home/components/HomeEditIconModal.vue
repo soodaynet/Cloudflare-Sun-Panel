@@ -53,10 +53,10 @@ const show = computed({
             >
               <img
                 :src="iconUrl"
-                class="w-5 h-5 object-contain"
+                class="w-full h-full object-cover rounded"
                 alt=""
-                width="20"
-                height="20"
+                width="32"
+                height="32"
                 loading="eager"
                 decoding="async"
                 referrerpolicy="no-referrer"
