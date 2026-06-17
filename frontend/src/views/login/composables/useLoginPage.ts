@@ -2,10 +2,16 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAbout } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
-import { updateFavicon, getCachedSiteConfig, SITE_CACHE_KEY } from '@/utils/faviconUtils'
-
-const LOGIN_BG_CACHE_KEY = 'sun-panel-login-bg'
-const LOGIN_STYLE_CACHE_KEY = 'sun-panel-login-style'
+import { updateFavicon, getCachedSiteConfig } from '@/utils/faviconUtils'
+import {
+  LOGIN_BG_CACHE_KEY,
+  LOGIN_STYLE_CACHE_KEY,
+  SITE_CACHE_KEY,
+  SITE_CACHE_TS_KEY,
+  PUBLIC_MODE_KEY,
+  SKIP_REDIRECT_KEY,
+  TOKEN_KEY,
+} from '@/utils/storageKeys'
 
 interface CachedLoginStyle {
   blur: number
@@ -41,6 +47,29 @@ const cachedStyle = getCachedLoginStyle()
 const loginBgImage = ref(cachedLoginBg)
 if (cachedLoginBg) {
   preloadLoginBg(cachedLoginBg)
+}
+
+// 壁纸加载就绪标志：用于控制容器淡入动画，与访客页面 HomeWallpaper 效果一致
+const bgImageReady = ref(false)
+
+/** 追踪壁纸加载状态，加载完成后触发淡入动画 */
+function trackBgLoad(url: string) {
+  bgImageReady.value = false
+  if (!url) {
+    bgImageReady.value = true
+    return
+  }
+  const img = new Image()
+  img.onload = () => { bgImageReady.value = true }
+  img.onerror = () => { bgImageReady.value = true }
+  img.src = url
+}
+
+// 从缓存初始化壁纸加载状态
+if (cachedLoginBg) {
+  trackBgLoad(cachedLoginBg)
+} else {
+  bgImageReady.value = true
 }
 
 // 从站点缓存恢复标题和图标
@@ -92,26 +121,6 @@ export function useLoginPage() {
   })
 
   async function initLoginPage() {
-    // 优先使用缓存：若已知公开模式可用且无 token，直接跳转，消除 API 等待延迟
-    if (localStorage.getItem('sun-panel-public-mode') === '1' && !localStorage.getItem('sun-panel-token')) {
-      const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
-      if (!skipAutoRedirect) {
-        authStore.setGuestMode(null)
-        router.push('/')
-        // 检查站点配置缓存是否在 5 分钟内，若是则跳过后台请求
-        const siteCacheTs = localStorage.getItem('sun-panel-site-config-ts')
-        const cacheFresh = siteCacheTs && (Date.now() - Number(siteCacheTs)) < 300000
-        if (!cacheFresh) {
-          getAbout<Record<string, string>>().then((res) => {
-            if (res.code === 0 && res.data) {
-              applyAboutResponse(res.data)
-            }
-          }).catch(() => {})
-        }
-        return
-      }
-    }
-
     try {
       const res = await getAbout<Record<string, string>>()
       if (res.code === 0 && res.data) {
@@ -128,9 +137,9 @@ export function useLoginPage() {
     const hasPublic = !!(data.panel_public_user_id || data.default_guest_mode === '1')
     if (hasPublic) {
       hasPublicMode.value = true
-      localStorage.setItem('sun-panel-public-mode', '1')
-      if (!localStorage.getItem('sun-panel-token')) {
-        const skipAutoRedirect = sessionStorage.getItem('sun-panel-skip-redirect')
+      localStorage.setItem(PUBLIC_MODE_KEY, '1')
+      if (!localStorage.getItem(TOKEN_KEY)) {
+        const skipAutoRedirect = sessionStorage.getItem(SKIP_REDIRECT_KEY)
         if (!skipAutoRedirect) {
           authStore.setGuestMode(null)
           router.push('/')
@@ -138,7 +147,7 @@ export function useLoginPage() {
         }
       }
     } else {
-      localStorage.setItem('sun-panel-public-mode', '0')
+      localStorage.setItem(PUBLIC_MODE_KEY, '0')
     }
     if (data.site_title) {
       siteTitle.value = data.site_title
@@ -151,7 +160,7 @@ export function useLoginPage() {
         JSON.stringify({ ...JSON.parse(localStorage.getItem(SITE_CACHE_KEY) || '{}'), favicon_url: data.favicon_url }),
       )
       updateFavicon(data.favicon_url || '')
-      localStorage.setItem('sun-panel-site-config-ts', String(Date.now()))
+      localStorage.setItem(SITE_CACHE_TS_KEY, String(Date.now()))
     }
     // 使用站点设置中的登录页背景图片
     const bgUrl = data.login_bg_image || ''
@@ -160,8 +169,9 @@ export function useLoginPage() {
       localStorage.setItem(LOGIN_BG_CACHE_KEY, bgUrl)
       // 添加 <link rel="preload"> 提示浏览器提前下载
       preloadLoginBg(bgUrl)
+      // 追踪壁纸加载状态，加载完成后触发淡入
+      trackBgLoad(bgUrl)
       // 立即设置背景 URL，不要等图片加载完再切换（否则会闪现默认渐变）
-      // CSS background-image 会自然地在图片下载完成后显示，无需手动 onload
       loginBgImage.value = bgUrl
     }
     // 读取登录卡片模糊度和遮罩不透明度设置
@@ -185,11 +195,9 @@ export function useLoginPage() {
     hasPublicMode,
     siteTitle,
     pageLoading,
-    loginBgImage,
-    loginBlur,
-    loginMaskOpacity,
     loginPageStyle,
     loginCardStyle,
+    bgImageReady,
     initLoginPage,
   }
 }

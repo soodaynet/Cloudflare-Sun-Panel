@@ -5,25 +5,34 @@ import { signToken } from '../utils/jwt'
 import { queryAll, queryFirst } from '../utils/db'
 import { AppError } from '../utils/errors'
 
+/** 用户查询字段（不含 password） */
+const USER_SELECT = 'SELECT id, username, password, name, head_image, status, role, mail, created_at, updated_at FROM users'
+
+/** 用户公开信息字段（不含 password） */
+const USER_PUBLIC_SELECT = 'SELECT id, username, name, head_image, status, role, mail, created_at FROM users'
+
 export class UserService {
   constructor(private db: D1Database) {}
 
+  // ========== 查询方法 ==========
+
+  /**
+   * 根据用户名查找用户
+   * @param username 用户名
+   */
   async findByUsername(username: string): Promise<UserRow | null> {
-    return queryFirst<UserRow>(
-      this.db,
-      'SELECT id, username, password, name, head_image, status, role, mail, created_at, updated_at FROM users WHERE username = ?',
-      username,
-    )
+    return queryFirst<UserRow>(this.db, `${USER_SELECT} WHERE username = ?`, username)
   }
 
+  /**
+   * 根据 ID 查找用户
+   * @param id 用户 ID
+   */
   async findById(id: number): Promise<UserRow | null> {
-    return queryFirst<UserRow>(
-      this.db,
-      'SELECT id, username, password, name, head_image, status, role, mail, created_at, updated_at FROM users WHERE id = ?',
-      id,
-    )
+    return queryFirst<UserRow>(this.db, `${USER_SELECT} WHERE id = ?`, id)
   }
 
+  /** 将数据库行格式化为前端需要的用户信息对象 */
   private formatUserInfo(row: UserRow) {
     return {
       id: row.id,
@@ -37,6 +46,16 @@ export class UserService {
     }
   }
 
+  // ========== 认证 ==========
+
+  /**
+   * 用户登录认证
+   * @param username 用户名
+   * @param password 密码
+   * @param jwtSecret JWT 签名密钥
+   * @returns token 和用户信息
+   * @throws AppError 用户名或密码错误、账号被禁用
+   */
   async authenticate(username: string, password: string, jwtSecret?: string) {
     const user = await this.findByUsername(username)
     if (!user) throw AppError.unauthorized('用户名或密码错误')
@@ -51,18 +70,26 @@ export class UserService {
       { secret: jwtSecret },
     )
 
-    return {
-      token,
-      userInfo: this.formatUserInfo(user),
-    }
+    return { token, userInfo: this.formatUserInfo(user) }
   }
 
+  /**
+   * 获取用户公开信息
+   * @param id 用户 ID
+   */
   async getUserInfo(id: number) {
     const row = await this.findById(id)
     if (!row) return null
     return this.formatUserInfo(row)
   }
 
+  // ========== 个人信息 ==========
+
+  /**
+   * 更新用户名称
+   * @param userId 用户 ID
+   * @param name 新名称
+   */
   async updateName(userId: number, name: string) {
     await this.db
       .prepare("UPDATE users SET name = ?, updated_at = datetime('now') WHERE id = ?")
@@ -70,9 +97,15 @@ export class UserService {
       .run()
   }
 
+  /**
+   * 更新用户密码
+   * @param userId 用户 ID
+   * @param oldPassword 旧密码
+   * @param newPassword 新密码
+   * @throws AppError 用户不存在、原密码错误
+   */
   async updatePassword(userId: number, oldPassword: string, newPassword: string) {
     const row = await queryFirst<UserRow>(this.db, 'SELECT password FROM users WHERE id = ?', userId)
-
     if (!row) throw AppError.notFound('用户不存在')
 
     const valid = await verifyPassword(oldPassword, row.password)
@@ -87,10 +120,17 @@ export class UserService {
     return { success: true }
   }
 
+  // ========== 管理员 - 用户管理 ==========
+
+  /**
+   * 获取用户列表（分页）
+   * @param page 页码
+   * @param pageSize 每页条数
+   */
   async getList(page: number, pageSize: number) {
     const offset = (page - 1) * pageSize
     const [list, countResult] = await Promise.all([
-      queryAll<UserRow>(this.db, 'SELECT * FROM users ORDER BY id DESC LIMIT ? OFFSET ?', pageSize, offset),
+      queryAll<UserRow>(this.db, `${USER_PUBLIC_SELECT} ORDER BY id DESC LIMIT ? OFFSET ?`, pageSize, offset),
       this.db.prepare('SELECT COUNT(*) as total FROM users').first() as Promise<{ total: number }>,
     ])
 
@@ -109,6 +149,15 @@ export class UserService {
     return { list: mapped, total: countResult.total, page, pageSize }
   }
 
+  /**
+   * 管理员创建用户
+   * @param username 用户名
+   * @param password 密码
+   * @param name 名称
+   * @param role 角色（1=管理员, 2=普通用户）
+   * @param status 状态（1=启用, 0=禁用）
+   * @throws AppError 用户名已存在
+   */
   async adminCreate(username: string, password: string, name: string, role = 2, status = 1) {
     const existing = await this.db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
     if (existing) throw AppError.conflict('该用户名已被注册')
@@ -122,6 +171,12 @@ export class UserService {
     return { success: true }
   }
 
+  /**
+   * 管理员更新用户信息（仅更新传入的字段）
+   * @param id 用户 ID
+   * @param data 要更新的字段（可选）
+   * @throws AppError 用户名冲突、无更新数据
+   */
   async adminUpdate(
     id: number,
     data: {
@@ -135,30 +190,34 @@ export class UserService {
     const updates: string[] = []
     const params: unknown[] = []
 
+    // 字段 → 更新映射（统一处理，降低圈复杂度）
+    const fieldMap: Array<{ field: string; value: unknown }> = [
+      { field: 'username', value: data.username },
+      { field: 'name', value: data.name },
+      { field: 'role', value: data.role },
+      { field: 'status', value: data.status },
+    ]
+
+    // 用户名唯一性检查
     if (data.username) {
       const existing = await this.db
         .prepare('SELECT id FROM users WHERE username = ? AND id != ?')
         .bind(data.username, id)
         .first()
       if (existing) throw AppError.conflict('该用户名已被注册')
-      updates.push('username = ?')
-      params.push(data.username)
     }
-    if (data.name) {
-      updates.push('name = ?')
-      params.push(data.name)
-    }
+
+    // 密码需单独处理（需要哈希）
     if (data.password) {
       updates.push('password = ?')
       params.push(await hashPassword(data.password))
     }
-    if (data.role !== undefined) {
-      updates.push('role = ?')
-      params.push(data.role)
-    }
-    if (data.status !== undefined) {
-      updates.push('status = ?')
-      params.push(data.status)
+
+    for (const { field, value } of fieldMap) {
+      if (value !== undefined) {
+        updates.push(`${field} = ?`)
+        params.push(value)
+      }
     }
 
     if (updates.length === 0) throw AppError.badRequest('无更新数据')
@@ -173,41 +232,48 @@ export class UserService {
     return { success: true }
   }
 
+  /**
+   * 管理员批量删除用户
+   * 同时删除用户关联的图标、分组和配置，防止自己删除自己
+   * @param userIds 要删除的用户 ID 列表
+   * @param selfUserId 当前操作者 ID
+   * @throws AppError 尝试删除自己
+   */
   async adminDelete(userIds: number[], selfUserId: number) {
     const filteredIds = userIds.filter((id) => id !== selfUserId)
     if (filteredIds.length === 0) throw AppError.badRequest('不能删除自己')
 
     const placeholders = filteredIds.map(() => '?').join(',')
-    await Promise.all([
-      this.db
-        .prepare(`DELETE FROM item_icons WHERE user_id IN (${placeholders})`)
-        .bind(...filteredIds)
-        .run(),
-      this.db
-        .prepare(`DELETE FROM item_icon_groups WHERE user_id IN (${placeholders})`)
-        .bind(...filteredIds)
-        .run(),
-      this.db
-        .prepare(`DELETE FROM user_configs WHERE user_id IN (${placeholders})`)
-        .bind(...filteredIds)
-        .run(),
-      this.db
-        .prepare(`DELETE FROM users WHERE id IN (${placeholders})`)
-        .bind(...filteredIds)
-        .run(),
-    ])
+    // 顺序执行：先删图标 → 分组 → 配置 → 用户，保证外键依赖
+    const deleteQueries = [
+      `DELETE FROM item_icons WHERE user_id IN (${placeholders})`,
+      `DELETE FROM item_icon_groups WHERE user_id IN (${placeholders})`,
+      `DELETE FROM user_configs WHERE user_id IN (${placeholders})`,
+      `DELETE FROM users WHERE id IN (${placeholders})`,
+    ]
+
+    for (const sql of deleteQueries) {
+      await this.db.prepare(sql).bind(...filteredIds).run()
+    }
 
     return { success: true }
   }
 
-  async register(username: string, password: string, name?: string, mail?: string, jwtSecret?: string) {
-    // Check if username already exists
-    const existing = await this.db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
-    if (existing) {
-      throw AppError.conflict('该用户名已被注册')
-    }
+  // ========== 注册 ==========
 
-    // Create user
+  /**
+   * 用户注册
+   * @param username 用户名
+   * @param password 密码
+   * @param name 昵称
+   * @param jwtSecret JWT 签名密钥
+   * @returns token 和用户信息
+   * @throws AppError 用户名已存在
+   */
+  async register(username: string, password: string, name?: string, jwtSecret?: string) {
+    const existing = await this.db.prepare('SELECT id FROM users WHERE username = ?').bind(username).first()
+    if (existing) throw AppError.conflict('该用户名已被注册')
+
     const hashed = await hashPassword(password)
     const result = await this.db
       .prepare('INSERT INTO users (username, password, name, role, status) VALUES (?, ?, ?, ?, 1)')
@@ -217,10 +283,7 @@ export class UserService {
     const userId = Number(result.meta.last_row_id)
     await this.db.prepare('INSERT OR IGNORE INTO user_configs (user_id) VALUES (?)').bind(userId).run()
 
-    // Query the newly created user
     const user = await this.findById(userId)
-
-    // Sign JWT token
     const token = await signToken({ userId, username, role: 2 }, { secret: jwtSecret })
 
     return { token, userInfo: this.formatUserInfo(user!) }

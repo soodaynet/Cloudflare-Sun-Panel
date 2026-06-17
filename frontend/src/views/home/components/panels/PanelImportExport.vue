@@ -40,6 +40,7 @@ async function handleExport() {
       const groups: ExportGroup[] = groupList.map((g) => ({
         title: g.title || '',
         sort: g.sort || 0,
+        publicVisible: g.publicVisible ?? 1,
         children:
           g.id && itemsMap[g.id]
             ? itemsMap[g.id].map((item) => ({
@@ -90,7 +91,7 @@ async function handleImportFile(e: Event) {
 async function importData(data: ExportData) {
   const batchSize = 50
   for (const g of data.icons) {
-    const groupRes = await saveGroup<Panel.ItemIconGroup>({ title: g.title, sort: g.sort })
+    const groupRes = await saveGroup<Panel.ItemIconGroup>({ title: g.title, sort: g.sort, publicVisible: g.publicVisible ?? 1 })
     if (groupRes.code === 0 && groupRes.data?.id) {
       const groupId = groupRes.data.id
       const items: Panel.ItemInfo[] = g.children.map((item) => ({

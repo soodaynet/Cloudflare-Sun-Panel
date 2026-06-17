@@ -6,6 +6,7 @@ import { securityHeadersMiddleware } from './middleware/securityHeaders'
 import { bodyLimitMiddleware } from './middleware/bodyLimit'
 import { validateEnv } from './utils/env'
 import { AppError } from './utils/errors'
+import { logger } from './utils/logger'
 import authRoutes from './routes/auth'
 import panelRoutes from './routes/panel'
 import groupsRoutes from './routes/groups'
@@ -13,6 +14,7 @@ import usersRoutes, { usersAdminApp as usersAdminRoutes } from './routes/users'
 import userConfigRoutes from './routes/userConfig'
 import settingsRoutes from './routes/settings'
 import initRoutes from './routes/init'
+import proxyRoutes from './routes/proxy'
 
 type Bindings = {
   DB: D1Database
@@ -25,14 +27,17 @@ const app = new Hono<{ Bindings: Bindings }>()
 // ========== 全局错误处理 ==========
 app.onError((err, c) => {
   if (err instanceof AppError) {
-    console.error(`[${err.name}] ${err.code} ${err.message}`)
-    return c.json({ code: err.code, msg: err.message, data: null }, err.httpStatus as 400 | 401 | 403 | 404 | 409 | 500)
+    logger.error('App', `${err.name} ${err.code}`, err)
+    return c.json(
+      { code: err.code, msg: err.message, data: null },
+      err.httpStatus as 400 | 401 | 403 | 404 | 409 | 500,
+    )
   }
-  console.error('[Global Error]', err)
+  logger.error('App', 'Unhandled error', err)
   return c.json({ code: 500, msg: '服务器内部错误', data: null }, 500)
 })
 
-// ========== 数据库自动初始化 ==========
+// ========== 数据库自动初始化（惰性 + 单次执行） ==========
 let dbInitPromise: Promise<void> | null = null
 let dbInitialized = false
 
@@ -44,18 +49,16 @@ async function initDatabase(db: D1Database): Promise<void> {
     return
   }
 
-  // Schema should be initialized via `wrangler d1 execute --file=./schema.sql`
-  console.error('[DB] Database tables not found. Please run: wrangler d1 execute sun-panel-db --file=./schema.sql')
+  logger.error('DB', 'Database tables not found. Please run: wrangler d1 execute sun-panel-db --file=./schema.sql')
   throw new Error('Database not initialized. Run `npm run db:init` to initialize.')
 }
 
 app.use('*', async (c, next) => {
   if (!dbInitialized) {
-    // Validate environment on first request
     validateEnv(c.env)
     if (!dbInitPromise) {
       dbInitPromise = initDatabase(c.env.DB).catch((err) => {
-        console.error('[DB] Init failed:', err)
+        logger.error('DB', 'Init failed', err)
         dbInitPromise = null
         throw err
       })
@@ -77,81 +80,69 @@ app.use('*', securityHeadersMiddleware)
 // 请求体大小限制中间件
 app.use('*', bodyLimitMiddleware)
 
-// 健康检查
+// 健康检查（禁止缓存）
 app.get('/api/health', (c) => {
-  c.header('Cache-Control', 'no-cache')
+  c.header('Cache-Control', 'no-cache, no-store, must-revalidate')
+  c.header('CDN-Cache-Control', 'no-cache')
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } })
 })
 
 // API 路由
-app.route('/', authRoutes)            // /login, /register
-app.route('/', initRoutes)            // /init
-app.route('/panel', panelRoutes)      // /panel/getAllData, /panel/itemIcon/*
-app.route('/panel', groupsRoutes)     // /panel/itemIconGroup/*
+app.route('/', authRoutes) // /login, /register
+app.route('/', initRoutes) // /init
+app.route('/panel', panelRoutes) // /panel/getAllData, /panel/itemIcon/*
+app.route('/panel', groupsRoutes) // /panel/itemIconGroup/*
 app.route('/panel', userConfigRoutes) // /panel/userConfig/*
 app.route('/panel/users', usersAdminRoutes) // /panel/users/getList, /panel/users/create, ...
-app.route('/', usersRoutes)           // /user/*
-app.route('/', settingsRoutes)        // /system/*, /about
+app.route('/', usersRoutes) // /user/*
+app.route('/', settingsRoutes) // /system/*, /about
 
-// 图片代理接口
-app.post('/api/proxy-image', async (c) => {
-  try {
-    const body = await c.req.json<{ url: string }>()
-    const { url } = body
+// 图片代理接口（GET / POST）
+app.route('/', proxyRoutes)
 
-    if (!url || typeof url !== 'string') {
-      return c.json({ code: 400, msg: '缺少 url 参数', data: null }, 400)
-    }
-
-    try {
-      new URL(url)
-    } catch {
-      return c.json({ code: 400, msg: '无效的 URL', data: null }, 400)
-    }
-
-    const fetchImage = async (targetUrl: string): Promise<Response> => {
-      const response = await fetch(targetUrl)
-      const contentType = response.headers.get('Content-Type') || ''
-
-      if (contentType.includes('image/')) {
-        const headers = new Headers()
-        headers.set('Content-Type', contentType)
-        headers.set('Cache-Control', 'public, max-age=3600')
-        return new Response(response.body, { headers })
-      }
-
-      if (contentType.includes('application/json')) {
-        const json = await response.json<any>()
-        const imageUrl = json.url || json.data || json.src
-        if (imageUrl && typeof imageUrl === 'string') {
-          try {
-            new URL(imageUrl)
-          } catch {
-            return c.json({ code: 400, msg: 'JSON 中的图片地址无效', data: null }, 400)
-          }
-          return fetchImage(imageUrl)
-        }
-        return c.json({ code: 400, msg: 'JSON 中未找到图片地址', data: null }, 400)
-      }
-
-      return c.json({ code: 400, msg: '无法获取图片', data: null }, 400)
-    }
-
-    return await fetchImage(url)
-  } catch (err) {
-    console.error('[proxy-image] Error:', err)
-    return c.json({ code: 400, msg: '无法获取图片', data: null }, 400)
-  }
-})
-
-// SPA 前端回退：未匹配的 GET 请求返回 index.html（Vue Router History 模式兜底）
+// ========== SPA 前端回退（带缓存优化） ==========
+// 未匹配的 GET 请求先尝试静态文件，未命中则返回 index.html
 app.get('*', async (c) => {
+  // 静态资源（JS/CSS/图片/字体）使用长期缓存
+  const url = new URL(c.req.url)
+  const isStaticAsset = /\.(?:js|mjs|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|webp|avif|json|map)$/i.test(url.pathname)
+
   try {
-    const assetReq = new Request(new URL('/index.html', c.req.url), c.req.raw)
-    const response = await c.env.ASSETS.fetch(assetReq)
-    if (response.ok) return response
+    const assetRes = await c.env.ASSETS.fetch(c.req.raw)
+    if (assetRes.status !== 404) {
+      // 为静态资源添加长期缓存头
+      if (isStaticAsset) {
+        const newHeaders = new Headers(assetRes.headers)
+        newHeaders.set('Cache-Control', 'public, max-age=31536000, immutable')
+        newHeaders.set('CDN-Cache-Control', 'public, max-age=31536000')
+        return new Response(assetRes.body, {
+          status: assetRes.status,
+          statusText: assetRes.statusText,
+          headers: newHeaders,
+        })
+      }
+      return assetRes
+    }
   } catch {
-    console.error('Failed to serve index.html fallback')
+    // 忽略，继续尝试 index.html
+  }
+
+  // SPA 兜底：返回 index.html
+  try {
+    url.pathname = '/index.html'
+    const indexRes = await c.env.ASSETS.fetch(new Request(url.toString(), c.req.raw))
+    if (indexRes.ok) {
+      // index.html 不缓存（保证更新后即时生效）
+      const newHeaders = new Headers(indexRes.headers)
+      newHeaders.set('Cache-Control', 'no-cache, must-revalidate')
+      return new Response(indexRes.body, {
+        status: indexRes.status,
+        statusText: indexRes.statusText,
+        headers: newHeaders,
+      })
+    }
+  } catch (e) {
+    logger.error('SPA', 'Failed to serve index.html fallback', e)
   }
   return c.json({ code: 404, msg: 'Not Found' }, 404)
 })

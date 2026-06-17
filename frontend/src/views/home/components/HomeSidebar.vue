@@ -65,6 +65,7 @@ function handleSettings() {
 
 function handleLogout() {
   authStore.removeToken()
+  router.push('/login')
 }
 
 onMounted(() => {
@@ -79,7 +80,7 @@ onUnmounted(() => {
 
 <template>
   <!-- 桌面端：侧边栏 -->
-  <div v-if="!isMobile" class="sidebar-root" @mouseenter="expanded = true; emit('sidebar-expanded', true)" @mouseleave="expanded = false; emit('sidebar-expanded', false)">
+  <div v-if="!isMobile" class="sidebar-root" @mouseenter="expanded = true" @mouseleave="expanded = false">
     <div class="sidebar-bar" :class="{ expanded }">
       <div class="sidebar-inner">
         <!-- 分组导航（可滚动） -->

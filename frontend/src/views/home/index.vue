@@ -47,8 +47,12 @@ const safeFooterHtml = computed(() => {
 
 // ---------- Composables ----------
 
-const { siteConfig, siteConfigLoaded, loadSiteConfig, handleSiteConfigUpdate, updateFavicon } = useSiteConfig()
-const { effectiveBackgroundImage, syncEffectiveWallpaper, preloadIconImages } = useWallpaper(siteConfig, panelState)
+const { siteConfig, siteConfigLoaded, handleSiteConfigUpdate, updateFavicon } = useSiteConfig()
+const { effectiveBackgroundImage, syncEffectiveWallpaper, preloadIconImages, markDataReady } = useWallpaper(
+  siteConfig,
+  panelState,
+  () => authStore.isVisitMode,
+)
 
 function applySiteConfigToDom(config: Panel.SiteConfig) {
   localStorage.setItem(SITE_CACHE_KEY, JSON.stringify(config))
@@ -66,6 +70,7 @@ const { groups, loading, visibleGroups, loadData, loadInitData, refreshAll } = u
   syncWallpaper: syncEffectiveWallpaper,
   preloadIcons: preloadIconImages,
   onSiteConfigUpdated: applySiteConfigToDom,
+  markDataReady,
 })
 
 const { announcementVisible, announcementText, startAnnouncementTimer, dismissAnnouncement } = useAnnouncement()
@@ -234,7 +239,7 @@ watch(() => authStore.isLoggedIn, (val) => {
     :style="glassVars"
   >
     <!-- 侧边栏分组导航 -->
-    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" @sidebar-expanded="(val: boolean) => { document.documentElement.style.overflow = val ? 'hidden' : '' }" />
+    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" @sidebar-expanded="(val: boolean) => { if (typeof document !== 'undefined') document.documentElement.style.overflow = val ? 'hidden' : '' }" />
 
     <!-- Logo + 访客标识（独立固定定位组件） -->
     <HomeLogo />
@@ -275,7 +280,7 @@ watch(() => authStore.isLoggedIn, (val) => {
       <!-- 内容区域（始终渲染，loading 结束后图标自动填充） -->
       <div>
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
-          <div class="mb-6 group-section" :class="`item-group-index-${gi}`" style="content-visibility: auto; contain-intrinsic-size: auto 200px">
+          <div class="mb-6 group-section" :class="`item-group-index-${gi}`">
             <div class="flex items-center gap-2 mb-3 px-2 group-title-row">
               <h3 class="text-white text-base sm:text-lg font-medium">{{ group.title }}</h3>
               <div class="group-title-btns opacity-0 transition-opacity duration-200 flex items-center gap-1">

@@ -18,14 +18,29 @@ interface AuthBindings {
 
 // ========== 辅助函数 ==========
 
-/** 获取 D1 数据库实例 */
-function getDB(c: Context): D1Database {
-  return (c.env as { DB: D1Database }).DB
-}
-
 /** 获取 JWT_SECRET（从 Cloudflare Worker bindings） */
 function getJwtSecret(c: Context): string | undefined {
   return (c.env as AuthBindings).JWT_SECRET
+}
+
+/** 从 Authorization header 解析 Bearer token 并验证 JWT，返回 payload 或 null */
+async function parseBearerToken(c: Context): Promise<Record<string, unknown> | null> {
+  const authHeader = c.req.header('Authorization')
+  if (!authHeader) return null
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
+  const jwtSecret = getJwtSecret(c)
+  return verifyToken(token, jwtSecret)
+}
+
+/** 从 JWT payload 构建 AuthUser 对象 */
+function makeAuthUser(payload: Record<string, unknown>, visitMode: number): AuthUser {
+  return {
+    userId: payload.userId as number,
+    username: payload.username as string,
+    name: (payload.name as string) || '',
+    role: payload.role as number,
+    visitMode,
+  }
 }
 
 // ========== 登录鉴权中间件 ==========
@@ -35,27 +50,13 @@ function getJwtSecret(c: Context): string | undefined {
  * 认证失败抛出 AppError，由全局错误处理器统一捕获
  */
 export async function authMiddleware(c: Context, next: Next): Promise<void> {
-  const authHeader = c.req.header('Authorization')
+  const payload = await parseBearerToken(c)
 
-  if (!authHeader) {
+  if (!payload) {
     throw AppError.unauthorized('未登录')
   }
 
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
-  const jwtSecret = getJwtSecret(c)
-  const payload = await verifyToken(token, jwtSecret)
-
-  if (!payload) {
-    throw AppError.unauthorized('token已失效，请重新登录')
-  }
-
-  c.set('authUser', {
-    userId: payload.userId as number,
-    username: payload.username as string,
-    name: (payload.name as string) || '',
-    role: payload.role as number,
-    visitMode: 0, // 登录模式
-  } as AuthUser)
+  c.set('authUser', makeAuthUser(payload, 0))
 
   await next()
 }
@@ -66,24 +67,13 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
  * 公开模式中间件 - 优先使用登录 token，无 token 时使用公开访问账号
  */
 export async function publicModeMiddleware(c: Context, next: Next): Promise<void> {
-  const authHeader = c.req.header('Authorization')
-  const db = getDB(c)
+  const db = (c.env as { DB: D1Database }).DB
 
-  if (authHeader) {
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader
-    const jwtSecret = getJwtSecret(c)
-    const payload = await verifyToken(token, jwtSecret)
-    if (payload) {
-      c.set('authUser', {
-        userId: payload.userId as number,
-        username: payload.username as string,
-        name: (payload.name as string) || '',
-        role: payload.role as number,
-        visitMode: 0,
-      } as AuthUser)
-      await next()
-      return
-    }
+  const payload = await parseBearerToken(c)
+  if (payload) {
+    c.set('authUser', makeAuthUser(payload, 0))
+    await next()
+    return
   }
 
   // 查询公开模式设置
@@ -147,4 +137,18 @@ export async function adminMiddleware(c: Context, next: Next): Promise<void> {
  */
 export function getAuthUser(c: Context): AuthUser | null {
   return c.get('authUser') as AuthUser | null
+}
+
+// ========== 可选鉴权中间件 ==========
+
+/**
+ * 可选鉴权中间件 - 有 token 就解析并设置 authUser，没有也不报错
+ * 用于 /init 等需要同时支持登录和未登录访问的端点
+ */
+export async function optionalAuthMiddleware(c: Context, next: Next): Promise<void> {
+  const payload = await parseBearerToken(c)
+  if (payload) {
+    c.set('authUser', makeAuthUser(payload, 0))
+  }
+  await next()
 }

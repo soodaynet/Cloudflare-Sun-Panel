@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { NButton, NTooltip } from 'naive-ui'
 
-defineProps<{
+const props = defineProps<{
   item: Panel.ItemInfo
   editable: boolean
   isEditMode: boolean
@@ -17,28 +17,41 @@ const emit = defineEmits<{
 }>()
 
 const errored = ref(false)
+
+/** 如果图标 URL 是代理地址 (/api/proxy-image?url=...)，提取真实 URL */
+const realIconSrc = computed(() => {
+  const src = props.item.icon?.src || ''
+  if (src.startsWith('/api/proxy-image?url=')) {
+    try {
+      return decodeURIComponent(src.slice('/api/proxy-image?url='.length))
+    } catch {
+      return src
+    }
+  }
+  return src
+})
 </script>
 
 <template>
   <div
-    v-memo="[item.id, item.icon?.src, item.title]"
     class="group-item w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all hover:scale-105 relative glass-hover"
-    style="contain: layout style; content-visibility: auto; contain-intrinsic-size: 96px"
+    style="contain: layout style"
     @click="emit('click', item)"
   >
     <div class="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-lg overflow-hidden flex items-center justify-center mb-1">
       <img
         v-if="item.icon?.src"
         v-show="!errored"
-        :src="item.icon.src"
+        :src="realIconSrc"
         class="w-full h-full object-cover rounded-lg"
         :alt="item.title"
         width="40"
         height="40"
         :loading="eagerLoad ? 'eager' : 'lazy'"
-        :decoding="eagerLoad ? 'sync' : 'async'"
+        decoding="async"
         :fetchpriority="eagerLoad ? 'high' : 'auto'"
         referrerpolicy="no-referrer"
+        style="image-rendering: auto;"
         @error="errored = true"
       />
       <div

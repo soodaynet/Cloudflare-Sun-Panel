@@ -3,7 +3,7 @@ import { router } from '@/router'
 import { useAuthStore } from '@/store/modules/auth'
 
 const service = axios.create({
-  baseURL: import.meta.env.VITE_GLOB_API_URL ?? '/api',
+  baseURL: '',
   timeout: 30000,
 })
 
@@ -28,7 +28,10 @@ service.interceptors.response.use(
     if (error.response?.status === 401) {
       const authStore = useAuthStore()
       authStore.removeToken()
-      router.push('/login')
+      // 避免在登录页重复跳转导致循环
+      if (router.currentRoute.value.name !== 'login') {
+        router.push('/login')
+      }
     }
     if (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) {
       return Promise.reject(new Error('请求超时，请稍后重试'))

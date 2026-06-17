@@ -9,7 +9,8 @@
     "db:init": "wrangler d1 execute sun-panel-db --file=./schema.sql",
     "db:init:local": "wrangler d1 execute sun-panel-db --file=./schema.sql --local",
     "lint": "eslint . --ext .ts,.tsx,.vue",
-    "format": "prettier --write \"src/**/*.ts\" \"frontend/src/**/*.{ts,vue}\""
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "packageManager": "pnpm@10.15.1",
   "pnpm": {

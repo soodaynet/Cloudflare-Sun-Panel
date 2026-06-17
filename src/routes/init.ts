@@ -1,8 +1,7 @@
 import { Hono } from 'hono'
 import type { D1Database } from '@cloudflare/workers-types'
-import { publicModeMiddleware, getAuthUser } from '../middleware/auth'
-import { PanelService } from '../services/PanelService'
-import { SettingsService } from '../services/SettingsService'
+import { getAuthUser, publicModeMiddleware } from '../middleware/auth'
+import { ServiceFactory } from '../services/ServiceFactory'
 import { ok } from '../utils/response'
 
 const initApp = new Hono<{ Bindings: { DB: D1Database } }>()
@@ -11,13 +10,11 @@ initApp.use('*', publicModeMiddleware)
 
 initApp.post('/init', async (c) => {
   const user = getAuthUser(c)
-  const db = c.env.DB
-  const panelService = new PanelService(db)
-  const settingsService = new SettingsService(db)
+  const factory = ServiceFactory.from(c.env.DB)
 
   const [panelData, aboutData, authInfo] = await Promise.all([
-    panelService.getAllData(user?.userId || 0),
-    settingsService.getAll(),
+    factory.panel.getAllData(user?.userId || 0),
+    factory.settings.getAll(),
     (async () => {
       if (user) {
         return {

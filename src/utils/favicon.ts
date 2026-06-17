@@ -96,7 +96,7 @@ export function parseFaviconFromHtml(html: string, baseUrl: string): FaviconCand
 export async function probeFavicon(origin: string, path: string): Promise<FaviconCandidate | null> {
   try {
     const abort = new AbortController()
-    const timeout = setTimeout(() => abort.abort(), 3000)
+    const timeout = setTimeout(() => abort.abort(), 2000)
     const res = await fetch(`${origin}${path}`, {
       method: 'HEAD',
       signal: abort.signal,

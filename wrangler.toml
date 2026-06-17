@@ -4,13 +4,19 @@ compatibility_date = "2025-05-01"
 
 [assets]
 directory = "./frontend/dist"
+not_found_handling = "single-page-application"
 
 [observability]
 enabled = true
 head_sampling_rate = 0.1
 
+# ========== 数据库 ==========
 [[d1_databases]]
 binding = "DB"
 database_name = "sun-panel-db"
 database_id = "__D1_DATABASE_ID__"
 
+# ========== 路由说明 ==========
+# 路由和缓存策略由 Worker 代码中的 Cache-Control 响应头控制，无需在 toml 中声明 routes
+# 静态资源通过 [assets] 绑定和 c.env.ASSETS.fetch() 提供，已在代码中添加 immutable 缓存头
+# API 路由由 Hono 框架处理，各路由独立设置缓存策略

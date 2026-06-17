@@ -1,8 +1,5 @@
 import { defineStore } from 'pinia'
-
-const TOKEN_KEY = 'sun-panel-token'
-const USER_KEY = 'sun-panel-user'
-const VISIT_MODE_KEY = 'sun-panel-visit-mode'
+import { TOKEN_KEY, USER_KEY, VISIT_MODE_KEY, PUBLIC_MODE_KEY, PANEL_STATE_KEY, SKIP_REDIRECT_KEY } from '@/utils/storageKeys'
 
 export enum VisitMode {
   VISIT_MODE_LOGIN = 0,
@@ -77,13 +74,13 @@ export const useAuthStore = defineStore('auth', {
       this.token = null
       this.userInfo = null
       // 根据公开模式可用性设置访客状态：可用则进入访客模式，否则标记为需登录
-      const publicModeAvailable = localStorage.getItem('sun-panel-public-mode') === '1'
+      const publicModeAvailable = localStorage.getItem(PUBLIC_MODE_KEY) === '1'
       this.visitMode = publicModeAvailable ? VisitMode.VISIT_MODE_PUBLIC : VisitMode.VISIT_MODE_LOGIN
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USER_KEY)
       localStorage.removeItem(VISIT_MODE_KEY)
-      localStorage.removeItem('sun-panel-state')
-      sessionStorage.setItem('sun-panel-skip-redirect', '1')
+      localStorage.removeItem(PANEL_STATE_KEY)
+      sessionStorage.setItem(SKIP_REDIRECT_KEY, '1')
     },
   },
 })

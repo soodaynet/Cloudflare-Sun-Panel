@@ -2,6 +2,7 @@ import type { App } from 'vue'
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/modules/auth'
+import { PUBLIC_MODE_KEY } from '@/utils/storageKeys'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -35,7 +36,7 @@ export const router = createRouter({
 // 路由守卫：确保未认证且未开启公开模式时，只能访问登录页
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
-  const publicModeAvailable = localStorage.getItem('sun-panel-public-mode') === '1'
+  const publicModeAvailable = localStorage.getItem(PUBLIC_MODE_KEY) === '1'
 
   // 已登录用户访问登录页，直接跳转首页
   if (to.name === 'login' && authStore.isLoggedIn) {

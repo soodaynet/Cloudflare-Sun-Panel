@@ -5,6 +5,7 @@ import { NButton, NCard, NForm, NFormItem, NInput, useMessage, NDivider } from '
 import { login } from '@/api/index'
 import { useAuthStore } from '@/store/modules/auth'
 import { VisitMode } from '@/store/modules/auth'
+import { TOKEN_KEY } from '@/utils/storageKeys'
 import { useLoginPage } from './composables/useLoginPage'
 
 const router = useRouter()
@@ -15,7 +16,7 @@ const username = ref('')
 const password = ref('')
 const loading = ref(false)
 
-const { hasPublicMode, siteTitle, pageLoading, loginBgImage, loginPageStyle, loginCardStyle, initLoginPage } = useLoginPage()
+const { hasPublicMode, siteTitle, pageLoading, loginPageStyle, loginCardStyle, bgImageReady, initLoginPage } = useLoginPage()
 
 onMounted(() => {
   initLoginPage()
@@ -45,7 +46,7 @@ async function handleLogin() {
 
 async function handleSkipLogin() {
   authStore.token = null
-  localStorage.removeItem('sun-panel-token')
+  localStorage.removeItem(TOKEN_KEY)
   authStore.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
   router.push('/')
 }
@@ -53,7 +54,8 @@ async function handleSkipLogin() {
 
 <template>
   <div
-    class="flex items-center justify-center min-h-screen"
+    class="login-page-container flex items-center justify-center min-h-screen"
+    :class="{ 'bg-ready': bgImageReady }"
     :style="loginPageStyle"
   >
     <!-- 加载动画 -->
@@ -105,6 +107,15 @@ async function handleSkipLogin() {
 </template>
 
 <style scoped>
+/* 登录页壁纸淡入动画，与访客页面 HomeWallpaper 效果一致 */
+.login-page-container {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+.login-page-container.bg-ready {
+  opacity: 1;
+}
+
 .login-card {
   background-color: var(--glass-bg-hover) !important;
   -webkit-backdrop-filter: blur(var(--glass-blur));

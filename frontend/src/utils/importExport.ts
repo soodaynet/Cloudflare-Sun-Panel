@@ -11,6 +11,7 @@
 export interface ExportGroup {
   title: string
   sort: number
+  publicVisible?: number
   children: ExportItem[]
 }
 

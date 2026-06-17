@@ -10,7 +10,7 @@ import {
   getListByGroupIdSchema,
   faviconSchema,
 } from '../utils/validate'
-import { PanelService } from '../services/PanelService'
+import { ServiceFactory } from '../services/ServiceFactory'
 import { ok, fail } from '../utils/response'
 import { isValidUrl, parseFaviconFromHtml, probeFavicon } from '../utils/favicon'
 
@@ -27,10 +27,9 @@ panelApp.use('*', publicModeMiddleware)
  * POST /api/panel/getAllData
  */
 panelApp.post('/getAllData', async (c) => {
-  const user = getAuthUser(c)
-  const userId = user!.userId
-  const service = new PanelService(c.env.DB)
-  const result = await service.getAllData(userId)
+  const user = getAuthUser(c)!
+  const factory = ServiceFactory.from(c.env.DB)
+  const result = await factory.panel.getAllData(user.userId)
 
   c.header('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
   return ok(c, result)
@@ -41,8 +40,8 @@ panelApp.post('/getAllData', async (c) => {
  * POST /api/panel/itemIcon/addMultiple
  */
 panelApp.post('/itemIcon/addMultiple', validate(iconAddMultipleSchema), async (c) => {
-  const user = getAuthUser(c)
-  if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
+  const user = getAuthUser(c)!
+  if (user.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
   const items = c.var.validatedBody as Array<{
     icon?: { itemType: number; src?: string; text?: string; backgroundColor?: string }
     title: string
@@ -53,8 +52,8 @@ panelApp.post('/itemIcon/addMultiple', validate(iconAddMultipleSchema), async (c
     itemIconGroupId: number
   }>
 
-  const service = new PanelService(c.env.DB)
-  await service.addMultipleIcons(items, user!.userId)
+  const factory = ServiceFactory.from(c.env.DB)
+  await factory.panel.addMultipleIcons(items, user.userId)
   return ok(c, null)
 })
 
@@ -63,8 +62,8 @@ panelApp.post('/itemIcon/addMultiple', validate(iconAddMultipleSchema), async (c
  * POST /api/panel/itemIcon/edit
  */
 panelApp.post('/itemIcon/edit', validate(iconEditSchema), async (c) => {
-  const user = getAuthUser(c)
-  if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
+  const user = getAuthUser(c)!
+  if (user.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
   const body = c.var.validatedBody as {
     id?: number
     icon?: { itemType: number; src?: string; text?: string; backgroundColor?: string }
@@ -76,8 +75,8 @@ panelApp.post('/itemIcon/edit', validate(iconEditSchema), async (c) => {
     itemIconGroupId: number
   }
 
-  const service = new PanelService(c.env.DB)
-  const result = await service.editIcon(body, user!.userId)
+  const factory = ServiceFactory.from(c.env.DB)
+  const result = await factory.panel.editIcon(body, user.userId)
   return ok(c, result)
 })
 
@@ -86,11 +85,11 @@ panelApp.post('/itemIcon/edit', validate(iconEditSchema), async (c) => {
  * POST /api/panel/itemIcon/getListByGroupId
  */
 panelApp.post('/itemIcon/getListByGroupId', validate(getListByGroupIdSchema), async (c) => {
-  const user = getAuthUser(c)
+  const user = getAuthUser(c)!
   const { itemIconGroupId } = c.var.validatedBody as { itemIconGroupId?: number }
 
-  const service = new PanelService(c.env.DB)
-  const list = await service.getIconsByGroupId(itemIconGroupId || 0, user!.userId)
+  const factory = ServiceFactory.from(c.env.DB)
+  const list = await factory.panel.getIconsByGroupId(itemIconGroupId || 0, user.userId)
 
   c.header('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
   return ok(c, list)
@@ -101,12 +100,12 @@ panelApp.post('/itemIcon/getListByGroupId', validate(getListByGroupIdSchema), as
  * POST /api/panel/itemIcon/deletes
  */
 panelApp.post('/itemIcon/deletes', validate(idsSchema), async (c) => {
-  const user = getAuthUser(c)
-  if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
+  const user = getAuthUser(c)!
+  if (user.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
   const { ids } = c.var.validatedBody as { ids: number[] }
 
-  const service = new PanelService(c.env.DB)
-  await service.deleteIcons(ids, user!.userId)
+  const factory = ServiceFactory.from(c.env.DB)
+  await factory.panel.deleteIcons(ids, user.userId)
   return ok(c, null)
 })
 
@@ -115,16 +114,16 @@ panelApp.post('/itemIcon/deletes', validate(idsSchema), async (c) => {
  * POST /api/panel/itemIcon/saveSort
  */
 panelApp.post('/itemIcon/saveSort', validate(sortSchema), async (c) => {
-  const user = getAuthUser(c)
-  if (user!.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
+  const user = getAuthUser(c)!
+  if (user.visitMode === 1) return fail(c, '访客模式下不允许修改', 403)
   const { sortItems } = c.var.validatedBody as { sortItems: Array<{ id: number; sort: number }> }
 
   if (sortItems.length === 0) {
     return ok(c, null)
   }
 
-  const service = new PanelService(c.env.DB)
-  await service.saveIconSort(sortItems, user!.userId)
+  const factory = ServiceFactory.from(c.env.DB)
+  await factory.panel.saveIconSort(sortItems, user.userId)
   return ok(c, null)
 })
 
@@ -178,7 +177,7 @@ panelApp.post('/itemIcon/getSiteFavicon', validate(faviconSchema), async (c) => 
   // /favicon.ico 兜底
   found.add(`${origin}/favicon.ico`)
 
-  // Google Favicon 代理（额外候选）
+  // Google Favicon
   found.add(`https://t0.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${origin}`)
 
   const iconUrls = Array.from(found).slice(0, 10)

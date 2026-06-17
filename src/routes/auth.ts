@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import type { D1Database } from '@cloudflare/workers-types'
-import { UserService } from '../services/UserService'
+import { ServiceFactory } from '../services/ServiceFactory'
 import { validate, loginSchema, registerSchema } from '../utils/validate'
 import { ok } from '../utils/response'
 import { createRateLimiter } from '../middleware/rateLimiter'
@@ -19,10 +19,10 @@ const loginLimiter = createRateLimiter({ maxRequests: 10, windowMs: 60000 })
  */
 authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
   const body = c.get('validatedBody') as { username: string; password: string }
-  const userService = new UserService(c.env.DB)
+  const factory = ServiceFactory.from(c.env.DB)
   const jwtSecret = c.env.JWT_SECRET
 
-  const result = await userService.authenticate(body.username, body.password, jwtSecret)
+  const result = await factory.user.authenticate(body.username, body.password, jwtSecret)
 
   return ok(c, { token: result.token, userInfo: result.userInfo })
 })
@@ -32,11 +32,11 @@ authApp.post('/login', loginLimiter, validate(loginSchema), async (c) => {
  * POST /api/register
  */
 authApp.post('/register', validate(registerSchema), async (c) => {
-  const body = c.get('validatedBody') as { username: string; password: string; name?: string; mail?: string }
-  const userService = new UserService(c.env.DB)
+  const body = c.get('validatedBody') as { username: string; password: string; name?: string }
+  const factory = ServiceFactory.from(c.env.DB)
   const jwtSecret = c.env.JWT_SECRET
 
-  const result = await userService.register(body.username, body.password, body.name, body.mail, jwtSecret)
+  const result = await factory.user.register(body.username, body.password, body.name, jwtSecret)
 
   return ok(c, { token: result.token, userInfo: result.userInfo })
 })

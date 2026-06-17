@@ -1,7 +1,8 @@
 import { ref, computed, type Ref } from 'vue'
-import { useAuthStore, usePanelState } from '@/store'
+import type { useAuthStore, usePanelState } from '@/store'
 import { getAllData, getInit } from '@/api/index'
 import { cachedRequest, invalidateCacheByPrefix, invalidateCache } from '@/utils/requestCache'
+import { PUBLIC_MODE_KEY } from '@/utils/storageKeys'
 
 export interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean
@@ -28,12 +29,14 @@ export function useDataLoader(options: {
   syncWallpaper: () => void
   preloadIcons: (groups: PreloadGroup[], count?: number) => void
   onSiteConfigUpdated: (config: Panel.SiteConfig) => void
+  markDataReady: () => void
 }) {
-  const { authStore, panelState, siteConfig, syncWallpaper, preloadIcons, onSiteConfigUpdated } = options
+  const { authStore, panelState, siteConfig, syncWallpaper, preloadIcons, onSiteConfigUpdated, markDataReady } = options
 
   const groups = ref<ItemGroup[]>([])
   const loading = ref(true)
 
+  /** 访客模式下仅显示 publicVisible !== 0 的分组，用户模式下显示全部分组 */
   const visibleGroups = computed(() => {
     if (!authStore.isVisitMode) return groups.value
     return groups.value.filter((g) => g.publicVisible !== 0)
@@ -70,6 +73,7 @@ export function useDataLoader(options: {
           panelState.updatePanelConfigFromCloud(panelConfig)
         }
         syncWallpaper()
+        markDataReady()
         preloadIcons(groups.value)
       }
     } catch (e) {
@@ -92,12 +96,20 @@ export function useDataLoader(options: {
           if (authInfo.user) {
             authStore.setUserInfo(authInfo.user)
             authStore.setVisitMode(authInfo.visitMode)
-          } else {
+          } else if (localStorage.getItem(PUBLIC_MODE_KEY) === '1') {
+            // 未登录时，仅当公开模式可用时才设置 visitMode
             authStore.setVisitMode(authInfo.visitMode)
           }
         }
 
-        // 2. 站点配置
+        // 2. 面板数据（必须在站点配置之前应用，确保风格壁纸优先于站点壁纸，避免壁纸闪烁）
+        groups.value = mapGroups(rawGroups, itemsMap)
+
+        if (panelConfig && Object.keys(panelConfig).length > 0) {
+          panelState.updatePanelConfigFromCloud(panelConfig)
+        }
+
+        // 3. 站点配置（在面板数据之后应用，这样 watchEffect 中 backgroundImageSrc 已就绪，login_bg_image 作为兜底不会覆盖）
         if (about && Object.keys(about).length > 0) {
           const config: Panel.SiteConfig = {
             site_title: about.site_title || '',
@@ -113,13 +125,8 @@ export function useDataLoader(options: {
           onSiteConfigUpdated(config)
         }
 
-        // 3. 面板数据
-        groups.value = mapGroups(rawGroups, itemsMap)
-
-        if (panelConfig && Object.keys(panelConfig).length > 0) {
-          panelState.updatePanelConfigFromCloud(panelConfig)
-        }
         syncWallpaper()
+        markDataReady()
         preloadIcons(groups.value)
       }
     } catch (e) {

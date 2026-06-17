@@ -1,3 +1,5 @@
+import { SITE_CACHE_KEY } from './storageKeys'
+
 function detectFaviconType(url: string): string {
   const ext = url.split('?')[0].split('.').pop()?.toLowerCase()
   switch (ext) {
@@ -10,6 +12,19 @@ function detectFaviconType(url: string): string {
     case 'webp': return 'image/webp'
     default: return ''
   }
+}
+
+function isExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.origin !== window.location.origin
+  } catch {
+    return false
+  }
+}
+
+function proxyFaviconUrl(url: string): string {
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`
 }
 
 function updateFavicon(url: string) {
@@ -27,11 +42,12 @@ function updateFavicon(url: string) {
   if (detectedType) {
     link.type = detectedType
   }
-  const separator = url.includes('?') ? '&' : '?'
-  link.href = url + separator + '_t=' + Date.now()
+  // 外部 URL（跨域 favicon）通过后端代理，避免浏览器 CORS 报错
+  link.href = isExternalUrl(url) ? proxyFaviconUrl(url) : url
 }
 
-const SITE_CACHE_KEY = 'sun-panel-site-config'
+export { detectFaviconType, updateFavicon, getCachedSiteConfig }
+export { SITE_CACHE_KEY }
 
 function getCachedSiteConfig(): Panel.SiteConfig {
   try {
@@ -40,5 +56,3 @@ function getCachedSiteConfig(): Panel.SiteConfig {
   } catch { /* ignore */ }
   return {}
 }
-
-export { detectFaviconType, updateFavicon, SITE_CACHE_KEY, getCachedSiteConfig }
