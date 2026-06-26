@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAbout } from '@/api/index'
+import { getAbout } from '@/modules/settings/api'
 import { useAuthStore } from '@/store/modules/auth'
 import { updateFavicon, getCachedSiteConfig } from '@/utils/faviconUtils'
 import {
@@ -48,6 +48,10 @@ const loginBgImage = ref(cachedLoginBg)
 if (cachedLoginBg) {
   preloadLoginBg(cachedLoginBg)
 }
+
+// 从缓存恢复全局玻璃变量，避免 API 返回前 Toaster 无玻璃效果
+document.documentElement.style.setProperty('--ann-blur', `${cachedStyle.blur}px`)
+document.documentElement.style.setProperty('--ann-opacity', `${cachedStyle.opacity}`)
 
 // 壁纸加载就绪标志：用于控制容器淡入动画，与访客页面 HomeWallpaper 效果一致
 const bgImageReady = ref(false)
@@ -120,35 +124,32 @@ export function useLoginPage() {
     } as Record<string, string>
   })
 
+  // 登录按钮玻璃层：相对登录卡片 ×1.2（模糊度与遮罩不透明度），颜色与主题 primary 协调
+  const loginButtonStyle = computed(() => {
+    const blur = Math.round(loginBlur.value * 1.2)
+    const opacity = Math.min(loginMaskOpacity.value * 1.2, 1.0)
+    return {
+      '--btn-blur': `${blur}px`,
+      '--btn-bg': `rgba(74, 144, 217, ${Math.max(opacity, 0.82)})`,
+    } as Record<string, string>
+  })
+
   async function initLoginPage() {
     try {
       const res = await getAbout<Record<string, string>>()
       if (res.code === 0 && res.data) {
         applyAboutResponse(res.data)
       }
-    } catch {
-      /* ignore */
+    } catch (e) {
+      // 排查站点信息无法显示的问题（如 CDN 缓存、WAF 拦截、网络错误）
+      console.error('[login] getAbout failed:', e)
     } finally {
       pageLoading.value = false
     }
   }
 
   function applyAboutResponse(data: Record<string, string>) {
-    const hasPublic = !!(data.panel_public_user_id || data.default_guest_mode === '1')
-    if (hasPublic) {
-      hasPublicMode.value = true
-      localStorage.setItem(PUBLIC_MODE_KEY, '1')
-      if (!localStorage.getItem(TOKEN_KEY)) {
-        const skipAutoRedirect = sessionStorage.getItem(SKIP_REDIRECT_KEY)
-        if (!skipAutoRedirect) {
-          authStore.setGuestMode(null)
-          router.push('/')
-          return
-        }
-      }
-    } else {
-      localStorage.setItem(PUBLIC_MODE_KEY, '0')
-    }
+    // 1. 先应用站点信息（无论是否公开模式都需要，避免重定向时站点标题/图标/背景缺失）
     if (data.site_title) {
       siteTitle.value = data.site_title
       document.title = data.site_title
@@ -181,6 +182,9 @@ export function useLoginPage() {
     if (data.login_mask_opacity !== undefined) {
       loginMaskOpacity.value = Number(data.login_mask_opacity)
     }
+    // 同步全局玻璃变量，使登录页 Toaster 等玻璃元素与公告设置一致
+    document.documentElement.style.setProperty('--ann-blur', `${loginBlur.value}px`)
+    document.documentElement.style.setProperty('--ann-opacity', `${loginMaskOpacity.value}`)
     // 缓存样式用于下次访问
     localStorage.setItem(
       LOGIN_STYLE_CACHE_KEY,
@@ -189,6 +193,23 @@ export function useLoginPage() {
         opacity: loginMaskOpacity.value,
       }),
     )
+
+    // 2. 处理公开模式重定向（站点信息已应用后再判断，避免重定向 return 跳过站点信息）
+    const hasPublic = !!(data.panel_public_user_id || data.default_guest_mode === '1')
+    if (hasPublic) {
+      hasPublicMode.value = true
+      localStorage.setItem(PUBLIC_MODE_KEY, '1')
+      if (!localStorage.getItem(TOKEN_KEY)) {
+        const skipAutoRedirect = sessionStorage.getItem(SKIP_REDIRECT_KEY)
+        if (!skipAutoRedirect) {
+          authStore.setGuestMode(null)
+          router.push('/')
+          return
+        }
+      }
+    } else {
+      localStorage.setItem(PUBLIC_MODE_KEY, '0')
+    }
   }
 
   return {
@@ -197,6 +218,7 @@ export function useLoginPage() {
     pageLoading,
     loginPageStyle,
     loginCardStyle,
+    loginButtonStyle,
     bgImageReady,
     initLoginPage,
   }

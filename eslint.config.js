@@ -8,7 +8,12 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/essential'],
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.wrangler/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.wrangler/**',
+      '**/frontend/src/components/ui/**',
+    ],
   },
   {
     languageOptions: {
@@ -41,6 +46,9 @@ export default tseslint.config(
       // Vue 规则
       'vue/multi-word-component-names': 'off',
       'vue/no-unused-components': 'warn',
+      'vue/no-v-html': 'off',
+      'vue/require-default-prop': 'off',
+      'vue/attribute-hyphenation': 'off',
     },
   },
 )

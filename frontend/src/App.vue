@@ -1,30 +1,18 @@
 <script setup lang="ts">
-import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
+import { Toaster } from '@/components/ui/sonner'
 import { useTheme } from './hooks/useTheme'
-import { useLanguage } from './hooks/useLanguage'
 
-const { theme, themeOverrides } = useTheme()
-const { language, dateLocale } = useLanguage()
+// 初始化主题：基于 CSS 变量向 <html> 切换 `dark` class
+useTheme()
 </script>
 
 <template>
-  <NConfigProvider
-    class="h-full"
-    :theme="theme"
-    :theme-overrides="themeOverrides"
-    :locale="language"
-    :date-locale="dateLocale"
-  >
-    <NMessageProvider>
-      <NDialogProvider>
-        <RouterView v-slot="{ Component }">
-          <Transition name="page-fade">
-            <component :is="Component" />
-          </Transition>
-        </RouterView>
-      </NDialogProvider>
-    </NMessageProvider>
-  </NConfigProvider>
+  <RouterView v-slot="{ Component }">
+    <Transition name="page-fade">
+      <component :is="Component" />
+    </Transition>
+  </RouterView>
+  <Toaster position="top-right" class="pt-20" />
 </template>
 
 <style>

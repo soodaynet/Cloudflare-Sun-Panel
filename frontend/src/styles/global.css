@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import './main.css';
 
 /* ========== CSS 设计令牌 (Design Tokens) ========== */
 :root {
@@ -87,9 +85,9 @@ body::-webkit-scrollbar {
 
 .glass-hover {
   background-color: var(--glass-bg);
+  /* transform 由卡片 Tailwind 工具类处理，此处不再过渡 transform 避免重复来源 */
   transition: background-color var(--transition-normal),
     backdrop-filter var(--transition-normal),
-    transform 0.2s var(--ease-out),
     box-shadow 0.2s var(--ease-out);
 }
 
@@ -97,23 +95,17 @@ body::-webkit-scrollbar {
   background-color: var(--glass-bg-hover);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  transform: scale(1.05);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* ========== Naive UI 全局玻璃覆盖 ========== */
-.n-popover {
+/* ========== Toaster 玻璃效果（与公告设置同步） ========== */
+[data-slot="toaster"] li {
   background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
-  backdrop-filter: blur(var(--ann-blur, 12px)) !important;
-  -webkit-backdrop-filter: blur(var(--ann-blur, 12px)) !important;
+  backdrop-filter: blur(var(--ann-blur, 12px));
+  -webkit-backdrop-filter: blur(var(--ann-blur, 12px));
 }
-
-.n-popover .n-popover__content {
-  background-color: transparent !important;
-}
-
-.n-popover .n-popover-arrow-wrapper .n-popover-arrow {
-  background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15)) !important;
+.dark [data-slot="toaster"] li {
+  background-color: rgba(20, 20, 23, var(--ann-opacity, 0.15)) !important;
 }
 
 /* ========== 加载动画 ========== */
@@ -153,103 +145,6 @@ body::-webkit-scrollbar {
   to { transform: rotate(360deg); }
 }
 
-/* ========== 统一动画系统 ========== */
-
-/* 淡入 */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* 淡出 */
-@keyframes fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-/* 从下方滑入 */
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 从上方滑入 */
-@keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 缩放弹入 */
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* 骨架屏脉冲 */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-/* 按钮按下反馈 */
-@keyframes press {
-  from { transform: scale(1); }
-  to { transform: scale(0.97); }
-}
-
-/* 通用动画工具类 */
-.animate-fade-in {
-  animation: fade-in 0.3s var(--ease-out) both;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s var(--ease-out) both;
-}
-
-.animate-slide-down {
-  animation: slide-down 0.3s var(--ease-out) both;
-}
-
-.animate-scale-in {
-  animation: scale-in 0.25s var(--ease-spring) both;
-}
-
-.animate-press {
-  animation: press 0.1s var(--ease-out) both;
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.06) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
-/* 触摸反馈：移动端点击时缩放 */
-@media (hover: none) {
-  .touch-feedback:active {
-    transform: scale(0.97);
-    transition: transform 0.1s var(--ease-out);
-  }
-}
-
 /* ========== Vue 过渡组件类 ========== */
 
 /* 加载动画淡入淡出 */
@@ -265,40 +160,11 @@ body::-webkit-scrollbar {
 /* 页面切换 */
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity 0.3s var(--ease-out);
+  transition: opacity 0.2s var(--ease-out);
 }
 .page-fade-enter-from,
 .page-fade-leave-to {
   opacity: 0;
-}
-
-/* 弹窗缩放 */
-.modal-scale-enter-active {
-  transition: all 0.25s var(--ease-spring);
-}
-.modal-scale-leave-active {
-  transition: all 0.2s var(--ease-out);
-}
-.modal-scale-enter-from,
-.modal-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-/* 列表项交错入场 */
-.list-item-enter-active {
-  transition: all 0.3s var(--ease-out);
-}
-.list-item-leave-active {
-  transition: all 0.2s var(--ease-out);
-}
-.list-item-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
-}
-.list-item-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
 }
 
 /* 公告淡入淡出 */
@@ -320,21 +186,4 @@ body::-webkit-scrollbar {
   .group-title-btns {
     opacity: 1;
   }
-}
-
-/* ========== 渲染性能优化 ========== */
-.card-container {
-  contain: layout style;
-}
-
-/* GPU 加速层（用于动画元素） */
-.gpu-layer {
-  transform: translateZ(0);
-  will-change: transform, opacity;
-}
-
-/* 内容可见性优化（延迟渲染屏幕外内容） */
-.content-visible {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 200px;
 }

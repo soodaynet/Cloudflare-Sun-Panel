@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useMessage } from 'naive-ui'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { toast } from '@/components/ui/sonner'
 import { useAuthStore, usePanelState } from '@/store'
-import { saveGroup, deleteGroups } from '@/api/index'
+import { saveGroup, deleteGroups } from '@/modules'
 import UsersManage from '@/components/apps/Users/index.vue'
 import PanelUserInfo from './panels/PanelUserInfo.vue'
 import PanelStyleSettings from './panels/PanelStyleSettings.vue'
@@ -48,7 +52,6 @@ const show = computed({
   set: (v) => emit('update:visible', v),
 })
 
-const message = useMessage()
 const authStore = useAuthStore()
 const panelState = usePanelState()
 const { panelConfig } = storeToRefs(panelState)
@@ -75,15 +78,18 @@ const apps = computed<App[]>(() => {
   return list
 })
 
+// resize 节流：避免拖动窗口时高频触发重排
+let resizeTimer: ReturnType<typeof setTimeout> | null = null
 function handleResize() {
-  screenWidth.value = window.innerWidth
-  isSmallScreen.value = screenWidth.value < 640
-  if (isSmallScreen.value) collapsed.value = true
+  if (resizeTimer) clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    screenWidth.value = window.innerWidth
+    isSmallScreen.value = screenWidth.value < 640
+    if (isSmallScreen.value) collapsed.value = true
+  }, 150)
 }
 
-const layoutHeight = computed(() => {
-  return isSmallScreen.value ? 'min(80vh, 450px)' : '500px'
-})
+const layoutHeight = computed(() => 'min(85vh, 560px)')
 
 onMounted(() => {
   window.addEventListener('resize', handleResize, { passive: true })
@@ -93,6 +99,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  if (resizeTimer) clearTimeout(resizeTimer)
 })
 
 // ====== 站点设置 ======
@@ -117,17 +124,17 @@ function openEditGroup(group: ItemGroup) {
 async function handleSaveGroup() {
   try {
     const res = await saveGroup(editingGroup.value)
-    if (res.code === 0) { message.success('保存成功'); editGroupModalVisible.value = false; props.onSaved() }
-    else message.error(res.msg || '保存失败')
-  } catch { message.error('网络错误') }
+    if (res.code === 0) { toast.success('保存成功'); editGroupModalVisible.value = false; props.onSaved() }
+    else toast.error(res.msg || '保存失败')
+  } catch { toast.error('网络错误') }
 }
 
 async function handleDeleteGroup(group: ItemGroup) {
   if (!group.id) return
   try {
     const res = await deleteGroups([group.id])
-    if (res.code === 0) { message.success('删除成功'); props.onSaved() }
-  } catch { message.error('网络错误') }
+    if (res.code === 0) { toast.success('删除成功'); props.onSaved() }
+  } catch { toast.error('网络错误') }
 }
 
 function openAddGroup() {
@@ -141,90 +148,112 @@ function handleGroupSaved() {
 </script>
 
 <template>
-  <NModal v-model:show="show" preset="card" title="" class="w-[95vw] sm:w-[700px] md:w-[900px]" size="small" :mask-closable="true">
-    <template #header>
-      <div class="flex items-center select-none cursor-pointer" @click="collapsed = !collapsed">
-        <span class="text-lg mr-2">{{ collapsed ? '▶' : '◀' }}</span>
-        <span>{{ apps.find(a => a.key === activeApp)?.name || '应用启动器' }}</span>
-      </div>
-    </template>
-    <NLayout has-sider :style="`height:${layoutHeight};border-radius:0.75rem;`">
-      <AppStarterSidebar
-        :apps="apps"
-        v-model:active-app="activeApp"
-        v-model:collapsed="collapsed"
-        :is-small-screen="isSmallScreen"
-      />
-      <NLayoutContent :content-style="`height:${layoutHeight}`">
-        <div class="h-full overflow-auto p-3 sm:p-4">
+  <Dialog v-model:open="show">
+    <DialogContent class="w-[95vw] max-w-[1200px] sm:max-w-[1200px] p-0">
+      <DialogHeader class="px-4 py-3 border-b">
+        <DialogTitle class="flex items-center select-none cursor-pointer">
+          <span class="text-lg mr-2" @click="collapsed = !collapsed">{{ collapsed ? '▶' : '◀' }}</span>
+          <span>{{ apps.find(a => a.key === activeApp)?.name || '应用启动器' }}</span>
+        </DialogTitle>
+      </DialogHeader>
 
-          <!-- ====== 我的信息 ====== -->
-          <PanelUserInfo v-if="activeApp === 'UserInfo'" />
+      <div class="flex" :style="{ height: layoutHeight }">
+        <AppStarterSidebar
+          :apps="apps"
+          v-model:active-app="activeApp"
+          v-model:collapsed="collapsed"
+          :is-small-screen="isSmallScreen"
+        />
+        <div class="flex-1 min-w-0 overflow-hidden @container" :style="{ height: layoutHeight }">
+          <div class="h-full overflow-auto p-3 sm:p-4">
+            <!-- Tab 切换淡入过渡 -->
+            <Transition name="tab-fade" mode="out-in">
+              <div :key="activeApp">
+                <!-- ====== 我的信息 ====== -->
+                <PanelUserInfo v-if="activeApp === 'UserInfo'" />
 
-          <!-- ====== 风格设置 ====== -->
-          <PanelStyleSettings
-            v-if="activeApp === 'Style'"
-            :panel-config="panelConfig"
-            :on-saved="props.onSaved"
-          />
+                <!-- ====== 风格设置 ====== -->
+                <PanelStyleSettings
+                  v-if="activeApp === 'Style'"
+                  :panel-config="panelConfig"
+                  :on-saved="props.onSaved"
+                />
 
-          <!-- ====== 公告设置 ====== -->
-          <PanelAnnounceSettings
-            v-if="activeApp === 'Announce'"
-            :panel-config="panelConfig"
-            :on-saved="props.onSaved"
-          />
+                <!-- ====== 公告设置 ====== -->
+                <PanelAnnounceSettings
+                  v-if="activeApp === 'Announce'"
+                  :panel-config="panelConfig"
+                  :on-saved="props.onSaved"
+                />
 
-          <!-- ====== 分组管理 ====== -->
-          <PanelGroupManage
-            v-if="activeApp === 'GroupManage'"
-            :groups="props.groups"
-            @add-group="openAddGroup"
-            @edit-group="openEditGroup"
-            @delete-group="handleDeleteGroup"
-            @saved="handleGroupSaved"
-          />
+                <!-- ====== 分组管理 ====== -->
+                <PanelGroupManage
+                  v-if="activeApp === 'GroupManage'"
+                  :groups="props.groups"
+                  @add-group="openAddGroup"
+                  @edit-group="openEditGroup"
+                  @delete-group="handleDeleteGroup"
+                  @saved="handleGroupSaved"
+                />
 
-          <!-- ====== 导入导出 ====== -->
-          <PanelImportExport
-            v-if="activeApp === 'ImportExport'"
-            :on-saved="props.onSaved"
-          />
+                <!-- ====== 导入导出 ====== -->
+                <PanelImportExport
+                  v-if="activeApp === 'ImportExport'"
+                  :on-saved="props.onSaved"
+                />
 
-          <!-- ====== 用户管理 ====== -->
-          <div v-if="activeApp === 'Users'" class="flex flex-col gap-4">
-            <UsersManage />
+                <!-- ====== 用户管理 ====== -->
+                <div v-if="activeApp === 'Users'" class="flex flex-col gap-4">
+                  <UsersManage />
+                </div>
+
+                <!-- ====== 站点设置 ====== -->
+                <PanelSiteSettings
+                  v-if="activeApp === 'SiteSettings'"
+                  :site-config="localSiteConfig"
+                  @update:site-config="handleSiteConfigUpdate"
+                />
+              </div>
+            </Transition>
           </div>
-
-          <!-- ====== 站点设置 ====== -->
-          <PanelSiteSettings
-            v-if="activeApp === 'SiteSettings'"
-            :site-config="localSiteConfig"
-            @update:site-config="handleSiteConfigUpdate"
-          />
-
         </div>
-      </NLayoutContent>
-    </NLayout>
+      </div>
+    </DialogContent>
+  </Dialog>
 
-    <!-- 分组编辑弹窗 -->
-    <NModal v-model:show="editGroupModalVisible" title="编辑分组" preset="card" class="w-[400px]">
+  <!-- 分组编辑弹窗 -->
+  <Dialog v-model:open="editGroupModalVisible">
+    <DialogContent class="w-[95vw] sm:w-[400px] max-w-[400px]">
+      <DialogHeader>
+        <DialogTitle>编辑分组</DialogTitle>
+      </DialogHeader>
       <div v-if="editingGroup" class="flex flex-col gap-4">
-        <div><label class="block text-sm mb-1">分组名称 *</label>
-          <input v-model="editingGroup.title" class="w-full border rounded px-3 py-2 sm:text-sm text-base" placeholder="请输入分组名称" /></div>
+        <div>
+          <label class="block text-sm mb-1">分组名称 *</label>
+          <Input v-model="editingGroup.title" placeholder="请输入分组名称" />
+        </div>
         <div class="flex items-center gap-2">
           <label class="text-sm">访客可见</label>
-          <NSwitch v-model:value="editingGroup.publicVisible" :checked-value="1" :unchecked-value="0" />
-        </div>
-        <div class="flex justify-end gap-2">
-          <NButton @click="editGroupModalVisible = false">取消</NButton>
-          <NButton type="primary" @click="handleSaveGroup">保存</NButton>
+          <Switch
+            :model-value="editingGroup.publicVisible === 1"
+            @update:model-value="(v: boolean) => (editingGroup.publicVisible = v ? 1 : 0)"
+          />
         </div>
       </div>
-    </NModal>
-  </NModal>
+      <DialogFooter>
+        <Button variant="outline" @click="editGroupModalVisible = false">取消</Button>
+        <Button @click="handleSaveGroup">保存</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
 
 <style scoped>
-:deep(.n-layout) { background-color: transparent !important; }
+/* Tab 切换淡入过渡 */
+.tab-fade-enter-active {
+  transition: opacity 150ms ease-out;
+}
+.tab-fade-enter-from {
+  opacity: 0;
+}
 </style>

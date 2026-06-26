@@ -1,7 +1,7 @@
 import { ref, watch, type Ref } from 'vue'
-import { useMessage } from 'naive-ui'
+import { toast } from '@/components/ui/sonner'
 import { usePanelState } from '@/store'
-import { setUserConfig } from '@/api/index'
+import { setUserConfig } from '@/modules'
 
 interface UseConfigEditorOptions {
   /** 来源配置（通常是 props.panelConfig） */
@@ -19,7 +19,6 @@ interface UseConfigEditorOptions {
 export function useConfigEditor(options: UseConfigEditorOptions) {
   const { config, onSaved, onSave } = options
 
-  const message = useMessage()
   const panelState = usePanelState()
 
   const localConfig = ref<Panel.panelConfig>({})
@@ -32,18 +31,21 @@ export function useConfigEditor(options: UseConfigEditorOptions) {
     { immediate: true, deep: true },
   )
 
-  async function handleSave() {
+  async function handleSave(): Promise<boolean> {
     const configToSave = { ...localConfig.value }
     try {
       const res = await setUserConfig({ panel: configToSave })
       if (res.code === 0) {
         panelState.updatePanelConfigFromCloud(configToSave)
-        message.success('配置已保存')
+        toast.success('配置已保存')
         onSave?.(configToSave)
         onSaved?.()
+        return true
       }
+      return false
     } catch {
-      message.error('保存失败')
+      toast.error('保存失败')
+      return false
     }
   }
 

@@ -131,10 +131,15 @@ function onLayerBLoad() {
     />
   </template>
   <!-- 无壁纸时的渐变背景 -->
-  <div v-else class="fixed inset-0 z-[1]" style="background: #dce2e8; contain: strict" />
+  <div v-else class="fixed inset-0 z-[1] wallpaper-fallback" />
 </template>
 
 <style scoped>
+.wallpaper-fallback {
+  /* 无壁纸兜底：原内联样式迁移至此，保留 contain:strict 渲染隔离 */
+  background: #dce2e8;
+  contain: strict;
+}
 /* 双图层交叉淡入淡出：新图 opacity 0→1，旧图 opacity 1→0，同步过渡 0.5s */
 .wallpaper-img {
   opacity: 0;

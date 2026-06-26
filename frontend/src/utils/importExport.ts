@@ -15,7 +15,7 @@ export interface ExportGroup {
   children: ExportItem[]
 }
 
-export interface ExportItem {
+interface ExportItem {
   title: string
   sort: number
   icon: Panel.ItemIcon | null

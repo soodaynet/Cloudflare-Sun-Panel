@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton } from 'naive-ui'
-import { useMessage } from 'naive-ui'
-import { getAllData, saveGroup, addItems } from '@/api/index'
+import { Button } from '@/components/ui/button'
+import { toast } from '@/components/ui/sonner'
+import { getAllData, saveGroup, addItems } from '@/modules'
 import { cachedRequest } from '@/utils/requestCache'
 import {
   createExportData,
@@ -21,7 +21,6 @@ const emit = defineEmits<{
   (e: 'saved'): void
 }>()
 
-const message = useMessage()
 const importExportLoading = ref(false)
 const fileInputRef = ref<HTMLInputElement>()
 
@@ -55,10 +54,10 @@ async function handleExport() {
       }))
       const data = createExportData(groups)
       downloadJSON(data)
-      message.success('导出成功')
+      toast.success('导出成功')
     }
   } catch {
-    message.error('导出失败')
+    toast.error('导出失败')
   } finally {
     importExportLoading.value = false
   }
@@ -73,15 +72,15 @@ async function handleImportFile(e: Event) {
     const text = await readFileAsText(file)
     const result = validateImportData(text)
     if (!result.valid || !result.data) {
-      message.error(result.error || '导入失败')
+      toast.error(result.error || '导入失败')
       return
     }
     await importData(result.data)
-    message.success('导入成功，请刷新页面查看')
+    toast.success('导入成功，请刷新页面查看')
     emit('saved')
     props.onSaved()
   } catch (err) {
-    message.error(err instanceof Error ? err.message : '导入失败')
+    toast.error(err instanceof Error ? err.message : '导入失败')
   } finally {
     importExportLoading.value = false
     if (fileInputRef.value) fileInputRef.value.value = ''
@@ -109,12 +108,17 @@ async function importData(data: ExportData) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 items-center py-6">
-    <p class="text-sm text-gray-500 mb-4">导出格式为 .sun-panel.json，可跨设备备份和恢复</p>
-    <input ref="fileInputRef" type="file" accept=".sun-panel.json,.json" class="hidden" @change="handleImportFile" />
-    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-      <NButton type="primary" :loading="importExportLoading" @click="handleExport">导出数据</NButton>
-      <NButton :loading="importExportLoading" @click="fileInputRef?.click()">导入数据</NButton>
+  <div class="flex flex-col gap-3">
+    <div>
+      <h3 class="text-sm font-medium text-foreground mb-2">导入导出</h3>
+      <div class="flex flex-col items-center gap-3">
+        <p class="text-sm text-muted-foreground">导出格式为 .sun-panel.json，可跨设备备份和恢复</p>
+        <input ref="fileInputRef" type="file" accept=".sun-panel.json,.json" class="hidden" @change="handleImportFile" />
+        <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <Button :disabled="importExportLoading" @click="handleExport">导出数据</Button>
+          <Button variant="outline" :disabled="importExportLoading" @click="fileInputRef?.click()">导入数据</Button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

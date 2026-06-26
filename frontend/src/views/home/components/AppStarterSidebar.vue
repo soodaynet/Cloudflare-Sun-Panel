@@ -27,12 +27,9 @@ function handleAppClick(appKey: string) {
 </script>
 
 <template>
-  <NLayoutSider
-    :collapsed="collapsed"
-    collapse-mode="width"
-    :collapsed-width="0"
-    :width="isSmallScreen ? '100%' : 180"
-    content-style="overflow: hidden"
+  <div
+    class="h-full overflow-hidden transition-[width] duration-300 shrink-0"
+    :style="{ width: collapsed ? '0px' : (isSmallScreen ? '100%' : '180px') }"
   >
     <div class="h-full dark:bg-[#2c2c32] p-2">
       <div
@@ -45,5 +42,5 @@ function handleAppClick(appKey: string) {
         <span>{{ app.name }}</span>
       </div>
     </div>
-  </NLayoutSider>
+  </div>
 </template>

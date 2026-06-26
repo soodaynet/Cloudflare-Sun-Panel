@@ -76,7 +76,7 @@ CREATE INDEX IF NOT EXISTS idx_item_icons_group_user ON item_icons(item_icon_gro
 -- 复合索引：按用户排序图标
 CREATE INDEX IF NOT EXISTS idx_item_icons_user_sort ON item_icons(user_id, sort, id);
 
--- 默认管理员 (密码: admin123)，仅在 users 表为空时插入
+-- 默认管理员 (密码: admin)，仅在 users 表为空时插入
 INSERT INTO users (id, username, password, name, role, status)
-SELECT 1, 'admin@sun.com', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'Admin', 1, 1
+SELECT 1, 'admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'Admin', 1, 1
 WHERE NOT EXISTS (SELECT 1 FROM users);

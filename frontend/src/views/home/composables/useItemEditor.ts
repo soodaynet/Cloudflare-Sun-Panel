@@ -1,10 +1,9 @@
 import { ref } from 'vue'
-import { useMessage } from 'naive-ui'
-import { addItems, editItem } from '@/api/index'
+import { toast } from '@/components/ui/sonner'
+import { addItems, editItem } from '@/modules'
 import { invalidateCacheByPrefix } from '@/utils/requestCache'
 
 export function useItemEditor(loadData: () => Promise<void>) {
-  const message = useMessage()
 
   const editModalShow = ref(false)
   const editingItem = ref<Panel.ItemInfo>({
@@ -38,19 +37,19 @@ export function useItemEditor(loadData: () => Promise<void>) {
   async function handleSaveItem() {
     const item = editingItem.value
     if (!item?.title) {
-      message.warning('请输入标题')
+      toast.warning('请输入标题')
       return
     }
     try {
       const res = item.id ? await editItem<Panel.ItemInfo>(item) : await addItems<Panel.ItemInfo[]>([item])
       if (res.code === 0) {
-        message.success('保存成功')
+        toast.success('保存成功')
         editModalShow.value = false
         invalidateCacheByPrefix('panel:')
         await loadData()
-      } else message.error(res.msg || '保存失败')
+      } else toast.error(res.msg || '保存失败')
     } catch {
-      message.error('网络错误')
+      toast.error('网络错误')
     }
   }
 

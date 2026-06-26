@@ -1,15 +1,15 @@
 import { ref } from 'vue'
-import { useMessage } from 'naive-ui'
-import { getSiteFavicon } from '@/api/panel'
+import { toast } from '@/components/ui/sonner'
+import { getSiteFavicon } from '@/modules'
 
 export function useFavicon() {
-  const message = useMessage()
   const getIconLoading = ref(false)
   const iconCandidates = ref<string[]>([])
 
+  // 调用后端获取站点 favicon 候选列表
   async function getIconByUrl(url: string) {
     if (!url) {
-      message.warning('请先输入网址')
+      toast.warning('请先输入网址')
       return
     }
     getIconLoading.value = true
@@ -18,12 +18,12 @@ export function useFavicon() {
       const res = await getSiteFavicon<{ iconUrls: string[] }>(url)
       if (res.code === 0 && res.data && res.data.iconUrls.length > 0) {
         iconCandidates.value = res.data.iconUrls
-        message.success(`找到 ${iconCandidates.value.length} 个图标候选`)
+        toast.success(`找到 ${iconCandidates.value.length} 个图标候选`)
       } else {
-        message.error(res.msg || '获取图标失败')
+        toast.error(res.msg || '获取图标失败')
       }
     } catch {
-      message.error('网络错误')
+      toast.error('网络错误')
     } finally {
       getIconLoading.value = false
     }
@@ -31,7 +31,7 @@ export function useFavicon() {
 
   function selectIcon(iconUrl: string): string {
     iconCandidates.value = []
-    message.success('已选择图标')
+    toast.success('已选择图标')
     return iconUrl
   }
 

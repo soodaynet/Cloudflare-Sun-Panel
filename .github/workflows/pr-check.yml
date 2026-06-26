@@ -10,7 +10,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    name: Build & Lint
+    name: Typecheck & Build & Lint
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -28,6 +28,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (Backend)
+        run: pnpm run typecheck
+
+      - name: Typecheck (Frontend)
+        run: pnpm run typecheck
+        working-directory: ./frontend
 
       - name: Build Frontend
         run: pnpm run build

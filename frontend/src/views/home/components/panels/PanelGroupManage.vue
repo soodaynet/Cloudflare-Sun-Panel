@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { NButton } from 'naive-ui'
+import { Button } from '@/components/ui/button'
 import { VueDraggable } from 'vue-draggable-plus'
-import { saveGroupSort } from '@/api/index'
+import { saveGroupSort } from '@/modules'
 
 interface ItemGroup {
   id?: number
@@ -60,13 +60,17 @@ function handleDeleteGroup(group: ItemGroup) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div class="flex gap-2"><NButton type="primary" size="small" @click="handleAddGroup">添加分组</NButton></div>
-    <div class="text-xs text-gray-400">拖拽分组可调整排序</div>
+  <div class="flex flex-col gap-3 h-full">
+    <!-- 添加按钮固定顶部 -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <Button size="sm" @click="handleAddGroup">添加分组</Button>
+      <span class="text-xs text-muted-foreground">拖拽分组可调整排序</span>
+    </div>
+    <!-- 拖拽列表可滚动 -->
     <VueDraggable
       v-model="localGroups"
       :animation="200"
-      class="flex flex-col gap-2 max-h-[250px] sm:max-h-[340px] overflow-auto"
+      class="flex flex-col gap-2 overflow-auto flex-1 min-h-0"
       @end="handleGroupSortEnd"
     >
       <div
@@ -85,8 +89,8 @@ function handleDeleteGroup(group: ItemGroup) {
           </span>
         </div>
         <div class="flex gap-2">
-          <NButton size="tiny" @click="handleEditGroup(group)">编辑</NButton>
-          <NButton size="tiny" type="error" @click="handleDeleteGroup(group)">删除</NButton>
+          <Button size="sm" variant="outline" @click="handleEditGroup(group)">编辑</Button>
+          <Button size="sm" variant="destructive" @click="handleDeleteGroup(group)">删除</Button>
         </div>
       </div>
     </VueDraggable>

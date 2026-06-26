@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:dry": "wrangler deploy --dry-run",
     "db:init": "wrangler d1 execute sun-panel-db --file=./schema.sql",
     "db:init:local": "wrangler d1 execute sun-panel-db --file=./schema.sql --local",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx,.vue",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -28,11 +30,11 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250605.0",
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.9.1",
+    "@types/node": "^24.0.0",
     "eslint": "^10.4.1",
     "eslint-plugin-vue": "^10.9.2",
     "globals": "^17.6.0",
-    "typescript": "^6.0.3",
+    "typescript": "^5.9.0",
     "typescript-eslint": "^8.60.1",
     "vue-eslint-parser": "^10.4.1",
     "wrangler": "^4.0.0"

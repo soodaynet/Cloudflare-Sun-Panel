@@ -70,7 +70,7 @@ export async function setupRouter(app: App) {
 }
 
 // 相邻路由预取：在当前页面加载完成后，空闲时预取可能访问的路由
-function prefetchAdjacentRoutes(currentRoute: ReturnType<typeof router.currentRoute.value>) {
+function prefetchAdjacentRoutes(currentRoute: typeof router.currentRoute.value) {
   const prefetchMap: Record<string, () => Promise<unknown>> = {
     'Home': () => import('@/views/home/index.vue'),
     'login': () => import('@/views/login/index.vue'),

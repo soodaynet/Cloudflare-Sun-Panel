@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue'
 import type { useAuthStore, usePanelState } from '@/store'
-import { getAllData, getInit } from '@/api/index'
+import { getAllData, getInit } from '@/modules'
 import { cachedRequest, invalidateCacheByPrefix, invalidateCache } from '@/utils/requestCache'
 import { PUBLIC_MODE_KEY } from '@/utils/storageKeys'
 

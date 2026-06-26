@@ -41,6 +41,9 @@ npm-debug.log*
 .cache/
 .npm-cache/
 
+# TRAE workspace (AI 协作工作区内容，不应进入主分支)
+.trae/
+
 # Turbopack / Next.js (future expansion)
 .next/
 .turbo/

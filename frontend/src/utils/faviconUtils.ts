@@ -14,19 +14,6 @@ function detectFaviconType(url: string): string {
   }
 }
 
-function isExternalUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return parsed.origin !== window.location.origin
-  } catch {
-    return false
-  }
-}
-
-function proxyFaviconUrl(url: string): string {
-  return `/api/proxy-image?url=${encodeURIComponent(url)}`
-}
-
 function updateFavicon(url: string) {
   let link = document.querySelector('link[rel~="icon"]') as HTMLLinkElement | null
   if (!url) {
@@ -42,12 +29,10 @@ function updateFavicon(url: string) {
   if (detectedType) {
     link.type = detectedType
   }
-  // 外部 URL（跨域 favicon）通过后端代理，避免浏览器 CORS 报错
-  link.href = isExternalUrl(url) ? proxyFaviconUrl(url) : url
+  link.href = url
 }
 
-export { detectFaviconType, updateFavicon, getCachedSiteConfig }
-export { SITE_CACHE_KEY }
+export { updateFavicon, getCachedSiteConfig }
 
 function getCachedSiteConfig(): Panel.SiteConfig {
   try {

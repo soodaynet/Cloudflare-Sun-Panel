@@ -1,6 +1,6 @@
 # Cloudflare-Sun-Panel
 
-一个基于 Cloudflare Workers + D1 + Vue 3 的轻量级个人导航面板，支持多用户、图标分组管理、访客模式、主题切换等功能。
+一个基于 Cloudflare Workers + D1 + Vue 3 的轻量级私有导航面板，支持多用户、图标分组管理、访客模式、主题切换。后端采用插件式模块化架构（Hono + ModuleRegistry），前端基于 shadcn-vue + Tailwind CSS 4 现代化 UI，一键部署到 Cloudflare，零服务器运维。
 
 ## 目录
 
@@ -11,20 +11,22 @@
 - [部署到 Cloudflare](#部署到-cloudflare)
   - [1. 创建 D1 数据库](#1-创建-d1-数据库)
   - [2. 配置 wrangler.toml](#2-配置-wranglertoml)
-  - [3. 初始化数据库表](#3-初始化数据库表)
+  - [3. 初始化数据库](#3-初始化数据库)
   - [4. 构建前端](#4-构建前端)
   - [5. 部署 Worker](#5-部署-worker)
-  - [6. 设置 JWT 密钥（推荐）](#6-设置-jwt-密钥推荐)
+  - [6. 配置 JWT_SECRET](#6-配置-jwt_secret)
+  - [7. 验证部署](#7-验证部署)
 - [CI/CD 自动部署](#cicd-自动部署)
 - [环境变量说明](#环境变量说明)
 - [项目目录结构](#项目目录结构)
 - [API 接口概览](#api-接口概览)
 - [数据导入导出](#数据导入导出)
+- [默认账号](#默认账号)
 - [常见问题排查](#常见问题排查)
 - [回滚策略](#回滚策略)
 - [验证部署成功](#验证部署成功)
-- [默认账号](#默认账号)
 - [致谢](#致谢)
+- [相关文档](#相关文档)
 
 ---
 
@@ -33,22 +35,26 @@
 ```
 浏览器 ──→ Cloudflare Worker (Hono)
                │
-               ├── 中间件链 (CORS → CSRF → SecurityHeaders → BodyLimit)
+               ├── 全局中间件 (CORS → CSRF → SecurityHeaders → BodyLimit)
                │
-               ├── API 路由 (/login, /panel/*, /user/*, /system/*)
-               │      └── D1 数据库 (SQLite)
+               ├── 模块注册表 (ModuleRegistry)
+               │   ├── /login          (auth 模块)
+               │   ├── /init           (init 模块)
+               │   ├── /panel/*        (panel + user-config + users 模块)
+               │   ├── /user/*         (users 模块)
+               │   ├── /system/*       (settings 模块)
+               │   └── /about          (settings 模块)
+               │       └── D1 数据库 (SQLite)
                │
-               ├── 静态资源 (Vue 3 SPA, History 模式) ── 由 Worker Assets 直接返回
-               │
-               └── 图片代理 (/api/proxy-image) ── 随机图片 API 代理
+               └── 静态资源 (Vue 3 SPA, History 模式) ── 由 Worker Assets 直接返回
 ```
 
-- **后端**: TypeScript + [Hono](https://hono.dev/) 运行在 Cloudflare Workers
-- **数据库**: Cloudflare D1 (SQLite)
-- **前端**: Vue 3 + Vite + Naive UI + Tailwind CSS
-- **认证**: 自签名 JWT（HMAC-SHA256），7 天过期
-- **安全**: CSRF 防护、安全响应头、请求体大小限制、登录频率限制
-- **密码**: SHA-256 + 随机盐值哈希
+- **后端**：TypeScript + [Hono](https://hono.dev/) ^4.7.8 运行于 Cloudflare Workers，插件式模块化架构（`src/modules/<name>/`）
+- **数据库**：Cloudflare D1（SQLite 兼容），binding 名 `DB`，库名 `sun-panel-db`
+- **前端**：Vue 3 + Vite 6 + shadcn-vue + Reka UI + Tailwind CSS 4（CSS-first 配置）
+- **认证**：JWT HMAC-SHA256（基于 Web Crypto API），Token 有效期 7 天
+- **安全**：CSRF 防护、安全响应头、请求体大小限制（1MB）、登录频率限制；无 SSRF、无公开注册
+- **密码**：SHA-256 哈希存储
 
 ---
 
@@ -56,10 +62,10 @@
 
 | 工具 | 最低版本 | 说明 |
 |------|---------|------|
-| Node.js | ≥ 18 | 推荐 22+ |
-| npm | ≥ 9 | 随 Node.js 附带 |
-| Wrangler | ≥ 4.0 | Cloudflare Workers CLI (`npm install -g wrangler`) |
-| Cloudflare 账号 | — | 需要开通 Workers 和 D1 服务 |
+| Node.js | 24+ | 推荐 24 LTS |
+| pnpm | 10.15.1+ | 包管理器（workspace monorepo） |
+| Wrangler | 4+ | Cloudflare Workers CLI（随 devDependencies 安装） |
+| Cloudflare 账户 | — | 需启用 Workers 与 D1 服务 |
 
 ---
 
@@ -67,11 +73,11 @@
 
 部署前请确保完成以下准备：
 
-1. **注册 Cloudflare 账号**：[https://dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
+1. **注册 Cloudflare 账户**：[https://dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
 2. **安装 Wrangler CLI 并登录**：
 
    ```bash
-   npm install -g wrangler
+   pnpm add -g wrangler
    wrangler login
    ```
 
@@ -82,7 +88,7 @@
 4. **创建 Cloudflare API Token**：
    - 进入 [API Tokens 页面](https://dash.cloudflare.com/profile/api-tokens)
    - 创建令牌 → 使用「Edit Cloudflare Workers」模板
-   - **重要**：在权限配置中需额外添加 **D1 编辑权限**（`Account` → `D1` → `Edit`），否则 `db:init` 步骤将失败
+   - **重要**：权限中需额外添加 **D1 编辑权限**（`Account` → `D1` → `Edit`），否则 D1 初始化步骤将失败
    - 保存生成的 Token（只显示一次）
 
 ---
@@ -90,30 +96,35 @@
 ## 快速开始（本地开发）
 
 ```bash
-# 1. 克隆项目
-git clone <repository-url>
+# 克隆仓库
+git clone <repo-url>
 cd Cloudflare-Sun-Panel
 
-# 2. 安装后端依赖
-npm install
+# 安装依赖（根 + 前端，pnpm workspace）
+pnpm install
 
-# 3. 安装前端依赖
-cd frontend
-npm install
-cd ..
+# 创建 D1 数据库（首次）
+wrangler d1 create sun-panel-db
+# 将返回的 database_id 写入 wrangler.toml（替换 __D1_DATABASE_ID__）
 
-# 4. 初始化本地 D1 数据库
-npm run db:init:local
+# 初始化本地数据库
+pnpm run db:init:local
 
-# 5. 启动后端 (端口 8787)
-npm run dev
+# 配置 JWT_SECRET（本地开发）
+echo "your-dev-secret" | wrangler secret put JWT_SECRET --local
+# 或创建 .dev.vars 文件：JWT_SECRET=your-dev-secret
 
-# 6. 另开终端，启动前端 (端口 3000)
-cd frontend
-npm run dev
+# 启动后端（端口 8787）
+pnpm dev
+
+# 另一个终端启动前端（端口 3000，代理 /api 到 8787）
+pnpm --filter frontend dev
+
+# 访问 http://localhost:3000
+# 默认管理员：admin / admin
 ```
 
-打开浏览器访问 `http://localhost:3000`，前端 API 请求会自动代理到 `localhost:8787`。
+前端 API 请求会通过 Vite 代理转发到本地 Worker（`localhost:8787`）。
 
 ---
 
@@ -139,7 +150,7 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 ### 2. 配置 wrangler.toml
 
-编辑项目根目录的 `wrangler.toml`，将 `__D1_DATABASE_ID__` 替换为上一步获取的 database_id：
+编辑项目根目录的 `wrangler.toml`，将 `__D1_DATABASE_ID__` 替换为上一步获取的 `database_id`：
 
 ```toml
 [[d1_databases]]
@@ -148,179 +159,115 @@ database_name = "sun-panel-db"
 database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # 替换这里
 ```
 
-### 3. 初始化数据库表
+> 若使用 GitHub Actions 自动部署，可保持 `__D1_DATABASE_ID__` 占位符不动，CI 会通过 Secret `CF_D1_DATABASE_ID` 自动 `sed` 注入。
+
+### 3. 初始化数据库
 
 ```bash
-npx wrangler d1 execute sun-panel-db --remote --file=./schema.sql
+pnpm run db:init
+# 等价于 wrangler d1 execute sun-panel-db --remote --file=./schema.sql
 ```
 
-这将在远程 D1 数据库中创建所有表、索引和默认管理员账号。
+这将在远程 D1 数据库中创建所有表、索引以及默认管理员账号（`admin` / `admin`）。
 
 ### 4. 构建前端
 
 ```bash
-cd frontend
-npm install
-npm run build
-cd ..
+pnpm --filter frontend run build
 ```
 
-构建产物位于 `frontend/dist/`。
+构建产物位于 `frontend/dist/`，包含 `vue-tsc` 类型检查与 `vite build`。
 
 ### 5. 部署 Worker
 
 ```bash
-npx wrangler deploy
+pnpm run deploy
+# 等价于 wrangler deploy
 ```
 
-部署完成后，Worker 会提供一个 `*.workers.dev` 域名（或你自定义的域名），同时前端静态资源也由 Worker 一起托管。
+部署完成后，Worker 会提供一个 `*.workers.dev` 域名（或你自定义的域名），同时前端静态资源也由 Worker 一并托管（`[assets]` 绑定 + SPA 回退）。
 
-### 6. 设置 JWT 密钥（推荐）
+### 6. 配置 JWT_SECRET
 
-为了安全，建议使用自定义 JWT 签名密钥：
+JWT 签名密钥必填，**未配置则 Worker 启动失败**（提示 `JWT_SECRET is required`）。通过 wrangler CLI 配置一次后即可在 Worker 上持久化：
 
 ```bash
 # 生成随机密钥
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# 设置为环境变量
-npx wrangler secret put JWT_SECRET
+# 配置 Cloudflare Workers Secret
+wrangler secret put JWT_SECRET
 # 粘贴上一步生成的密钥
-
-# 设置后重新部署
-npx wrangler deploy
 ```
 
-> 不设置 JWT_SECRET 将使用代码中的默认密钥，**生产环境强烈建议更换**。
+> 该 Secret 不通过 GitHub Actions 注入，仅在 Worker 上配置一次。
+
+### 7. 验证部署
+
+```bash
+# 健康检查
+curl https://<your-worker>.workers.dev/api/health
+# 预期：{ "code": 0, "msg": "ok", "data": { "status": "running", "time": "..." } }
+
+# 使用默认账号 admin / admin 登录
+```
+
+详见 [验证部署成功](#验证部署成功) 章节。
 
 ---
 
 ## CI/CD 自动部署
 
-项目已配置 GitHub Actions 工作流（`.github/workflows/deploy-worker.yml`），推送代码到 `main` 分支即可自动部署。
+项目通过 GitHub Actions 实现持续集成与自动部署（位于 `.github/workflows/`）。
 
-### Repository Secrets 完整配置指南
+### 工作流
 
-部署前必须在 GitHub 仓库中配置以下 **3 个 Secrets**。每个 Secret 的作用和获取方式如下：
+| 工作流文件 | 触发条件 | 执行内容 |
+|-----------|---------|---------|
+| `deploy-worker.yml` | 推送到 `main` 分支（排除 `.md`）或手动触发 | typecheck（后端 + 前端） → 前端 build → 注入 D1 database_id → `wrangler deploy` → D1 初始化（`continue-on-error: true`） |
+| `pr-check.yml` | 提交 PR 到 `main` 分支（排除 `.md`） | typecheck（后端 + 前端） → 前端 build → ESLint |
 
----
+CI 环境固定使用 **pnpm 10.15.1 + Node.js 24**。
 
-#### ① `CF_API_TOKEN` — Cloudflare API 令牌
+### 所需 GitHub Secrets
 
-| 属性 | 值 |
-|------|-----|
-| **作用** | 用于 `wrangler deploy` 认证，将 Worker 部署到 Cloudflare |
-| **使用位置** | `deploy-worker.yml` deploy 与 init 步骤 |
-| **必填** | 是 |
+命名**不得**以 `GITHUB_` 开头（GitHub 保留前缀）：
 
-**获取方式：**
+| 名称 | 用途 |
+|------|------|
+| `CF_API_TOKEN` | Cloudflare API Token（Workers + D1 编辑权限） |
+| `CF_ACCOUNT_ID` | Cloudflare Account ID |
+| `CF_D1_DATABASE_ID` | D1 数据库 ID，CI 通过 `sed` 注入到 `wrangler.toml` 替换 `__D1_DATABASE_ID__` |
 
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. 点击右上角头像 → **「我的个人资料」(My Profile)**
-3. 左侧菜单选择 **「API 令牌」(API Tokens)**
-4. 点击 **「创建令牌」(Create Token)**
-5. 选择 **「编辑 Cloudflare Workers」(Edit Cloudflare Workers)** 模板
-6. 权限配置（Worker 默认权限 + 额外添加 D1 权限）：
-   - **账户资源**：包括你的账户
-   - **区域资源**：包括所有区域
-   - **额外权限**：点击「+ 添加更多」，添加 `Account` → `D1` → `Edit`（用于工作流中的 `db:init` 步骤初始化 D1 数据库表）
-7. 点击 **「继续以显示摘要」→「创建令牌」**
-8. **立即复制生成的 Token**（只显示一次，关闭后无法再次查看）
+在 GitHub 仓库 **Settings → Secrets and variables → Actions** 中添加。
 
-> 也可使用全局 API Key 替代，但 Token 更安全。全局 Key 在「API 密钥」页面获取。
+### 所需 Cloudflare Workers Secrets
 
----
+通过 `wrangler secret put` 配置一次，在 Worker 上持久化，不通过 Actions 注入：
 
-#### ② `CF_ACCOUNT_ID` — Cloudflare 账户 ID
-
-| 属性 | 值 |
-|------|-----|
-| **作用** | 指定部署目标账户，`wrangler deploy` 需要此 ID 定位账户 |
-| **使用位置** | `deploy-worker.yml` deploy 与 init 步骤 |
-| **必填** | 是 |
-
-**获取方式：**
-
-- **方法一（Dashboard）**：登录 Cloudflare → 右侧边栏 **Workers & Pages** → 页面右侧直接可见「账户 ID」（Account ID），点击复制。
-- **方法二（Wrangler CLI）**：在终端执行 `wrangler whoami`，输出中「Account ID」即为所需值。
-- **方法三（URL）**：登录 Cloudflare Dashboard 后，浏览器地址栏 URL 格式为 `https://dash.cloudflare.com/<account-id>`，其中 `<account-id>` 就是 32 位十六进制字符串。
-
----
-
-#### ③ `CF_D1_DATABASE_ID` — D1 数据库 ID
-
-| 属性 | 值 |
-|------|-----|
-| **作用** | 注入到 `wrangler.toml` 替换占位符 `__D1_DATABASE_ID__`，绑定正确的 D1 数据库 |
-| **使用位置** | `deploy-worker.yml` Inject D1 database_id 步骤 |
-| **必填** | 是 |
-
-**获取方式：**
-
-1. 先在终端创建 D1 数据库（如果尚未创建）：
-   ```bash
-   wrangler d1 create sun-panel-db
-   ```
-2. 执行后会输出类似内容，复制其中的 `database_id` 值：
-   ```
-   [[d1_databases]]
-   binding = "DB"
-   database_name = "sun-panel-db"
-   database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-   ```
-3. **替代方法**：登录 Cloudflare Dashboard → Workers & Pages → D1 → 选择 `sun-panel-db` → 页面显示「Database ID」，点击复制。
-
----
-
-### Secrets 配置步骤
-
-在 GitHub 仓库页面操作：
-
-1. 进入 **Settings** → **Secrets and variables** → **Actions**
-2. 点击 **「New repository secret」** 按钮
-3. 依次添加以上 3 个 Secret：
-
-   | Name | Secret（填入对应值） |
-   |------|---------------------|
-   | `CF_API_TOKEN` | `d8b... 粘贴 Token` |
-   | `CF_ACCOUNT_ID` | `a1b2c3... 粘贴 32位 ID` |
-   | `CF_D1_DATABASE_ID` | `xxxx-xxxx-... 粘贴 UUID` |
-
-4. 添加完成后，列表应显示 3 个 Actions secrets
+| 名称 | 必填 | 说明 |
+|------|------|------|
+| `JWT_SECRET` | ✅ | JWT 签名密钥，未配置则 Worker 启动失败 |
 
 ### 触发方式
 
 - **自动触发**：推送到 `main` 分支时（排除 `.md` 文件）
 - **手动触发**：GitHub 仓库 → Actions →「Deploy to Cloudflare」→「Run workflow」
 
-### 工作流步骤
-
-| 步骤 | 操作 | 使用的 Secret |
-|------|------|-------------|
-| 1 | Checkout 代码 | — |
-| 2 | 安装 Worker 依赖 (`npm ci`) | — |
-| 3 | 安装前端依赖 (`cd frontend && npm ci`) | — |
-| 4 | 构建前端 (`npm run build`) | — |
-| 5 | 替换 `wrangler.toml` 中 D1 ID 占位符 | `CF_D1_DATABASE_ID` |
-| 6 | 部署 Worker + 静态资源 (`wrangler deploy`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
-| 7 | 初始化 D1 数据库表 (`wrangler d1 execute ... --remote`) | `CF_API_TOKEN`、`CF_ACCOUNT_ID` |
-
 ---
 
 ## 环境变量说明
 
-| 变量名 | 作用域 | 必填 | 说明 |
-|--------|--------|------|------|
-| `JWT_SECRET` | Worker Secret | 推荐 | JWT 签名密钥，长随机字符串 |
-| `CF_API_TOKEN` | GitHub Actions | 是 (CI) | Cloudflare API 令牌 |
-| `CF_ACCOUNT_ID` | GitHub Actions | 是 (CI) | Cloudflare 账户 ID |
-| `CF_D1_DATABASE_ID` | GitHub Actions | 是 (CI) | D1 数据库 ID |
+| 变量名 | 类型 | 必填 | 说明 | 配置方式 |
+|--------|------|------|------|----------|
+| `JWT_SECRET` | Cloudflare Workers Secret | 是 | JWT 签名密钥（HMAC-SHA256） | `wrangler secret put JWT_SECRET` |
+| `CF_API_TOKEN` | GitHub Actions Secret | 是（CI） | Cloudflare API Token（Workers + D1 编辑权限） | GitHub 仓库 Settings → Secrets |
+| `CF_ACCOUNT_ID` | GitHub Actions Secret | 是（CI） | Cloudflare Account ID | GitHub 仓库 Settings → Secrets |
+| `CF_D1_DATABASE_ID` | GitHub Actions Secret | 是（CI） | D1 数据库 ID | GitHub 仓库 Settings → Secrets |
 
-前端构建环境变量（`frontend/.env.production`）：
-
-| 变量名 | 必填 | 说明 |
-|--------|------|------|
-| `VITE_GLOB_API_URL` | 否 | API 基础 URL，留空则与前端同域 |
+> **注意**：GitHub Secret 名称不得以 `GITHUB_` 开头（GitHub 保留前缀，会触发安全校验错误）。
+>
+> `wrangler.toml` 中的 `database_id = "__D1_DATABASE_ID__"` 为占位符，**不要**在仓库中硬编码真实 ID；CI 在部署时通过 `sed -i "s/__D1_DATABASE_ID__/${{ secrets.CF_D1_DATABASE_ID }}/g" wrangler.toml` 注入。
 
 ---
 
@@ -329,81 +276,72 @@ npx wrangler deploy
 ```
 Cloudflare-Sun-Panel/
 ├── .github/workflows/
-│   └── deploy-worker.yml     # GitHub Actions 自动部署配置
-├── frontend/                  # Vue 3 前端
-│   ├── src/
-│   │   ├── api/               # API 请求封装 (auth, panel, settings, user)
-│   │   ├── components/        # 公用组件 (apps, common)
-│   │   │   ├── apps/Users/    # 用户管理组件
-│   │   │   └── common/        # 通用组件
-│   │   ├── hooks/             # 组合式函数 (useTheme, useLanguage)
-│   │   ├── locales/           # 国际化 (zh-CN, en-US)
-│   │   ├── router/            # Vue Router 配置 (History 模式)
-│   │   ├── store/             # Pinia 状态管理 (app, auth, panel)
-│   │   ├── styles/            # 全局样式
-│   │   ├── typings/           # TypeScript 类型声明
-│   │   ├── utils/             # 工具函数
-│   │   │   ├── importExport.ts # 数据导入导出
-│   │   │   ├── requestCache.ts # 请求缓存
-│   │   │   └── request/       # HTTP 请求封装 (axios 实例)
-│   │   ├── views/             # 页面组件
-│   │   │   ├── home/
-│   │   │   │   ├── components/  # 主页子组件 (卡片、侧栏、壁纸等)
-│   │   │   │   │   └── panels/  # 设置面板组件
-│   │   │   │   └── composables/ # 主页逻辑 (公告、数据加载、站点配置等)
-│   │   │   ├── login/          # 登录页
-│   │   │   └── exception/404/  # 404 页面
-│   │   ├── App.vue
-│   │   └── main.ts
+│   ├── deploy-worker.yml               # 自动部署工作流（main 推送触发）
+│   └── pr-check.yml                    # PR 检查工作流（typecheck + build + lint）
+├── frontend/                           # Vue 3 前端（shadcn-vue + Tailwind 4）
+│   ├── components.json                 # shadcn-vue 配置（style=new-york, baseColor=neutral）
 │   ├── index.html
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   └── package.json
-├── src/                       # Cloudflare Worker 后端
-│   ├── middleware/             # 中间件
-│   │   ├── auth.ts            # 鉴权（JWT 验证、公开/访客模式、管理员）
-│   │   ├── cors.ts            # CORS 跨域
-│   │   ├── csrf.ts            # CSRF 防护
-│   │   ├── securityHeaders.ts # 安全响应头
-│   │   ├── bodyLimit.ts       # 请求体大小限制 (1MB)
-│   │   └── rateLimiter.ts     # 频率限制（登录接口）
-│   ├── models/                # 类型定义
-│   ├── routes/                # API 路由处理
-│   │   ├── auth.ts            # /login, /register
-│   │   ├── init.ts            # /init（统一初始化接口）
-│   │   ├── panel.ts           # /panel/itemIcon/* + /panel/getAllData
-│   │   ├── groups.ts          # /panel/itemIconGroup/*
-│   │   ├── userConfig.ts      # /panel/userConfig/* + /panel/users/*
-│   │   ├── users.ts           # /user/*
-│   │   ├── settings.ts        # /system/*, /about
-│   ├── services/              # 业务服务层
-│   │   ├── PanelService.ts    # 图标、分组 CRUD
-│   │   ├── UserService.ts     # 用户认证、管理
-│   │   ├── SettingsService.ts # 系统设置
-│   ├── utils/                 # 工具函数
-│   │   ├── jwt.ts             # JWT 签名/验证 (HMAC-SHA256)
-│   │   ├── password.ts        # 密码哈希 (SHA-256 + 盐值)
-│   │   ├── db.ts              # 数据库查询辅助
-│   │   ├── env.ts             # 环境变量校验
-│   │   ├── errors.ts          # 统一错误类 (AppError)
-│   │   ├── favicon.ts         # Favicon 探测/解析 (含 SSRF 防护)
-│   │   ├── origin.ts          # 请求来源校验 (CORS/CSRF)
-│   │   ├── response.ts        # 统一响应格式
-│   │   └── validate.ts        # Zod 校验 + 中间件适配
-│   ├── validators/            # Zod Schema 定义
-│   │   ├── auth.ts
-│   │   ├── panel.ts
-│   │   ├── settings.ts
-│   │   └── user.ts
-│   └── index.ts               # 入口文件
-├── schema.sql                 # D1 数据库 DDL + 默认数据
-├── wrangler.toml              # Cloudflare Workers 配置
-├── package.json               # 根 workspace 配置
-├── eslint.config.js           # ESLint 配置
-├── .prettierrc                # Prettier 配置
-├── pnpm-workspace.yaml        # pnpm workspace 定义
-└── tsconfig.json
+│   ├── vite.config.ts                  # Vite 6 配置（含 /api 代理到 8787）
+│   ├── tsconfig.json
+│   ├── package.json
+│   └── src/
+│       ├── main.ts、App.vue、env.d.ts
+│       ├── components/
+│       │   ├── ui/                     # shadcn-vue 生成组件（禁止修改源码）
+│       │   │   └── button/input/card/dialog/form/select/table/dropdown-menu/tabs/switch/checkbox/textarea/badge/sonner/label
+│       │   ├── apps/Users/             # 用户管理组件（index.vue + EditUser/）
+│       │   └── common/                 # 通用组件
+│       ├── modules/                    # 业务模块（每个含 api.ts + types.ts）
+│       │   ├── auth/、panel/、users/、settings/
+│       ├── views/                      # 页面
+│       │   ├── home/                   # 主页（index.vue + components/ + composables/ + components/panels/）
+│       │   ├── login/                  # 登录页（含 composables/useLoginPage.ts）
+│       │   └── exception/404/
+│       ├── hooks/                      # 组合式函数（useTheme、useLanguage）
+│       ├── store/modules/              # Pinia store（app、auth、panel）
+│       ├── locales/                    # i18n（zh-CN、en-US）
+│       ├── router/                     # Vue Router（History 模式）
+│       ├── lib/utils.ts                # cn helper（clsx + tailwind-merge）
+│       ├── styles/                     # main.css（Tailwind 4 @theme 指令）、global.css
+│       ├── utils/                      # 工具（request/axios、importExport、requestCache、storageKeys、faviconUtils）
+│       ├── api/                        # 已废弃，保留向后兼容
+│       └── typings/
+├── src/                                # Cloudflare Worker 后端
+│   ├── index.ts                        # Hono App 入口：全局中间件 + 模块注册表 + SPA 回退
+│   ├── modules/                        # 插件式模块化架构
+│   │   ├── types.ts                    # AppContext、AppBindings、ModuleDefinition 接口
+│   │   ├── registry.ts                 # ModuleRegistry 类（register/install/get/list）
+│   │   ├── shared/                     # 共享工具与中间件（模块间唯一通信通道）
+│   │   │   ├── jwt.ts                  # JWT 签名/验证（Web Crypto API）
+│   │   │   ├── env.ts                  # 环境变量校验（JWT_SECRET 必填）
+│   │   │   ├── db.ts、password.ts、validate.ts、origin.ts
+│   │   │   ├── response.ts、errors.ts、logger.ts
+│   │   │   └── middleware/             # cors、csrf、securityHeaders、bodyLimit、auth、rateLimiter
+│   │   ├── auth/                       # 登录模块（无注册）
+│   │   ├── init/                       # 初始化状态接口
+│   │   ├── panel/                      # 面板模块（item-icon、group 子模块 + getAllData 聚合）
+│   │   ├── user-config/                # 用户配置
+│   │   ├── users/                      # 用户管理（usersAdminModule + userSelfModule）
+│   │   └── settings/                   # 系统设置 + /about
+│   │   （每个模块自包含：index.ts / routes.ts / service.ts / validator.ts / types.ts）
+│   ├── routes/                         # 已废弃，保留向后兼容
+│   ├── services/                       # 已废弃，保留向后兼容
+│   ├── utils/                          # 已废弃，保留向后兼容
+│   ├── middleware/                     # 已废弃，保留向后兼容
+│   ├── validators/                     # 已废弃，保留向后兼容
+│   └── models/                         # 已废弃，保留向后兼容
+├── schema.sql                          # D1 表结构 + 索引 + 默认管理员 admin/admin
+├── wrangler.toml                       # Cloudflare Workers 配置（含密钥说明注释）
+├── pnpm-workspace.yaml                 # pnpm workspace 定义
+├── package.json                        # 根 workspace 配置
+├── eslint.config.js                    # ESLint 配置
+├── tsconfig.json
+├── CLAUDE.md                           # 面向 Claude AI 助手的项目指引
+├── AGENTS.md                           # 面向通用 AI Agent 的协作规范
+└── README.md
 ```
+
+> **说明**：旧目录（`src/routes/`、`src/services/`、`src/utils/`、`src/middleware/`、`src/validators/`、`src/models/` 与 `frontend/src/api/`）已废弃，仅为向后兼容保留，新代码请使用 `src/modules/` 与 `frontend/src/modules/`。
 
 ---
 
@@ -415,39 +353,28 @@ Cloudflare-Sun-Panel/
 { "code": 0, "msg": "ok", "data": {} }
 ```
 
+`code: 0` 表示成功，非 0 表示业务错误。
+
+### 主要接口
+
 | 路径 | 方法 | 认证 | 说明 |
 |------|------|------|------|
 | `/login` | POST | 无 | 用户登录，返回 JWT token |
-| `/register` | POST | 无 | 用户注册，返回 JWT token |
-| `/init` | POST | 公开模式 | 统一初始化，一次性获取面板数据、系统设置和认证信息 |
-| `/panel/getAllData` | POST | 公开模式 | 统一获取全部数据（分组 + 图标 + 用户配置） |
-| `/user/getAuthInfo` | POST | 公开模式 | 获取当前认证信息和访客模式状态 |
-| `/user/updateInfo` | POST | 需登录 | 更新昵称 |
-| `/user/updatePassword` | POST | 需登录 | 修改密码 |
-| `/panel/itemIconGroup/getList` | POST | 公开模式 | 获取分组列表 |
-| `/panel/itemIconGroup/edit` | POST | 公开模式 | 新增/编辑分组（访客只读） |
-| `/panel/itemIconGroup/deletes` | POST | 公开模式 | 删除分组及图标 |
-| `/panel/itemIconGroup/saveSort` | POST | 公开模式 | 保存分组排序 |
-| `/panel/itemIcon/getListByGroupId` | POST | 公开模式 | 获取分组下图标列表 |
-| `/panel/itemIcon/getSiteFavicon` | POST | 公开模式 | 获取站点 favicon 图标 |
-| `/panel/itemIcon/addMultiple` | POST | 公开模式 | 批量添加图标 |
-| `/panel/itemIcon/edit` | POST | 公开模式 | 新增/编辑图标 |
-| `/panel/itemIcon/deletes` | POST | 公开模式 | 批量删除图标 |
-| `/panel/itemIcon/saveSort` | POST | 公开模式 | 保存图标排序 |
-| `/panel/userConfig/get` | POST | 公开模式 | 获取用户配置 |
-| `/panel/userConfig/set` | POST | 公开模式 | 保存用户配置（访客只读） |
-| `/panel/users/getList` | POST | 管理员 | 获取用户列表 |
-| `/panel/users/create` | POST | 管理员 | 创建用户 |
-| `/panel/users/update` | POST | 管理员 | 编辑用户 |
-| `/panel/users/deletes` | POST | 管理员 | 删除用户 |
-| `/panel/users/getPublicVisitUser` | POST | 管理员 | 获取公开访问用户 |
-| `/panel/users/setPublicVisitUser` | POST | 管理员 | 设置/取消公开访问用户 |
-| `/system/setting/get` | POST | 无 | 获取单个系统设置 |
-| `/system/setting/set` | POST | 管理员 | 保存单个系统设置 |
-| `/system/settings/saveAll` | POST | 管理员 | 批量保存系统设置 |
-| `/about` | POST | 无 | 获取所有系统设置 |
+| `/init` | POST | 公开模式 | 获取初始化状态与面板数据 |
+| `/panel/getAllData` | POST | 公开模式 | 获取所有分组与图标 |
+| `/panel/itemIcon/*` | POST | 公开模式 | 图标 CRUD（getListByGroupId / edit / deletes / saveSort / addMultiple 等） |
+| `/panel/itemIconGroup/*` | POST | 公开模式 | 分组 CRUD（getList / edit / deletes / saveSort） |
+| `/panel/userConfig/*` | POST | 公开模式 | 用户配置（get / set） |
+| `/panel/users/*` | POST | 管理员 | 用户管理（getList / create / update / deletes / getPublicVisitUser / setPublicVisitUser） |
+| `/user/*` | POST | 需登录 | 当前用户信息与密码（getAuthInfo / updateInfo / updatePassword） |
+| `/system/*` | POST | 管理员 | 系统设置（setting/get、setting/set、settings/saveAll） |
+| `/about` | POST | 无 | 获取站点信息（所有系统设置） |
 | `/api/health` | GET | 无 | 健康检查 |
-| `/api/proxy-image` | POST | 无 | 代理获取外部图片（支持 JSON API 解析） |
+
+### 已移除接口
+
+- **`/api/proxy-image`**（图片代理）—— 已移除，存在 SSRF 风险。如需外部图片，前端直连目标 URL 或公开 favicon 服务。
+- **`/register`**（用户注册）—— 已移除，私有面板场景，用户由管理员后台通过 `/panel/users/create` 创建。
 
 ---
 
@@ -487,6 +414,19 @@ Cloudflare-Sun-Panel/
 
 ---
 
+## 默认账号
+
+| 用户名 | 密码 | 角色 | 状态 |
+|--------|------|------|------|
+| `admin` | `admin` | 管理员（role=1） | 启用（status=1） |
+
+- 密码哈希：SHA-256 `8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918`
+- 该默认账号由 `schema.sql` 在 `users` 表为空时插入，仅用于首次登录。
+- **首次登录后请立即修改密码**。
+- 系统为私有面板，**不支持公开注册**，用户由管理员在后台通过 `/panel/users/create` 创建。
+
+---
+
 ## 常见问题排查
 
 ### 1. 前端 API 请求 404
@@ -496,7 +436,8 @@ Cloudflare-Sun-Panel/
 **排查步骤**：
 - 检查 `frontend/.env.production` 中 `VITE_GLOB_API_URL` 是否为空（同域部署应为空）
 - 验证 Worker 是否成功部署：访问 `https://<your-worker>.workers.dev/api/health`
-- 本地开发时确保后端 `wrangler dev` 正在运行
+- 本地开发时确保后端 `pnpm dev`（wrangler dev）正在运行
+- 确认前端 Vite 代理（`vite.config.ts`）已将 `/api` 转发到 `localhost:8787`
 
 ### 2. 数据库查询失败
 
@@ -504,52 +445,65 @@ Cloudflare-Sun-Panel/
 
 **排查步骤**：
 - 确认 D1 数据库已创建且 `database_id` 在 `wrangler.toml` 中正确配置
-- 执行 `npm run db:init` 初始化表结构
+- 执行 `pnpm run db:init` 初始化表结构
 - 在 Cloudflare Dashboard → Workers & Pages → D1 中验证数据库是否存在
+- 确认 `database_id` 占位符 `__D1_DATABASE_ID__` 已被替换为真实 ID
 
-### 3. CORS 错误
+### 3. Worker 启动失败：JWT_SECRET is required
+
+**现象**：Worker 部署后无法启动，日志提示 `JWT_SECRET is required`。
+
+**原因**：`src/modules/shared/env.ts` 在启动时校验 `JWT_SECRET`，未配置则直接抛错。
+
+**解决**：
+```bash
+wrangler secret put JWT_SECRET
+# 粘贴一个长随机字符串（建议 32 字节以上）
+```
+
+### 4. CORS 错误
 
 **现象**：浏览器控制台显示跨域错误。
 
 **排查步骤**：
-- 确认前端和后端在同一域名下
-- 如果分域部署，需修改 `src/middleware/cors.ts` 中的 `Access-Control-Allow-Origin`
+- 确认前端和后端在同一域名下（推荐方案）
+- 如分域部署，需修改 `src/modules/shared/middleware/cors.ts` 中的 `Access-Control-Allow-Origin`
 
-### 4. 登录后 token 失效
+### 5. 登录后 token 失效
 
 **现象**：登录成功后短时间内需要重新登录。
 
 **排查步骤**：
 - JWT 默认 7 天过期，检查系统时间是否正确
 - 如果每次访问都需要重新登录，检查 localStorage 是否被清除
-- 确认 JWT_SECRET 在所有 Worker 实例中一致
+- 确认 `JWT_SECRET` 在 Worker 上已正确配置（未配置则启动失败，不会出现此问题）
 
-### 5. 前端资源 404（直接访问子页面）
+### 6. 前端资源 404（直接访问子页面）
 
 **现象**：直接访问 `/login` 等子页面返回 404。
 
-**原因**和**解决**：前端使用 History 路由模式，直接通过 `/login`、`/settings` 等路径访问。Worker 已配置 SPA 回退逻辑，所有非 API / 非静态资源请求自动返回 `index.html`，由前端路由接管。
+**原因和解决**：前端使用 History 路由模式。`wrangler.toml` 中 `[assets]` 配置了 `not_found_handling = "single-page-application"`，所有非 API / 非静态资源请求会自动返回 `index.html`，由前端路由接管。
 
-### 6. 构建失败
+### 7. 构建失败
 
-**现象**：`npm run build` 报错。
+**现象**：`pnpm --filter frontend run build` 报错。
 
 **排查步骤**：
 ```bash
 # 清理后重新安装
-rm -rf node_modules frontend/node_modules frontend/dist
-npm install
-cd frontend && npm install && npm run build
+pnpm install
+pnpm --filter frontend run typecheck   # 先确认类型检查通过
+pnpm --filter frontend run build
 ```
 
-### 7. Wrangler 部署超时
+### 8. Wrangler 部署超时
 
-**现象**：`wrangler deploy` 长时间无响应。
+**现象**：`pnpm run deploy` 长时间无响应。
 
 **排查步骤**：
 - 确认网络可访问 Cloudflare API
 - 检查 `wrangler whoami` 是否已登录
-- 尝试 `wrangler deploy --dry-run` 进行预检
+- 尝试 `pnpm run deploy:dry`（`wrangler deploy --dry-run`）进行预检
 
 ---
 
@@ -581,9 +535,9 @@ Cloudflare Workers 自动保留最近版本，可在 Dashboard 回滚：
 
 ```bash
 git checkout <tag-or-commit>
-npm install
-cd frontend && npm install && npm run build && cd ..
-npx wrangler deploy
+pnpm install
+pnpm --filter frontend run build
+pnpm run deploy
 ```
 
 ---
@@ -610,10 +564,10 @@ curl https://<your-worker>.workers.dev/api/health
 ### 3. 登录验证
 
 使用默认账号登录：
-- 用户名：`admin@sun.com`
-- 密码：`admin123`
+- 用户名：`admin`
+- 密码：`admin`
 
-登录成功后应跳转到主页（空白面板）。
+登录成功后应跳转到主页（空白面板）。**首次登录后请立即修改密码**。
 
 ### 4. 功能验证清单
 
@@ -626,16 +580,23 @@ curl https://<your-worker>.workers.dev/api/health
 - [ ] 站点设置可保存（管理员）
 - [ ] 用户管理功能正常（管理员）
 - [ ] 访客模式功能正常
-- [ ] 主题切换正常（浅色/深色/跟随系统）
-- [ ] 语言切换正常（中文/英文）
+- [ ] 主题切换正常（浅色 / 深色 / 跟随系统）
+- [ ] 语言切换正常（中文 / 英文）
 
-### 5. API 验证
+### 5. 创建测试分组与图标
+
+登录后在主页：
+1. 点击「新增分组」，创建一个测试分组（如「常用工具」）
+2. 在分组内点击「新增图标」，添加一个测试图标（如 GitHub → `https://github.com`）
+3. 刷新页面，确认分组与图标已持久化
+
+### 6. API 验证
 
 ```bash
 # 验证登录
 curl -X POST https://<your-worker>.workers.dev/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin@sun.com","password":"admin123"}'
+  -d '{"username":"admin","password":"admin"}'
 
 # 验证公开接口
 curl -X POST https://<your-worker>.workers.dev/about \
@@ -644,33 +605,23 @@ curl -X POST https://<your-worker>.workers.dev/about \
 
 ---
 
-## 默认账号
-
-| 用户名 | 密码 | 角色 |
-|--------|------|------|
-| `admin@sun.com` | `admin123` | 管理员 |
-
-> **安全提醒**：部署后请立即修改默认管理员密码。
-
----
-
-## 技术栈
-
-- **运行时**：Cloudflare Workers
-- **框架**：Hono ^4.7
-- **数据库**：Cloudflare D1 (SQLite)
-- **前端框架**：Vue 3.5 + TypeScript
-- **构建工具**：Vite 6
-- **UI 组件**：Naive UI 2.43
-- **CSS 框架**：Tailwind CSS 3.4
-- **状态管理**：Pinia 2.3
-- **国际化**：vue-i18n 9.14
-- **拖拽排序**：vue-draggable-plus 0.6
-- **安全过滤**：DOMPurify 3.4
-- **数据校验**：Zod 3.24
-- **包管理**：npm / pnpm（workspace monorepo）
 ## 致谢
 
 本项目基于以下优秀项目构建，特别感谢：
 
-- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 提供的优秀导航面板项目，本项目为其开源的 Cloudflare Workers 平台的适配版本。 
+- **Sun-Panel** — [https://github.com/hslr-s/sun-panel](https://github.com/hslr-s/sun-panel) — 提供的优秀导航面板项目，本项目为其开源的 Cloudflare Workers 平台的适配版本。
+- [Hono](https://hono.dev/) — 轻量级 Web 框架
+- [Cloudflare Workers](https://workers.cloudflare.com/) + [D1](https://developers.cloudflare.com/d1/) — 边缘计算与 Serverless 数据库
+- [Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) — 前端框架与构建工具
+- [shadcn-vue](https://www.shadcn-vue.com/) + [Reka UI](https://reka-ui.com/) — 现代化 UI 组件方案
+- [Tailwind CSS](https://tailwindcss.com/) — 原子化 CSS 框架
+
+---
+
+## 相关文档
+
+- [CLAUDE.md](./CLAUDE.md) — 面向 Claude AI 助手的项目工作指引（架构约定、禁区清单、模块注册表说明）
+- [AGENTS.md](./AGENTS.md) — 面向通用 AI Agent 的协作规范（模块边界、提交规范、PR 检查清单、安全实践）
+- [`wrangler.toml`](./wrangler.toml) — Cloudflare Workers 配置（含密钥与路由说明注释）
+- [`schema.sql`](./schema.sql) — D1 数据库表结构与默认数据
+- [`.github/workflows/`](./.github/workflows/) — CI/CD 工作流

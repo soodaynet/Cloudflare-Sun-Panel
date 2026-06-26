@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { Menu } from 'lucide-vue-next'
 import { useAuthStore } from '@/store'
 
 const props = defineProps<{
@@ -18,7 +19,8 @@ const authStore = useAuthStore()
 const expanded = ref(false)
 const isMobile = ref(false)
 const mobileMenuOpen = ref(false)
-const mobileWidth = 800
+// 与 Tailwind md 断点对齐：<768px 走移动端抽屉，≥768px 走桌面侧边栏
+const mobileWidth = 768
 const scrollOffset = 80
 
 function checkMobile() {
@@ -29,6 +31,13 @@ function checkMobile() {
 watch(expanded, (val) => {
   if (!isMobile.value) {
     emit('sidebar-expanded', val)
+  }
+})
+
+// 抽屉打开时锁定 body 滚动，防止 iOS Safari 背景滚动穿透
+watch(mobileMenuOpen, (open) => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = open ? 'hidden' : ''
   }
 })
 
@@ -63,6 +72,45 @@ function handleSettings() {
   expanded.value = false
 }
 
+// 设置面板 chunk 预取（去重，悬停/聚焦时触发，点击时几乎立即可用）
+let settingsChunkPrefetched = false
+function prefetchSettingsChunk() {
+  if (settingsChunkPrefetched) return
+  settingsChunkPrefetched = true
+  // 预取 HomeAppStarter chunk
+  import('./HomeAppStarter.vue').catch(() => {
+    // 预取失败则重置标记，允许下次重试
+    settingsChunkPrefetched = false
+  })
+}
+
+// 空闲时间预取全部 async chunk（去重）
+const prefetchedChunks = new Set<string>()
+function prefetchAllChunksIdle() {
+  if (prefetchedChunks.has('app-starter')) return
+  prefetchedChunks.add('app-starter')
+  prefetchedChunks.add('edit-icon-modal')
+  prefetchedChunks.add('iframe-modal')
+  // 显式 import 字面量，确保 bundler 识别为 chunk 拆分
+  Promise.all([
+    import('./HomeAppStarter.vue'),
+    import('./HomeEditIconModal.vue'),
+    import('./HomeIframeModal.vue'),
+  ]).catch(() => {
+    // 预取失败则清空标记，允许下次重试
+    prefetchedChunks.clear()
+  })
+}
+
+// 兼容不支持 requestIdleCallback 的浏览器，降级为 setTimeout
+const scheduleIdle = (cb: () => void) => {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(cb, { timeout: 3000 })
+  } else {
+    setTimeout(cb, 1500)
+  }
+}
+
 function handleLogout() {
   authStore.removeToken()
   router.push('/login')
@@ -71,10 +119,18 @@ function handleLogout() {
 onMounted(() => {
   checkMobile()
   window.addEventListener('resize', handleResize, { passive: true })
+  // 空闲时间预取弹窗 chunk，点击时几乎立即可用
+  scheduleIdle(() => {
+    prefetchAllChunksIdle()
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  // 组件卸载时恢复 body 滚动，避免遗留锁定
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+  }
 })
 </script>
 
@@ -104,7 +160,12 @@ onUnmounted(() => {
         <!-- 底部操作按钮（始终可见） -->
         <div class="sidebar-actions">
           <template v-if="authStore.isLoggedIn">
-            <div class="nav-item sidebar-action-item" @click="handleSettings">
+            <div
+              class="nav-item sidebar-action-item"
+              @click="handleSettings"
+              @mouseenter="prefetchSettingsChunk"
+              @focus="prefetchSettingsChunk"
+            >
               <div class="nav-slip" />
               <span class="nav-title">设 置</span>
             </div>
@@ -124,36 +185,69 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- 移动端：触发按钮 -->
-  <div v-if="isMobile" class="mobile-btn" @click.stop="mobileMenuOpen = !mobileMenuOpen">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="21" height="21" fill="currentColor">
-      <path d="M17.5 4.5c-1.95 0-4.05.4-5.5 1.5c-1.45-1.1-3.55-1.5-5.5-1.5c-1.45 0-2.99.22-4.28.79C1.49 5.62 1 6.33 1 7.14v11.28c0 1.3 1.22 2.26 2.48 1.94c.98-.25 2.02-.36 3.02-.36c1.56 0 3.22.26 4.56.92c.6.3 1.28.3 1.87 0c1.34-.67 3-.92 4.56-.92c1 0 2.04.11 3.02.36c1.26.33 2.48-.63 2.48-1.94V7.14c0-.81-.49-1.52-1.22-1.85c-1.28-.57-2.82-.79-4.27-.79M21 17.23c0 .63-.58 1.09-1.2.98c-.75-.14-1.53-.2-2.3-.2c-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5c.92 0 1.83.09 2.7.28c.46.1.8.51.8.98z"/>
-      <path d="M13.98 11.01c-.32 0-.61-.2-.71-.52c-.13-.39.09-.82.48-.94c1.54-.5 3.53-.66 5.36-.45c.41.05.71.42.66.83s-.42.71-.83.66c-1.62-.19-3.39-.04-4.73.39c-.08.01-.16.03-.23.03m0 2.66c-.32 0-.61-.2-.71-.52c-.13-.39.09-.82.48-.94c1.53-.5 3.53-.66 5.36-.45c.41.05.71.42.66.83s-.42.71-.83.66c-1.62-.19-3.39-.04-4.73.39a1 1 0 0 1-.23.03m0 2.66c-.32 0-.61-.2-.71-.52c-.13-.39.09-.82.48-.94c1.53-.5 3.53-.66 5.36-.45c.41.05.71.42.66.83s-.42.7-.83.66c-1.62-.19-3.39-.04-4.73.39a1 1 0 0 1-.23.03"/>
-    </svg>
-  </div>
+  <!-- 移动端：触发按钮（圆形毛玻璃，使用 lucide Menu 图标） -->
+  <button
+    v-if="isMobile"
+    class="drawer-trigger"
+    aria-label="打开导航菜单"
+    @click.stop="mobileMenuOpen = !mobileMenuOpen"
+  >
+    <Menu class="h-5 w-5" />
+  </button>
 
-  <!-- 移动端下拉菜单 -->
-  <div v-if="isMobile && mobileMenuOpen" class="mobile-overlay" @click="mobileMenuOpen = false" @touchmove.prevent>
-    <div class="mobile-menu" @click.stop>
+  <!-- 移动端：侧滑抽屉（Teleport 到 body 以确保层级正确） -->
+  <Teleport to="body">
+    <Transition name="drawer-overlay">
       <div
-        v-for="(item, i) in navItems"
-        :key="i"
-        class="mobile-nav-item"
-        @click="scrollToGroup(i)"
+        v-if="isMobile && mobileMenuOpen"
+        class="drawer-overlay"
+        @click="mobileMenuOpen = false"
+        @touchmove.prevent
+      />
+    </Transition>
+    <Transition name="drawer-slide">
+      <div
+        v-if="isMobile && mobileMenuOpen"
+        class="drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="导航菜单"
+        @click.stop
       >
-        {{ item.title }}
+        <!-- 顶部标题区 -->
+        <div class="drawer-header">
+          <span class="drawer-title">导航</span>
+        </div>
+        <!-- 分组列表（可滚动，面板内不阻止 touchmove 以允许滚动） -->
+        <div class="drawer-nav">
+          <div
+            v-for="(item, i) in navItems"
+            :key="i"
+            class="drawer-nav-item"
+            @click="scrollToGroup(i)"
+          >
+            <span class="drawer-nav-title">{{ item.title }}</span>
+          </div>
+        </div>
+        <!-- 底部固定操作区 -->
+        <div class="drawer-divider" />
+        <div class="drawer-actions">
+          <template v-if="authStore.isLoggedIn">
+            <div
+              class="drawer-nav-item drawer-action-item"
+              @click="handleSettings"
+              @mouseenter="prefetchSettingsChunk"
+              @focus="prefetchSettingsChunk"
+            >设 置</div>
+            <div class="drawer-nav-item drawer-action-item" @click="handleLogout">退出登录</div>
+          </template>
+          <template v-else>
+            <div class="drawer-nav-item drawer-action-item" @click="handleLogin">登 录</div>
+          </template>
+        </div>
       </div>
-      <!-- 移动端操作按钮 -->
-      <div class="mobile-divider" />
-      <template v-if="authStore.isLoggedIn">
-        <div class="mobile-nav-item mobile-action-item" @click="handleSettings">设 置</div>
-        <div class="mobile-nav-item mobile-action-item" @click="handleLogout">退出登录</div>
-      </template>
-      <template v-else>
-        <div class="mobile-nav-item mobile-action-item" @click="handleLogin">登 录</div>
-      </template>
-    </div>
-  </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -290,71 +384,131 @@ onUnmounted(() => {
   background-color: rgba(255, 255, 255, 0.5) !important;
 }
 
-/* ===== 移动端 ===== */
-.mobile-btn {
+/* ===== 移动端触发按钮 ===== */
+.drawer-trigger {
   position: fixed;
   top: 20px;
   left: 20px;
-  width: 46px;
-  height: 46px;
-  background-color: rgba(42, 42, 42, 0.42);
-  color: white;
-  border-radius: 0.5rem;
+  width: 48px;
+  height: 48px;
+  background-color: hsl(var(--background) / 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 9999px;
+  color: hsl(var(--foreground));
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  user-select: none;
+  transition: background 0.2s ease;
+}
+.drawer-trigger:hover {
+  background-color: hsl(var(--background) / 0.8);
 }
 
-.mobile-overlay {
+/* ===== 移动端侧滑抽屉 ===== */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.drawer-overlay-enter-active,
+.drawer-overlay-leave-active {
+  transition: opacity 0.2s ease;
+}
+.drawer-overlay-enter-from,
+.drawer-overlay-leave-to {
+  opacity: 0;
+}
+
+.drawer-panel {
   position: fixed;
   top: 0;
+  bottom: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 49;
-  background: rgba(0,0,0,0.3);
-  touch-action: manipulation;
+  width: 50vw;
+  max-width: 320px;
+  z-index: 50;
+  background-color: var(--glass-bg-hover);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
+}
+.drawer-slide-enter-active {
+  transition: transform 0.25s ease-out;
+}
+.drawer-slide-leave-active {
+  transition: transform 0.25s ease-in;
+}
+.drawer-slide-enter-from,
+.drawer-slide-leave-to {
+  transform: translateX(-100%);
 }
 
-.mobile-menu {
-  position: fixed;
-  top: 76px;
-  left: 20px;
-  background: rgba(42, 42, 42, 0.95);
-  border-radius: 0.5rem;
-  padding: 8px;
-  min-width: 180px;
-  backdrop-filter: blur(10px);
+.drawer-header {
+  padding: 16px 20px;
+  flex-shrink: 0;
+}
+.drawer-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
 }
 
-.mobile-nav-item {
+.drawer-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding: 0 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.drawer-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.drawer-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.drawer-nav-item {
   padding: 12px 14px;
   color: white;
   font-size: 14px;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   cursor: pointer;
   transition: background 0.2s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-
-.mobile-nav-item:hover {
+.drawer-nav-item:hover,
+.drawer-nav-item:active {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.mobile-divider {
+.drawer-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.15);
-  margin: 4px 8px;
+  margin: 4px 16px;
 }
 
-.mobile-action-item {
-  color: rgba(255, 255, 255, 0.6);
+.drawer-actions {
+  flex-shrink: 0;
+  padding: 8px 12px 16px;
+}
+.drawer-action-item {
+  color: rgba(255, 255, 255, 0.7);
   font-size: 13px;
 }
 </style>

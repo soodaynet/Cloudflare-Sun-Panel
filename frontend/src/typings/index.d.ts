@@ -1,23 +1,3 @@
-declare namespace Common {
-  interface InfoBase {
-    id?: number
-    createTime?: string
-    updateTime?: string
-  }
-
-  interface SortItemRequest {
-    id: number
-    sort: number
-  }
-
-  interface ListResponse<T> {
-    list: T[]
-    total: number
-    page: number
-    pageSize: number
-  }
-}
-
 declare namespace User {
   interface Info {
     id: number
@@ -98,16 +78,6 @@ declare namespace Panel {
   }
 
   type PanelPanelConfigStyleEnum = 'text' | 'image' | 'detail'
-
-  interface userConfig {
-    panel: panelConfig
-    searchEngine?: Record<string, unknown>
-  }
-
-  interface ItemIconSortRequest {
-    sortItems: Common.SortItemRequest[]
-    itemIconGroupId: number
-  }
 
   interface SiteConfig {
     site_title?: string
