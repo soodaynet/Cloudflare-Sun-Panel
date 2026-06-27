@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/.wrangler/**',
       '**/frontend/src/components/ui/**',
+      // frontend/public 为 Vite 静态资源目录，文件原样复制到 dist，不属于源代码 lint 范围
+      '**/frontend/public/**',
     ],
   },
   {

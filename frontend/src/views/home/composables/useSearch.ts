@@ -1,6 +1,4 @@
 import { ref, computed, watch, type Ref } from 'vue'
-import { setUserConfig } from '@/modules'
-import { useAuthStore } from '@/store'
 import type { SearchEngineConfig } from '@/modules/panel/types'
 import type { ItemGroup } from './useDataLoader'
 
@@ -33,7 +31,6 @@ export function useSearch(options: {
   openUrl: (item: Panel.ItemInfo) => void
 }) {
   const { visibleGroups, searchEngineConfig, openUrl } = options
-  const authStore = useAuthStore()
 
   // 输入值
   const searchQuery = ref('')
@@ -41,6 +38,8 @@ export function useSearch(options: {
   const isDropdownOpen = ref(false)
   // 当前高亮的本地图标索引，-1 表示无高亮
   const highlightIndex = ref(-1)
+  // 会话级搜索引擎覆盖索引：仅本次会话生效，不持久化；null 表示沿用默认 currentIndex
+  const sessionEngineIndex = ref<number | null>(null)
 
   // 防抖：输入 200ms 后才更新过滤依据
   const debouncedQuery = ref('')
@@ -71,23 +70,28 @@ export function useSearch(options: {
     return result
   })
 
+  // 当前生效的引擎索引：会话覆盖优先，越界回退到 currentIndex
+  const activeEngineIndex = computed(() => {
+    const cfg = searchEngineConfig.value
+    const session = sessionEngineIndex.value
+    // 会话覆盖越界保护：若 session 超出 engines 范围，回退到 currentIndex
+    if (session !== null && session >= 0 && session < cfg.engines.length) {
+      return session
+    }
+    return cfg.currentIndex
+  })
+
   // 当前选中的搜索引擎
   const currentEngine = computed(() => {
     const cfg = searchEngineConfig.value
-    return cfg.engines[cfg.currentIndex] || cfg.engines[0]
+    return cfg.engines[activeEngineIndex.value] || cfg.engines[0]
   })
 
-  // 切换搜索引擎：更新本地配置并持久化（访客模式仅本地更新，不保存）
-  async function selectEngine(index: number) {
+  // 切换搜索引擎：仅修改本次会话的当前引擎，不持久化、不改变默认
+  function selectEngine(index: number) {
     const cfg = searchEngineConfig.value
     if (index < 0 || index >= cfg.engines.length) return
-    searchEngineConfig.value = { ...cfg, currentIndex: index }
-    if (authStore.isVisitMode) return
-    try {
-      await setUserConfig({ searchEngine: { ...searchEngineConfig.value } })
-    } catch {
-      // 保存失败不影响本次会话内的本地切换
-    }
+    sessionEngineIndex.value = index
   }
 
   // 触发外部搜索：用当前引擎在新标签页打开搜索结果
@@ -132,6 +136,7 @@ export function useSearch(options: {
     highlightIndex,
     localMatches,
     currentEngine,
+    activeEngineIndex,
     selectEngine,
     handleExternalSearch,
     handleEnter,

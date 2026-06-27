@@ -1,8 +1,8 @@
 import { ref, computed, type Ref } from 'vue'
 import type { useAuthStore, usePanelState } from '@/store'
 import { getAllData, getInit } from '@/modules'
-import { cachedRequest, invalidateCacheByPrefix, invalidateCache } from '@/utils/requestCache'
-import { PUBLIC_MODE_KEY } from '@/utils/storageKeys'
+import { cachedRequest, invalidateCacheByPrefix, invalidateCache, initCacheKey } from '@/utils/requestCache'
+import { PUBLIC_MODE_KEY, panelDataKey } from '@/utils/storageKeys'
 import type { SearchEngineConfig } from '@/modules/panel/types'
 
 export interface ItemGroup extends Panel.ItemIconGroup {
@@ -38,6 +38,9 @@ export function useDataLoader(options: {
 
   const groups = ref<ItemGroup[]>([])
   const loading = ref(true)
+  // 首次数据就绪标志：初始 false，首次 loadInitData 成功后置 true 且不再重置。
+  // 用于门控搜索框/Logo 渲染，避免加载期间显示默认值后被真实配置替换的闪烁。
+  const initialLoaded = ref(false)
 
   /** 访客模式下仅显示 publicVisible !== 0 的分组，用户模式下显示全部分组 */
   const visibleGroups = computed(() => {
@@ -90,7 +93,8 @@ export function useDataLoader(options: {
   async function loadInitData() {
     loading.value = true
     try {
-      const res = await getInit<InitData>()
+      // FE-1: 走 cachedRequest 去重 + 60s 内存缓存（与后端 /init max-age=60 对齐，按用户隔离）
+      const res = await cachedRequest(initCacheKey(authStore.userInfo?.id), () => getInit<InitData>(), 60)
       if (res.code === 0 && res.data) {
         const { groups: rawGroups, itemsMap, panelConfig, about, authInfo, searchEngine } = res.data
 
@@ -110,6 +114,16 @@ export function useDataLoader(options: {
 
         if (panelConfig && Object.keys(panelConfig).length > 0) {
           panelState.updatePanelConfigFromCloud(panelConfig)
+        }
+
+        // FE-6: 写入 panelData 首屏缓存（仅 groups+itemsMap+panelConfig，不含 about/authInfo/searchEngine）
+        try {
+          localStorage.setItem(
+            panelDataKey(authStore.userInfo?.id),
+            JSON.stringify({ data: { groups: rawGroups, itemsMap, panelConfig }, ts: Date.now() }),
+          )
+        } catch {
+          // 配额溢出等异常，忽略
         }
 
         // 3. 站点配置（在面板数据之后应用，这样 watchEffect 中 backgroundImageSrc 已就绪，login_bg_image 作为兜底不会覆盖）
@@ -136,6 +150,9 @@ export function useDataLoader(options: {
         if (searchEngine) {
           onSearchEngineUpdated?.(searchEngine)
         }
+
+        // 首次加载成功后标记，刷新时不再重置（保持搜索框/Logo 不消失）
+        initialLoaded.value = true
       }
     } catch (e) {
       console.error(e)
@@ -144,9 +161,40 @@ export function useDataLoader(options: {
     }
   }
 
+  /**
+   * FE-6: 同步读取 localStorage 中的 panelData 首屏缓存，立即渲染（秒开）
+   * 仅应用 groups + panelConfig，/init 网络返回后由 loadInitData 覆盖
+   * 不含 about/authInfo/searchEngine（敏感/易变，仅 /init 返回时应用）
+   */
+  function applyCachedPanelData(): boolean {
+    try {
+      const raw = localStorage.getItem(panelDataKey(authStore.userInfo?.id))
+      if (!raw) return false
+      const parsed = JSON.parse(raw) as {
+        data: {
+          groups: Panel.ItemIconGroup[]
+          itemsMap: Record<number, Panel.ItemInfo[]>
+          panelConfig: Panel.panelConfig
+        }
+        ts: number
+      }
+      if (!parsed?.data) return false
+      const { groups: rawGroups, itemsMap, panelConfig } = parsed.data
+      groups.value = mapGroups(rawGroups, itemsMap)
+      if (panelConfig && Object.keys(panelConfig).length > 0) {
+        panelState.updatePanelConfigFromCloud(panelConfig)
+      }
+      preloadIcons(groups.value)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /** 刷新全部数据：清缓存 + 单次 /init 调用（替代原来的 3 次独立请求） */
   function refreshAll() {
     invalidateCacheByPrefix('panel:')
+    invalidateCacheByPrefix('init:')
     invalidateCache('site:about')
     loadInitData()
   }
@@ -154,9 +202,11 @@ export function useDataLoader(options: {
   return {
     groups,
     loading,
+    initialLoaded,
     visibleGroups,
     loadData,
     loadInitData,
+    applyCachedPanelData,
     refreshAll,
   }
 }

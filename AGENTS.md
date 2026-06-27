@@ -20,7 +20,7 @@
 - **遵守模块边界**：不跨模块修改内部实现，只通过共享接口或 HTTP API 通信。
 - **不跨层修改**：前端不直接调用后端 `service.ts`，后端不直接操作前端 store。
 - **最小化修改**：只改完成任务所必需的文件，不做无关重构、不"顺手"优化。
-- **保留向后兼容**：旧 `src/routes/`、`src/services/`、`src/validators/`、`src/utils/`、`src/middleware/`、`src/models/` 与 `frontend/src/api/` 目录暂保留，**不得**主动删除。
+- **模块化架构**：旧 `src/routes/`、`src/services/`、`src/validators/`、`src/utils/`、`src/middleware/`、`src/models/` 与 `frontend/src/api/` 目录已由 `src/modules/` 与 `frontend/src/modules/` 模块化架构取代，不再保留。
 - **验证后提交**：提交前必须运行 `pnpm run typecheck` + `pnpm run lint` + `pnpm --filter sun-panel-frontend run build` 全部通过。
 - **中文注释**：标识符用英文，注释用中文。
 - **不创建文档**：除 `docs/` 下既定文档（`ssrf-policy.md`/`dependencies.md`/`modules.md` 等）外，**不得**主动创建 `.md` 文档。

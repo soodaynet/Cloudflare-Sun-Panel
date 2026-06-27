@@ -18,7 +18,7 @@ const username = ref('')
 const password = ref('')
 const loading = ref(false)
 
-const { hasPublicMode, siteTitle, pageLoading, loginPageStyle, loginCardStyle, loginButtonStyle, bgImageReady, initLoginPage } = useLoginPage()
+const { hasPublicMode, siteTitle, pageLoading, loginPageStyle, loginCardStyle, loginButtonStyle, bgImageReady, initLoginPage, prefetchInitForUser } = useLoginPage()
 
 onMounted(() => {
   initLoginPage()
@@ -35,6 +35,8 @@ async function handleLogin() {
     if (res.code === 0) {
       authStore.loginSuccess(res.data.token, res.data.userInfo)
       toast.success('登录成功')
+      // FE-5: 跳转前 fire-and-forget 预取 /init，写入 init:<userId> 缓存，首页 loadInitData 命中即复用
+      prefetchInitForUser(res.data.userInfo.id)
       router.push('/')
     } else {
       toast.error(res.msg || '登录失败')

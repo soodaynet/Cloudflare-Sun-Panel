@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Input } from '@/components/ui/input'
 import {
@@ -20,19 +20,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'openUrl', item: Panel.ItemInfo): void
-  (e: 'engineChanged', config: SearchEngineConfig): void
 }>()
 
 const { t } = useI18n()
 
-// 本地可写配置：从 props 同步，selectEngine 时本地更新并通知父组件
-const engineConfig = ref<SearchEngineConfig>({ ...props.searchEngineConfig })
-watch(
-  () => props.searchEngineConfig,
-  (cfg) => {
-    engineConfig.value = { ...cfg }
-  },
-)
+// searchEngineConfig 视为只读输入：useSearch 内部不再原地修改 currentIndex
+const searchEngineConfigRef = computed(() => props.searchEngineConfig)
 
 // visibleGroups 以 computed 形式喂给 useSearch，保证响应式
 const visibleGroupsRef = computed(() => props.visibleGroups)
@@ -43,6 +36,7 @@ const {
   highlightIndex,
   localMatches,
   currentEngine,
+  activeEngineIndex,
   selectEngine,
   handleExternalSearch,
   handleEnter,
@@ -50,14 +44,13 @@ const {
   closeDropdown,
 } = useSearch({
   visibleGroups: visibleGroupsRef,
-  searchEngineConfig: engineConfig,
+  searchEngineConfig: searchEngineConfigRef,
   openUrl: (item) => emit('openUrl', item),
 })
 
-// 切换搜索引擎：本地更新（selectEngine 内同步完成）+ 通知父组件刷新
+// 切换搜索引擎：仅本次会话生效（selectEngine 内部已设置 sessionEngineIndex）
 function onSelectEngine(index: number) {
   selectEngine(index)
-  emit('engineChanged', { ...engineConfig.value })
 }
 
 // 点击本地图标匹配项
@@ -108,6 +101,8 @@ onUnmounted(() => {
               :src="currentEngine.icon"
               class="size-4 rounded-sm object-cover"
               alt=""
+              decoding="async"
+              fetchpriority="high"
               referrerpolicy="no-referrer"
               @error="($event.target as HTMLImageElement).style.display = 'none'"
             />
@@ -120,9 +115,9 @@ onUnmounted(() => {
             <ChevronDown class="size-3 opacity-70" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="glass-panel border-white/10 text-white min-w-[150px]" align="start">
+        <DropdownMenuContent class="search-dropdown-glass border-white/10 text-white min-w-[150px]" align="start">
           <DropdownMenuItem
-            v-for="(eng, i) in engineConfig.engines"
+            v-for="(eng, i) in props.searchEngineConfig.engines"
             :key="i"
             class="flex items-center gap-2 focus:bg-white/15 text-white"
             @select="onSelectEngine(i)"
@@ -132,6 +127,7 @@ onUnmounted(() => {
               :src="eng.icon"
               class="size-4 rounded-sm object-cover"
               alt=""
+              decoding="async"
               referrerpolicy="no-referrer"
               @error="($event.target as HTMLImageElement).style.display = 'none'"
             />
@@ -141,7 +137,7 @@ onUnmounted(() => {
               >{{ eng.name.charAt(0) }}</span
             >
             <span class="flex-1">{{ eng.name }}</span>
-            <Check v-if="i === engineConfig.currentIndex" class="size-3 text-white/80" />
+            <Check v-if="i === activeEngineIndex" class="size-3 text-white/80" />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -215,14 +211,18 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
-/* 搜索下拉面板毛玻璃：在公告设置（--ann-blur / --ann-opacity）基础上 +20% */
+<!-- 非 scoped 全局：引擎切换菜单 DropdownMenuContent 会 teleport 到 body，scoped 样式无法命中 -->
+<style>
+/* 搜索下拉面板 + 引擎切换菜单毛玻璃：在公告设置（--ann-blur / --ann-opacity）基础上 +20% */
 .search-dropdown-glass {
   background-color: rgba(255, 255, 255, calc(var(--ann-opacity, 0.15) * 1.2));
   backdrop-filter: blur(calc(var(--ann-blur, 12px) * 1.2));
   -webkit-backdrop-filter: blur(calc(var(--ann-blur, 12px) * 1.2));
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
 }
+</style>
+
+<style scoped>
 /* 隐藏本地图标列表滚动条，与主页面一致（可滚动但不显示） */
 .search-scroll-hide {
   scrollbar-width: none;

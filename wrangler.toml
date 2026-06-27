@@ -21,6 +21,7 @@ database_id = "__D1_DATABASE_ID__"
 # ========== 密钥说明 ==========
 # JWT_SECRET：JWT 签名密钥，必填。**不在此处声明**，通过 wrangler CLI 配置：
 #   wrangler secret put JWT_SECRET
+# 亦由 CI 在每次部署时通过 wrangler secret put 同步（见 .github/workflows/deploy-worker.yml）。
 # 未配置时 Worker 启动会失败并提示 "JWT_SECRET is required"。
 # 默认管理员账号 admin/admin 在 schema.sql 中初始化，登录后建议立即修改密码。
 

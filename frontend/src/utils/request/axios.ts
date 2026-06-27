@@ -5,7 +5,7 @@ import { toast } from '@/components/ui/sonner'
 
 const service = axios.create({
   baseURL: '',
-  timeout: 30000,
+  timeout: 15000,
 })
 
 service.interceptors.request.use(

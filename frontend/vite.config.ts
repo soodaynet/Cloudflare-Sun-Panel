@@ -42,6 +42,7 @@ export default defineConfig({
           'vue-i18n': ['vue-i18n'],
           'reka-ui': ['reka-ui'],
           'utils': ['axios', 'clsx', 'tailwind-merge'],
+          'lucide': ['lucide-vue-next'],
         },
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',

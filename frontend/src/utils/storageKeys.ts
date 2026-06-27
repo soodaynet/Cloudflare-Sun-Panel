@@ -29,5 +29,9 @@ export const PUBLIC_MODE_KEY = 'sun-panel-public-mode'
 // ========== 面板状态 ==========
 export const PANEL_STATE_KEY = 'sun-panel-state'
 
+// ========== 面板数据首屏缓存（按用户隔离，仅缓存 panelData：groups+itemsMap+panelConfig，不含 about/authInfo） ==========
+export const panelDataKey = (userId: string | number | undefined): string =>
+  `sun-panel:panel-data:${userId || 'guest'}`
+
 // ========== sessionStorage ==========
 export const SKIP_REDIRECT_KEY = 'sun-panel-skip-redirect'

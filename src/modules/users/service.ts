@@ -4,9 +4,6 @@ import { hashPassword, verifyPassword } from '../shared/password'
 import { queryAll, queryFirst } from '../shared/db'
 import { AppError } from '../shared/errors'
 
-/** 用户查询字段（含 password） */
-const USER_SELECT = 'SELECT id, username, password, name, head_image, status, role, mail, created_at, updated_at FROM users'
-
 /** 用户公开信息字段（不含 password） */
 const USER_PUBLIC_SELECT = 'SELECT id, username, name, head_image, status, role, mail, created_at FROM users'
 
@@ -20,7 +17,8 @@ export class UserService {
    * @param id 用户 ID
    */
   async findById(id: number): Promise<UserRow | null> {
-    return queryFirst<UserRow>(this.db, `${USER_SELECT} WHERE id = ?`, id)
+    // getUserInfo 路径无需 password，改用公开字段避免读出密码哈希
+    return queryFirst<UserRow>(this.db, `${USER_PUBLIC_SELECT} WHERE id = ?`, id)
   }
 
   /** 将数据库行格式化为前端需要的用户信息对象 */

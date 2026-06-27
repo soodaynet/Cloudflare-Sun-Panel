@@ -53,7 +53,7 @@
 - **数据库**：Cloudflare D1（SQLite 兼容），binding 名 `DB`，库名 `sun-panel-db`
 - **前端**：Vue 3 + Vite 6 + shadcn-vue + Reka UI + Tailwind CSS 4（CSS-first 配置）
 - **认证**：JWT HMAC-SHA256（基于 Web Crypto API），Token 有效期 7 天
-- **安全**：CSRF 防护、安全响应头、请求体大小限制（1MB）、登录频率限制；无 SSRF、无公开注册
+- **安全**：CSRF 防护、安全响应头、请求体大小限制（1MB）、登录频率限制；SSRF 合规化（受 `docs/ssrf-policy.md` 约束）、无公开注册
 - **密码**：SHA-256 哈希存储
 
 ---
@@ -118,7 +118,7 @@ echo "your-dev-secret" | wrangler secret put JWT_SECRET --local
 pnpm dev
 
 # 另一个终端启动前端（端口 3000，代理 /api 到 8787）
-pnpm --filter frontend dev
+pnpm --filter sun-panel-frontend run dev
 
 # 访问 http://localhost:3000
 # 默认管理员：admin / admin
@@ -173,7 +173,7 @@ pnpm run db:init
 ### 4. 构建前端
 
 ```bash
-pnpm --filter frontend run build
+pnpm --filter sun-panel-frontend run build
 ```
 
 构建产物位于 `frontend/dist/`，包含 `vue-tsc` 类型检查与 `vite build`。
@@ -200,7 +200,7 @@ wrangler secret put JWT_SECRET
 # 粘贴上一步生成的密钥
 ```
 
-> 该 Secret 不通过 GitHub Actions 注入，仅在 Worker 上配置一次。
+> 该 Secret 亦由 CI 在每次部署时自动同步（见 `.github/workflows/deploy-worker.yml` 的「Sync JWT_SECRET」步骤），亦可手动 `wrangler secret put JWT_SECRET` 配置一次。
 
 ### 7. 验证部署
 
@@ -238,6 +238,7 @@ CI 环境固定使用 **pnpm 10.15.1 + Node.js 24**。
 | `CF_API_TOKEN` | Cloudflare API Token（Workers + D1 编辑权限） |
 | `CF_ACCOUNT_ID` | Cloudflare Account ID |
 | `CF_D1_DATABASE_ID` | D1 数据库 ID，CI 通过 `sed` 注入到 `wrangler.toml` 替换 `__D1_DATABASE_ID__` |
+| `JWT_SECRET` | JWT 签名密钥，CI 部署时通过 `wrangler secret put` 同步到 Worker |
 
 在 GitHub 仓库 **Settings → Secrets and variables → Actions** 中添加。
 
@@ -288,48 +289,40 @@ Cloudflare-Sun-Panel/
 │       ├── main.ts、App.vue、env.d.ts
 │       ├── components/
 │       │   ├── ui/                     # shadcn-vue 生成组件（禁止修改源码）
-│       │   │   └── button/input/card/dialog/form/select/table/dropdown-menu/tabs/switch/checkbox/textarea/badge/sonner/label
-│       │   ├── apps/Users/             # 用户管理组件（index.vue + EditUser/）
-│       │   └── common/                 # 通用组件
+│       │   │   └── button/input/card/dialog/form/select/table/dropdown-menu/switch/textarea/badge/sonner/label/slider
+│       │   └── apps/Users/             # 用户管理组件（index.vue + EditUser/）
 │       ├── modules/                    # 业务模块（每个含 api.ts + types.ts）
 │       │   ├── auth/、panel/、users/、settings/
 │       ├── views/                      # 页面
 │       │   ├── home/                   # 主页（index.vue + components/ + composables/ + components/panels/）
 │       │   ├── login/                  # 登录页（含 composables/useLoginPage.ts）
 │       │   └── exception/404/
-│       ├── hooks/                      # 组合式函数（useTheme、useLanguage）
+│       ├── hooks/                      # 组合式函数（useTheme）
 │       ├── store/modules/              # Pinia store（app、auth、panel）
 │       ├── locales/                    # i18n（zh-CN、en-US）
 │       ├── router/                     # Vue Router（History 模式）
 │       ├── lib/utils.ts                # cn helper（clsx + tailwind-merge）
 │       ├── styles/                     # main.css（Tailwind 4 @theme 指令）、global.css
 │       ├── utils/                      # 工具（request/axios、importExport、requestCache、storageKeys、faviconUtils）
-│       ├── api/                        # 已废弃，保留向后兼容
 │       └── typings/
 ├── src/                                # Cloudflare Worker 后端
 │   ├── index.ts                        # Hono App 入口：全局中间件 + 模块注册表 + SPA 回退
-│   ├── modules/                        # 插件式模块化架构
-│   │   ├── types.ts                    # AppContext、AppBindings、ModuleDefinition 接口
-│   │   ├── registry.ts                 # ModuleRegistry 类（register/install/get/list）
-│   │   ├── shared/                     # 共享工具与中间件（模块间唯一通信通道）
-│   │   │   ├── jwt.ts                  # JWT 签名/验证（Web Crypto API）
-│   │   │   ├── env.ts                  # 环境变量校验（JWT_SECRET 必填）
-│   │   │   ├── db.ts、password.ts、validate.ts、origin.ts
-│   │   │   ├── response.ts、errors.ts、logger.ts
-│   │   │   └── middleware/             # cors、csrf、securityHeaders、bodyLimit、auth、rateLimiter
-│   │   ├── auth/                       # 登录模块（无注册）
-│   │   ├── init/                       # 初始化状态接口
-│   │   ├── panel/                      # 面板模块（item-icon、group 子模块 + getAllData 聚合）
-│   │   ├── user-config/                # 用户配置
-│   │   ├── users/                      # 用户管理（usersAdminModule + userSelfModule）
-│   │   └── settings/                   # 系统设置 + /about
-│   │   （每个模块自包含：index.ts / routes.ts / service.ts / validator.ts / types.ts）
-│   ├── routes/                         # 已废弃，保留向后兼容
-│   ├── services/                       # 已废弃，保留向后兼容
-│   ├── utils/                          # 已废弃，保留向后兼容
-│   ├── middleware/                     # 已废弃，保留向后兼容
-│   ├── validators/                     # 已废弃，保留向后兼容
-│   └── models/                         # 已废弃，保留向后兼容
+│   └── modules/                        # 插件式模块化架构
+    │   ├── types.ts                    # AppContext、AppBindings、ModuleDefinition 接口
+    │   ├── registry.ts                 # ModuleRegistry 类（register/install/get/list）
+    │   ├── shared/                     # 共享工具与中间件（模块间唯一通信通道）
+    │   │   ├── jwt.ts                  # JWT 签名/验证（Web Crypto API）
+    │   │   ├── env.ts                  # 环境变量校验（JWT_SECRET 必填）
+    │   │   ├── db.ts、password.ts、validate.ts、origin.ts
+    │   │   ├── response.ts、errors.ts、logger.ts
+    │   │   └── middleware/             # cors、csrf、securityHeaders、bodyLimit、auth、rateLimiter
+    │   ├── auth/                       # 登录模块（无注册）
+    │   ├── init/                       # 初始化状态接口
+    │   ├── panel/                      # 面板模块（item-icon、group 子模块 + getAllData 聚合）
+    │   ├── user-config/                # 用户配置
+    │   ├── users/                      # 用户管理（usersAdminModule + userSelfModule）
+    │   └── settings/                   # 系统设置 + /about
+    │   （每个模块自包含：index.ts / routes.ts / service.ts / validator.ts / types.ts）
 ├── schema.sql                          # D1 表结构 + 索引 + 默认管理员 admin/admin
 ├── wrangler.toml                       # Cloudflare Workers 配置（含密钥说明注释）
 ├── pnpm-workspace.yaml                 # pnpm workspace 定义
@@ -340,8 +333,6 @@ Cloudflare-Sun-Panel/
 ├── AGENTS.md                           # 面向通用 AI Agent 的协作规范
 └── README.md
 ```
-
-> **说明**：旧目录（`src/routes/`、`src/services/`、`src/utils/`、`src/middleware/`、`src/validators/`、`src/models/` 与 `frontend/src/api/`）已废弃，仅为向后兼容保留，新代码请使用 `src/modules/` 与 `frontend/src/modules/`。
 
 ---
 
@@ -486,14 +477,14 @@ wrangler secret put JWT_SECRET
 
 ### 7. 构建失败
 
-**现象**：`pnpm --filter frontend run build` 报错。
+**现象**：`pnpm --filter sun-panel-frontend run build` 报错。
 
 **排查步骤**：
 ```bash
 # 清理后重新安装
 pnpm install
-pnpm --filter frontend run typecheck   # 先确认类型检查通过
-pnpm --filter frontend run build
+pnpm --filter sun-panel-frontend run typecheck   # 先确认类型检查通过
+pnpm --filter sun-panel-frontend run build
 ```
 
 ### 8. Wrangler 部署超时
@@ -536,7 +527,7 @@ Cloudflare Workers 自动保留最近版本，可在 Dashboard 回滚：
 ```bash
 git checkout <tag-or-commit>
 pnpm install
-pnpm --filter frontend run build
+pnpm --filter sun-panel-frontend run build
 pnpm run deploy
 ```
 

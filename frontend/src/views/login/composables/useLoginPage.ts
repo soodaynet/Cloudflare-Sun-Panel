@@ -1,8 +1,9 @@
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAbout } from '@/modules/settings/api'
+import { getAbout, getInit } from '@/modules/settings/api'
 import { useAuthStore } from '@/store/modules/auth'
 import { updateFavicon, getCachedSiteConfig } from '@/utils/faviconUtils'
+import { cachedRequest, initCacheKey } from '@/utils/requestCache'
 import {
   LOGIN_BG_CACHE_KEY,
   LOGIN_STYLE_CACHE_KEY,
@@ -148,6 +149,32 @@ export function useLoginPage() {
     }
   }
 
+  // FE-5: 登录页预取 /init，写入与首页 loadInitData 相同的缓存 key（initCacheKey），命中即复用
+  // fire-and-forget：失败静默忽略，不阻塞登录流程/跳转
+  function prefetchInitForUser(userId: string | number | undefined) {
+    cachedRequest(initCacheKey(userId), () => getInit(), 60).catch(() => {
+      /* 预取失败静默忽略，不影响登录页/登录流程 */
+    })
+  }
+
+  // 空闲时预取 /init 写入 init:guest（覆盖未登录直访首页场景）
+  // 不支持 requestIdleCallback 时退化为 setTimeout 2000
+  let idleCancel: (() => void) | null = null
+  onMounted(() => {
+    const run = () => prefetchInitForUser(undefined)
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      const handle = window.requestIdleCallback(run, { timeout: 2000 })
+      idleCancel = () => window.cancelIdleCallback(handle)
+    } else {
+      const handle = window.setTimeout(run, 2000)
+      idleCancel = () => window.clearTimeout(handle)
+    }
+  })
+  onUnmounted(() => {
+    idleCancel?.()
+    idleCancel = null
+  })
+
   function applyAboutResponse(data: Record<string, string>) {
     // 1. 先应用站点信息（无论是否公开模式都需要，避免重定向时站点标题/图标/背景缺失）
     if (data.site_title) {
@@ -221,5 +248,6 @@ export function useLoginPage() {
     loginButtonStyle,
     bgImageReady,
     initLoginPage,
+    prefetchInitForUser,
   }
 }

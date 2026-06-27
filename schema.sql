@@ -71,6 +71,8 @@ CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);
 CREATE INDEX IF NOT EXISTS idx_item_icons_group_id ON item_icons(item_icon_group_id);
 CREATE INDEX IF NOT EXISTS idx_item_icons_user_id ON item_icons(user_id);
 CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id);
+-- 复合索引：按用户查询分组并按 sort, id 排序
+CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_sort ON item_icon_groups(user_id, sort, id);
 -- 复合索引：按分组查询图标 + 按用户隔离
 CREATE INDEX IF NOT EXISTS idx_item_icons_group_user ON item_icons(item_icon_group_id, user_id);
 -- 复合索引：按用户排序图标

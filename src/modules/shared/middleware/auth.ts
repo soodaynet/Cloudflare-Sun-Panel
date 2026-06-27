@@ -4,6 +4,10 @@ import type { AuthUser } from '../types'
 import { verifyToken } from '../jwt'
 import { AppError } from '../errors'
 
+// ponytail: isolate 级缓存，TTL 60s，跨 isolate 不共享；管理员切换公开访问用户后最长 60s 生效
+let cachedPublicUser: { user: AuthUser; exp: number } | null = null
+const PUBLIC_USER_CACHE_TTL = 60_000
+
 // ========== 辅助函数 ==========
 
 /** 从 Authorization header 解析 Bearer token 并验证 JWT，返回 payload 或 null */
@@ -58,6 +62,13 @@ export const publicModeMiddleware: MiddlewareHandler<AppContext> = async (c, nex
     return
   }
 
+  // 命中 isolate 缓存且未过期，直接复用，跳过 D1 查询
+  if (cachedPublicUser && cachedPublicUser.exp > Date.now()) {
+    c.set('authUser', cachedPublicUser.user)
+    await next()
+    return
+  }
+
   // 查询公开模式设置
   const settingsResult = await db
     .prepare("SELECT config_name, config_value FROM system_settings WHERE config_name = 'panel_public_user_id' OR config_name = 'default_guest_mode'")
@@ -83,13 +94,15 @@ export const publicModeMiddleware: MiddlewareHandler<AppContext> = async (c, nex
   }
 
   if (targetUser) {
-    c.set('authUser', {
+    const user: AuthUser = {
       userId: targetUser.id as number,
       username: targetUser.username as string,
       name: (targetUser.name as string) || '',
       role: targetUser.role as number,
       visitMode: 1,
-    })
+    }
+    c.set('authUser', user)
+    cachedPublicUser = { user, exp: Date.now() + PUBLIC_USER_CACHE_TTL }
     await next()
     return
   }

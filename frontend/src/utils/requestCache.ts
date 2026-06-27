@@ -13,6 +13,12 @@ interface CacheEntry<T> {
 
 const cache = new Map<string, CacheEntry<unknown>>()
 
+/**
+ * /init 请求缓存 key 工厂：按用户隔离
+ * FE-5（登录页预取）可 import 此函数写入同一 key，实现跨页面缓存共享
+ */
+export const initCacheKey = (userId: string | number | undefined): string => `init:${userId || 'guest'}`
+
 /** 请求去重 + 内存缓存：同一 key 在 maxAge 秒内只发一次请求 */
 export function cachedRequest<T>(key: string, requestFn: () => Promise<T>, maxAge: number = 60): Promise<T> {
   const now = Date.now()

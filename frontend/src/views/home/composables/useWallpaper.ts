@@ -78,12 +78,13 @@ export function useWallpaper(
     link?.remove()
     if (!url) return
 
-    // <link rel="preload"> 触发浏览器提前下载
+    // <link rel="preload"> 触发浏览器提前下载（壁纸首屏视觉关键，高优先级）
     link = document.createElement('link')
     link.rel = 'preload'
     link.as = 'image'
     link.href = url
     link.setAttribute('data-wallpaper', 'true')
+    link.setAttribute('fetchpriority', 'high')
     document.head.appendChild(link)
 
     // 后台解码，利用预加载的缓存，不产生二次请求
@@ -113,6 +114,10 @@ export function useWallpaper(
   function preloadIconImages(groups: PreloadGroup[], count: number = 36) {
     let loaded = 0
     const seen = new Set<string>()
+    // 缓存当前 DOM 中已有的 preload link href（绝对 URL），避免与 index.html 注入的 preload 重复
+    const existingPreloads = new Set<string>(
+      Array.from(document.querySelectorAll('link[rel="preload"][as="image"]')).map((l) => (l as HTMLLinkElement).href),
+    )
     for (const group of groups) {
       for (const item of group.items || []) {
         if (loaded >= count) return
@@ -122,13 +127,26 @@ export function useWallpaper(
         if (seen.has(src)) continue
         seen.add(src)
 
-        const link = document.createElement('link')
-        link.rel = 'preload'
-        link.as = 'image'
-        link.href = src
-        link.setAttribute('data-icon-preload', 'true')
-        document.head.appendChild(link)
+        // 转为绝对 URL 与 DOM 中 link.href 比较（浏览器会规范化为绝对 URL）
+        let absSrc = src
+        try {
+          absSrc = new URL(src, location.origin).href
+        } catch {
+          // 无效 URL 跳过 link 注入，但仍尝试 new Image 解码
+        }
 
+        // DOM 中已存在同 href 的 preload link 时跳过注入（index.html 已 preload）
+        if (!existingPreloads.has(absSrc)) {
+          const link = document.createElement('link')
+          link.rel = 'preload'
+          link.as = 'image'
+          link.href = src
+          link.setAttribute('data-icon-preload', 'true')
+          document.head.appendChild(link)
+          existingPreloads.add(absSrc)
+        }
+
+        // 后台解码始终执行，利用已有缓存不产生二次网络请求
         const img = new Image()
         img.src = src
         img.decode().catch(() => {})

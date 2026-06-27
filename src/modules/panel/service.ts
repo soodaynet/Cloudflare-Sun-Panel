@@ -76,15 +76,22 @@ export class PanelService {
    * 获取用户全部面板数据（分组、图标、面板配置）
    * 一次查询替代多次 API 调用，减少网络往返
    * @param userId 用户 ID
+   * @param prefetchedConfigRow 预取的 user_configs 行（/init 聚合路径复用，命中时跳过 user_configs 查询）
    */
-  async getAllData(userId: number): Promise<AllDataResponse> {
+  async getAllData(
+    userId: number,
+    prefetchedConfigRow?: { panel_json: string } | null,
+  ): Promise<AllDataResponse> {
     const [groups, iconRows, configRow] = await Promise.all([
       queryAll<ItemIconGroupRow>(this.db,
         `${GROUP_SELECT} WHERE user_id = ? ORDER BY sort ASC, id ASC`, userId),
       queryAll<ItemIconRow>(this.db,
         `${ICON_SELECT} WHERE user_id = ? ORDER BY sort ASC, id ASC`, userId),
-      queryFirst<{ panel_json: string }>(this.db,
-        'SELECT panel_json FROM user_configs WHERE user_id = ?', userId),
+      // 命中预取行则跳过 user_configs 查询（/init 路径已由 userConfig.getRawRow 预取）
+      prefetchedConfigRow !== undefined
+        ? Promise.resolve(prefetchedConfigRow)
+        : queryFirst<{ panel_json: string }>(this.db,
+          'SELECT panel_json FROM user_configs WHERE user_id = ?', userId),
     ])
 
     const itemsMap: Record<number, IconItem[]> = {}
@@ -356,7 +363,8 @@ export class PanelService {
 
     // 兜底
     found.add(`${origin}/favicon.ico`)
-    found.add(`https://t0.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${encodeURIComponent(origin)}`)
+    // 兜底改走同源 /api/favicon-proxy（边缘缓存 30 天 + 64px），避免外链 google favicon
+    found.add(`/api/favicon-proxy?domain=${encodeURIComponent(parsedUrl.hostname)}&sz=64`)
 
     const iconUrls = Array.from(found).slice(0, 10)
     return { iconUrls, title: meta.title, description: meta.description, siteName: meta.siteName }

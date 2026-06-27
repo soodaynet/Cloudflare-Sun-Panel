@@ -40,7 +40,9 @@ itemIconRouter.post('/getSiteFavicon', validate(faviconSchema), async (c) => {
 
   const service = new PanelService(c.env.DB)
   const result = await service.getSiteFavicon(url)
-  c.header('Cache-Control', 'private, max-age=600')
+  // 按 URL 公开可缓存（无敏感数据），与 upstream cf.cacheTtl:3600 对齐
+  c.header('Cache-Control', 'public, max-age=3600')
+  c.header('CDN-Cache-Control', 'public, max-age=3600')
   return ok(c, result)
 })
 

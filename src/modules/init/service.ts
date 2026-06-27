@@ -26,11 +26,16 @@ export class InitService {
    * @param user 认证用户（未登录时为 null）
    */
   async aggregate(user: AuthUser | null): Promise<InitResponse> {
+    const userId = user?.userId || 0
+    // 预取 user_configs 一次（panel_json + search_engine_json），供 getAllData 与 userConfig.get 复用；
+    // /init 路径下中间件已保证 authUser 存在，跳过 userConfig.get 内的 users 存在性校验
+    const userConfigRow = await this.userConfig.getRawRow(userId)
+
     const [panelData, about, authInfo, userCfg] = await Promise.all([
-      this.panel.getAllData(user?.userId || 0),
+      this.panel.getAllData(userId, userConfigRow),
       this.settings.getAll(),
       InitService.buildAuthInfo(user),
-      this.userConfig.get(user?.userId || 0),
+      this.userConfig.get(userId, userConfigRow),
     ])
 
     return {

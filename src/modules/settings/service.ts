@@ -47,9 +47,18 @@ export class SettingsService {
    */
   async saveAll(entries: Record<string, string>) {
     const kvList = Object.entries(entries)
-    await Promise.all(
-      kvList.map(([configName, configValue]) => this.upsertSetting(configName, configValue)),
+    if (kvList.length === 0) return
+
+    // 单次 batch 提交所有 upsert，事务性、N 次往返合并为 1 次
+    const statements = kvList.map(([configName, configValue]) =>
+      this.db
+        .prepare(
+          `INSERT INTO system_settings (config_name, config_value) VALUES (?, ?)
+           ON CONFLICT(config_name) DO UPDATE SET config_value = excluded.config_value, updated_at = datetime('now')`,
+        )
+        .bind(configName, configValue ?? ''),
     )
+    await this.db.batch(statements)
   }
 
   // ========== 公开访问用户 ==========
@@ -110,21 +119,13 @@ export class SettingsService {
    * @param configValue 配置值
    */
   private async upsertSetting(configName: string, configValue: string) {
-    const existing = await this.db
-      .prepare('SELECT id FROM system_settings WHERE config_name = ?')
-      .bind(configName)
-      .first()
-
-    if (existing) {
-      await this.db
-        .prepare("UPDATE system_settings SET config_value = ?, updated_at = datetime('now') WHERE config_name = ?")
-        .bind(configValue ?? '', configName)
-        .run()
-    } else {
-      await this.db
-        .prepare('INSERT INTO system_settings (config_name, config_value) VALUES (?, ?)')
-        .bind(configName, configValue ?? '')
-        .run()
-    }
+    // 单语句 upsert：依赖 system_settings.config_name 的 UNIQUE 约束
+    await this.db
+      .prepare(
+        `INSERT INTO system_settings (config_name, config_value) VALUES (?, ?)
+         ON CONFLICT(config_name) DO UPDATE SET config_value = excluded.config_value, updated_at = datetime('now')`,
+      )
+      .bind(configName, configValue ?? '')
+      .run()
   }
 }

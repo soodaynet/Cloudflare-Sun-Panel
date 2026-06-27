@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Pencil, Trash2 } from 'lucide-vue-next'
+import { toProxiedFavicon } from '@/utils/faviconUtils'
 
 const props = defineProps<{
   item: Panel.ItemInfo
@@ -21,7 +22,7 @@ const errored = ref(false)
 // 图标是否加载完成，用于淡入过渡
 const loaded = ref(false)
 
-const realIconSrc = computed(() => props.item.icon?.src || '')
+const realIconSrc = computed(() => toProxiedFavicon(props.item.icon?.src || ''))
 
 // 注：preconnectOrigin 已上提到父组件（home/index.vue），避免每卡片注册 watcher
 </script>
