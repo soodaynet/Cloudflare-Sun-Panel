@@ -1,0 +1,86 @@
+import { defineStore } from 'pinia'
+import { TOKEN_KEY, USER_KEY, VISIT_MODE_KEY, PUBLIC_MODE_KEY, PANEL_STATE_KEY, SKIP_REDIRECT_KEY } from '@/utils/storageKeys'
+
+export enum VisitMode {
+  VISIT_MODE_LOGIN = 0,
+  VISIT_MODE_PUBLIC = 1,
+}
+
+export interface AuthState {
+  token: string | null
+  userInfo: User.Info | null
+  visitMode: VisitMode
+}
+
+export const useAuthStore = defineStore('auth', {
+  state: (): AuthState => {
+    const token = localStorage.getItem(TOKEN_KEY)
+    const userStr = localStorage.getItem(USER_KEY)
+    const visitMode = Number(localStorage.getItem(VISIT_MODE_KEY)) || VisitMode.VISIT_MODE_LOGIN
+    let userInfo = null
+    if (userStr) {
+      try {
+        userInfo = JSON.parse(userStr)
+      } catch {
+        userInfo = null
+      }
+    }
+    return {
+      token,
+      userInfo,
+      visitMode,
+    }
+  },
+
+  getters: {
+    isLoggedIn: (state) => !!state.token,
+    isAdmin: (state) => state.userInfo?.role === 1,
+    isVisitMode: (state) => state.visitMode === VisitMode.VISIT_MODE_PUBLIC,
+    isAuthenticated: (state) => !!state.token || state.visitMode === VisitMode.VISIT_MODE_PUBLIC,
+  },
+
+  actions: {
+    setToken(token: string) {
+      this.token = token
+      localStorage.setItem(TOKEN_KEY, token)
+    },
+
+    setUserInfo(info: User.Info) {
+      this.userInfo = info
+      localStorage.setItem(USER_KEY, JSON.stringify(info))
+    },
+
+    setVisitMode(mode: VisitMode) {
+      this.visitMode = mode
+      localStorage.setItem(VISIT_MODE_KEY, String(mode))
+    },
+
+    loginSuccess(token: string, userInfo: User.Info) {
+      this.setToken(token)
+      this.setUserInfo(userInfo)
+      this.setVisitMode(VisitMode.VISIT_MODE_LOGIN)
+    },
+
+    setGuestMode(userInfo: User.Info | null) {
+      this.token = null
+      localStorage.removeItem(TOKEN_KEY)
+      this.setVisitMode(VisitMode.VISIT_MODE_PUBLIC)
+      if (userInfo) {
+        this.setUserInfo(userInfo)
+      }
+    },
+
+    removeToken() {
+      this.token = null
+      this.userInfo = null
+      // 根据公开模式可用性设置访客状态：可用则进入访客模式，否则标记为需登录
+      const publicModeAvailable = localStorage.getItem(PUBLIC_MODE_KEY) === '1'
+      this.visitMode = publicModeAvailable ? VisitMode.VISIT_MODE_PUBLIC : VisitMode.VISIT_MODE_LOGIN
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(USER_KEY)
+      localStorage.removeItem(VISIT_MODE_KEY)
+      localStorage.removeItem(PANEL_STATE_KEY)
+      sessionStorage.setItem(SKIP_REDIRECT_KEY, '1')
+    },
+  },
+})

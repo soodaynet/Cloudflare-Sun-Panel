@@ -1,0 +1,30 @@
+name = "sun-panel"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+
+[assets]
+directory = "./frontend/dist"
+not_found_handling = "single-page-application"
+
+[observability]
+enabled = true
+head_sampling_rate = 0.1
+
+# ========== 数据库 ==========
+[[d1_databases]]
+binding = "DB"
+database_name = "sun-panel-db"
+# 占位符由 GitHub Actions 在部署时通过 sed 替换为真实 D1 数据库 ID
+# 真实 ID 通过 GitHub Secret `CF_D1_DATABASE_ID` 注入，不在仓库中硬编码
+database_id = "__D1_DATABASE_ID__"
+
+# ========== 密钥说明 ==========
+# JWT_SECRET：JWT 签名密钥，必填。**不在此处声明**，通过 wrangler CLI 配置：
+#   wrangler secret put JWT_SECRET
+# 未配置时 Worker 启动会失败并提示 "JWT_SECRET is required"。
+# 默认管理员账号 admin/admin 在 schema.sql 中初始化，登录后建议立即修改密码。
+
+# ========== 路由说明 ==========
+# 路由和缓存策略由 Worker 代码中的 Cache-Control 响应头控制，无需在 toml 中声明 routes
+# 静态资源通过 [assets] 绑定和 c.env.ASSETS.fetch() 提供，已在代码中添加 immutable 缓存头
+# API 路由由 Hono 框架处理，各路由独立设置缓存策略

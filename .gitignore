@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+frontend/dist/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Vite
+.vite/
+*.vite-*
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+*.tmp
+.cache/
+.npm-cache/
+
+# TRAE workspace (AI 协作工作区内容，不应进入主分支)
+.trae/
+
+# Turbopack / Next.js (future expansion)
+.next/
+.turbo/
+
+# Test
+coverage/
+.nyc_output/
+
+# Certificates
+*.pem
+*.crt
+*.key.local

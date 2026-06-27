@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f0f0f0" media="(prefers-color-scheme: light)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta http-equiv="Accept-CH" content="Sec-CH-Viewport-Width, Sec-CH-Viewport-Height" />
+    <title></title>
+    <!-- Google Favicon API 预连接（favicon-proxy 经 google s2 服务） -->
+    <link rel="preconnect" href="https://t0.gstatic.cn" crossorigin />
+    <link rel="dns-prefetch" href="https://t0.gstatic.cn" />
+
+    <style>
+        /* 使用系统字体栈替代 Google Fonts，消除外部字体加载阻塞 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
+                         Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+
+    <!-- 站点标题 & favicon + 壁纸预加载：在 Vue 挂载前立即触发 -->
+    <script>
+    (function() {
+      // ===== 1. 站点标题和 favicon 预注入 =====
+      try {
+        var siteConfigRaw = localStorage.getItem('sun-panel-site-config');
+        if (siteConfigRaw) {
+          var siteConfig = JSON.parse(siteConfigRaw);
+          if (siteConfig.site_title) {
+            document.title = siteConfig.site_title;
+          }
+          if (siteConfig.favicon_url) {
+            // 不再拼接 _t=Date.now() 时间戳：favicon 内容稳定，让浏览器走正常缓存
+            var favUrl = siteConfig.favicon_url;
+
+            var iconLink = document.createElement('link');
+            iconLink.rel = 'icon';
+            iconLink.href = favUrl;
+            document.head.appendChild(iconLink);
+
+            var appleLink = document.createElement('link');
+            appleLink.rel = 'apple-touch-icon';
+            appleLink.href = favUrl;
+            document.head.appendChild(appleLink);
+          }
+        }
+      } catch(e) {}
+
+      // ===== 2. 壁纸预加载 =====
+      var key = 'sun-panel-effective-wallpaper';
+      var wallpaper = localStorage.getItem(key);
+      if (!wallpaper) return;
+
+      // 1. <link rel="preload"> 触发浏览器预加载
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = wallpaper;
+      link.setAttribute('data-wallpaper', 'true');
+      document.head.appendChild(link);
+
+      // 2. 外部域名添加 preconnect，节省 TLS/连接时间
+      try {
+        var url = new URL(wallpaper);
+        if (url.hostname !== location.hostname) {
+          var pc = document.createElement('link');
+          pc.rel = 'preconnect';
+          pc.href = url.origin;
+          pc.crossOrigin = 'anonymous';
+          document.head.appendChild(pc);
+        }
+      } catch(e) {}
+    })();
+    </script>
+</head>
+<body class="min-h-screen">
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
