@@ -121,5 +121,77 @@
       "maskOpacity": "Mask Opacity",
       "syncNote": "Icon hover and sidebar expanded use the same blur and opacity"
     }
+  },
+  "hitokoto": {
+    "loading": "Loading...",
+    "error": "No quote"
+  },
+  "music": {
+    "title": "Music",
+    "play": "Play",
+    "pause": "Pause",
+    "prev": "Previous",
+    "next": "Next",
+    "volume": "Volume",
+    "playlist": "Playlist",
+    "loopAll": "List Loop",
+    "loopOne": "Single Loop",
+    "loopNone": "No Loop",
+    "orderList": "Sequential",
+    "orderRandom": "Shuffle",
+    "noTrack": "No tracks",
+    "loadError": "Load failed"
+  },
+  "settings": {
+    "hitokoto": {
+      "title": "Hitokoto",
+      "enable": "Enable Hitokoto",
+      "apiUrl": "Hitokoto API URL",
+      "category": "Category",
+      "align": "Text Align",
+      "typewriter": "Typewriter",
+      "typewriterDuration": "Full Duration",
+      "typewriterCursor": "Cursor Style",
+      "typewriterAnimation": "Animation",
+      "showFrom": "Show Source",
+      "showFromWho": "Show Author",
+      "autoSwitch": "Auto Switch",
+      "autoSwitchInterval": "Switch Interval",
+      "transitionDuration": "Transition Duration",
+      "categoryAny": "All",
+      "categoryA": "Anime",
+      "categoryB": "Manga",
+      "categoryC": "Game",
+      "categoryD": "Literature",
+      "categoryE": "Original",
+      "categoryF": "Web",
+      "categoryG": "Other",
+      "categoryH": "Film",
+      "categoryI": "Poetry",
+      "categoryJ": "Netease",
+      "categoryK": "Philosophy",
+      "categoryL": "Joke",
+      "selectAll": "Select All",
+      "alignLeft": "Left",
+      "alignCenter": "Center",
+      "cursorNone": "None",
+      "cursorBlock": "Block",
+      "cursorBlink": "Blink",
+      "animationType": "Type",
+      "animationFade": "Fade",
+      "animationSlide": "Slide"
+    },
+    "music": {
+      "title": "Music",
+      "enable": "Enable Music Player",
+      "server": "Music Source",
+      "type": "Resource Type",
+      "id": "Song/Playlist ID",
+      "apiUrl": "Meting API URL",
+      "autoplay": "Autoplay",
+      "volume": "Default Volume",
+      "loop": "Loop Mode",
+      "order": "Play Order"
+    }
   }
 }

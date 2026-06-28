@@ -363,8 +363,7 @@ export class PanelService {
 
     // 兜底
     found.add(`${origin}/favicon.ico`)
-    // 兜底改走同源 /api/favicon-proxy（边缘缓存 30 天 + 64px），避免外链 google favicon
-    found.add(`/api/favicon-proxy?domain=${encodeURIComponent(parsedUrl.hostname)}&sz=64`)
+    found.add(`https://t0.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=${encodeURIComponent(origin)}`)
 
     const iconUrls = Array.from(found).slice(0, 10)
     return { iconUrls, title: meta.title, description: meta.description, siteName: meta.siteName }

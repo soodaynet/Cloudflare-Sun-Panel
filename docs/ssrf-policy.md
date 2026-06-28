@@ -114,8 +114,9 @@ try {
 
 | 端点 | 方法 | 实现位置 | 说明 |
 | --- | --- | --- | --- |
-| `/api/favicon-proxy` | GET | `src/index.ts`（约第 44–74 行） | 代理 google favicon 服务（`https://www.google.com/s2/favicons`）。校验 `domain` 参数（拼成 `https://${domain}` 后过 `isValidUrl`），按 `sz` 透传尺寸，设置 `Cache-Control: public, max-age=2592000, immutable`（30 天）+ `CDN-Cache-Control` 同值。上游失败返回 502。**注意**：该端点未设显式超时与响应大小限制，依赖 Workers 运行时默认行为。 |
 | `/panel/itemIcon/getSiteFavicon` | POST | `src/modules/panel/item-icon/routes.ts` + `src/modules/panel/service.ts` `getSiteFavicon()` | 抓取目标站点 HTML，解析 favicon `<link>` 标签与站点元数据（title/description/OG 标签）。受 `isValidUrl` 约束（屏蔽 localhost/回环/私网段），HTML 抓取 **3s 超时**（`AbortController`），favicon.ico HEAD 探测 2s 超时，`cf: { cacheTtl: 3600 }`（1 小时），路由层 `Cache-Control: private, max-age=600`。 |
+
+> 一言与音乐功能已改为前端直连上游 API（hitokoto.cn / Meting），不走后端代理，故无对应 SSRF 端点。
 
 > 新增 SSRF 端点**必须**在 PR 合并前补充到本清单。
 
@@ -150,6 +151,5 @@ try {
 ## 8. 参考
 
 - `isValidUrl` 实现：`src/modules/shared/favicon.ts`
-- `/api/favicon-proxy` 实现：`src/index.ts`
 - `getSiteFavicon` 实现：`src/modules/panel/item-icon/routes.ts`、`src/modules/panel/service.ts`
 - 项目安全总则：`AGENTS.md` §6、`CLAUDE.md` §10

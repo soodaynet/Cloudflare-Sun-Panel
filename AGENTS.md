@@ -169,7 +169,7 @@ PR 合并前**必须**全部通过：
 
 - **变量外置**：`JWT_SECRET`、`CF_API_TOKEN`、`CF_ACCOUNT_ID`、`CF_D1_DATABASE_ID` 全部通过 Cloudflare Secrets 或 GitHub Actions Secrets 管理，**不得**硬编码。
 - **SSRF 规范化**：允许 SSRF 但必须遵循 `docs/ssrf-policy.md` 规范（URL 校验、超时、缓存、仅 GET、响应大小限制等强制约束）。如需外部图片，优先前端直连目标 URL 或公开 favicon 服务；服务端抓取须合规。
-  - **现有合规端点**：`GET /api/favicon-proxy`（代理 google favicon 服务，校验 domain，30 天缓存）、`POST /panel/itemIcon/getSiteFavicon`（抓取目标站点 HTML 解析 favicon + 元数据，`isValidUrl` 校验，3s 超时，1 小时缓存）。新增 SSRF 端点必须在 PR 说明中引用 `docs/ssrf-policy.md` 并补充到合规清单。
+  - **现有合规端点**：`POST /panel/itemIcon/getSiteFavicon`（抓取目标站点 HTML 解析 favicon + 元数据，`isValidUrl` 校验，3s 超时，1 小时缓存）。新增 SSRF 端点必须在 PR 说明中引用 `docs/ssrf-policy.md` 并补充到合规清单。
 - **无公开注册**：用户仅由管理员后台通过 `/panel/users/create` 创建，**不得**恢复 `/register` 接口。
 - **JWT 必填**：未配置 `JWT_SECRET` 时 Worker 启动失败（`src/modules/shared/env.ts` 校验），**不得**添加默认回退值。
 - **D1 唯一存储**：所有持久化数据存 Cloudflare D1（binding 名 `DB`，库名 `sun-panel-db`），**不得**引入 KV/R2/其他数据库。session/缓存等临时数据可用内存或 `c.var` 上下文，但不得持久化到非 D1 存储。

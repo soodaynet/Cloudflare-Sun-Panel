@@ -91,10 +91,11 @@ body::-webkit-scrollbar {
     box-shadow 0.2s var(--ease-out);
 }
 
+/* 卡片 hover：基于 --ann-blur/--ann-opacity +10%，opacity 最小 0.15 */
 .glass-hover:hover {
-  background-color: var(--glass-bg-hover);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background-color: rgba(255, 255, 255, max(0.15, calc(var(--ann-opacity, 0.15) * 1.1)));
+  backdrop-filter: blur(calc(var(--ann-blur, 12px) * 1.1));
+  -webkit-backdrop-filter: blur(calc(var(--ann-blur, 12px) * 1.1));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
@@ -185,5 +186,25 @@ body::-webkit-scrollbar {
 @media (hover: none) {
   .group-title-btns {
     opacity: 1;
+  }
+}
+
+/* ========== 隐藏非输入元素的文本插入符（caret），保留选中能力 ==========
+   方案：用 `caret-color: transparent` 隐藏所有元素的文本插入符（点击可选中文本时
+   浏览器渲染的闪烁竖线），同时完全不触碰 cursor 与 user-select：
+   - cursor 保留 UA 默认 auto（文本上为 I-beam，与生产版本一致）
+   - user-select 保留 UA 默认 auto（文本可正常选中复制）
+   输入元素恢复 caret-color: auto，保留编辑插入符可见。
+   放入 @layer base 后，Tailwind v4 的 caret-* 工具类优先级仍高于本规则。 */
+@layer base {
+  * {
+    caret-color: transparent;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  [contenteditable=""] {
+    caret-color: auto;
   }
 }

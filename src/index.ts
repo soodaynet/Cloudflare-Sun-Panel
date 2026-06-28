@@ -9,7 +9,6 @@ import { bodyLimitMiddleware } from './modules/shared/middleware/bodyLimit'
 import { validateEnv } from './modules/shared/env'
 import { AppError } from './modules/shared/errors'
 import { logger } from './modules/shared/logger'
-import { isValidUrl } from './modules/shared/favicon'
 import { authModule } from './modules/auth'
 import { initModule } from './modules/init'
 import { panelModule } from './modules/panel'
@@ -38,39 +37,6 @@ app.get('/api/health', (c) => {
   c.header('Cache-Control', 'no-cache, no-store, must-revalidate')
   c.header('CDN-Cache-Control', 'no-cache')
   return c.json({ code: 0, msg: 'ok', data: { status: 'running', time: new Date().toISOString() } })
-})
-
-// ========== Favicon 代理（公开，无需认证）==========
-app.get('/api/favicon-proxy', async (c) => {
-  const domain = c.req.query('domain')
-  const sz = c.req.query('sz') || '64'
-  if (!domain) {
-    return c.json({ code: 400, msg: '缺少 domain 参数', data: null }, 400)
-  }
-  // SSRF 安全校验
-  try {
-    const testUrl = `https://${domain}`
-    if (!isValidUrl(testUrl)) {
-      return c.json({ code: 400, msg: 'domain 不合法', data: null }, 400)
-    }
-  } catch {
-    return c.json({ code: 400, msg: 'domain 不合法', data: null }, 400)
-  }
-  try {
-    const upstream = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${sz}`
-    const resp = await fetch(upstream)
-    if (!resp.ok) {
-      return c.json({ code: 502, msg: '上游服务不可用', data: null }, 502)
-    }
-    const contentType = resp.headers.get('content-type') || 'image/x-icon'
-    const body = await resp.arrayBuffer()
-    c.header('Content-Type', contentType)
-    c.header('Cache-Control', 'public, max-age=2592000, immutable')
-    c.header('CDN-Cache-Control', 'public, max-age=2592000, immutable')
-    return c.body(body)
-  } catch {
-    return c.json({ code: 502, msg: '上游服务不可用', data: null }, 502)
-  }
 })
 
 // ========== 数据库自动初始化 ==========

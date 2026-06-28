@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/sonner'
 import { useAuthStore, usePanelState } from '@/store'
 import { saveGroup, deleteGroups } from '@/modules'
 import AppStarterSidebar from './AppStarterSidebar.vue'
-import type { SearchEngineConfig } from '@/modules/panel/types'
+import type { SearchEngineConfig } from '@/modules'
 
 // 8 个 Panel 改为按需加载：首屏只下载当前激活 Tab 的 chunk，其余在切换时再拉取
 const UsersManage = defineAsyncComponent(() => import('@/components/apps/Users/index.vue'))
@@ -20,6 +20,8 @@ const PanelGroupManage = defineAsyncComponent(() => import('./panels/PanelGroupM
 const PanelImportExport = defineAsyncComponent(() => import('./panels/PanelImportExport.vue'))
 const PanelSiteSettings = defineAsyncComponent(() => import('./panels/PanelSiteSettings.vue'))
 const PanelSearchSettings = defineAsyncComponent(() => import('./panels/PanelSearchSettings.vue'))
+const PanelHitokotoSettings = defineAsyncComponent(() => import('./panels/PanelHitokotoSettings.vue'))
+const PanelMusicSettings = defineAsyncComponent(() => import('./panels/PanelMusicSettings.vue'))
 
 interface App {
   name: string
@@ -77,6 +79,8 @@ const apps = computed<App[]>(() => {
     { name: '分组管理', key: 'GroupManage', icon: '📁' },
     { name: '导入导出', key: 'ImportExport', icon: '📦' },
     { name: '搜索引擎', key: 'SearchSettings', icon: '🔍' },
+    { name: '一言', key: 'Hitokoto', icon: '💬' },
+    { name: '音乐', key: 'Music', icon: '🎵' },
   ]
   if (authStore.isAdmin) {
     list.push({ name: '用户管理', key: 'Users', icon: '👥', adminOnly: true })
@@ -214,6 +218,20 @@ function handleGroupSaved() {
                   v-if="activeApp === 'SearchSettings'"
                   :search-engine-config="searchEngineConfig"
                   @update:search-engine-config="(cfg) => $emit('update:searchEngineConfig', cfg)"
+                />
+
+                <!-- ====== 一言 ====== -->
+                <PanelHitokotoSettings
+                  v-if="activeApp === 'Hitokoto'"
+                  :panel-config="panelConfig"
+                  :on-saved="props.onSaved"
+                />
+
+                <!-- ====== 音乐 ====== -->
+                <PanelMusicSettings
+                  v-if="activeApp === 'Music'"
+                  :panel-config="panelConfig"
+                  :on-saved="props.onSaved"
                 />
 
                 <!-- ====== 用户管理 ====== -->

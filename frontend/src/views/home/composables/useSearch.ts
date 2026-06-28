@@ -1,5 +1,5 @@
 import { ref, computed, watch, type Ref } from 'vue'
-import type { SearchEngineConfig } from '@/modules/panel/types'
+import type { SearchEngineConfig } from '@/modules'
 import type { ItemGroup } from './useDataLoader'
 
 /** 本地匹配结果最大数量 */

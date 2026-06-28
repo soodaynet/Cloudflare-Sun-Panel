@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from '@/components/ui/sonner'
-import { setUserConfig } from '@/modules'
-import type { SearchEngine, SearchEngineConfig } from '@/modules/panel/types'
+import { saveSearchEngineConfig } from '@/modules'
+import type { SearchEngine, SearchEngineConfig } from '@/modules'
 
 const props = defineProps<{
   searchEngineConfig: SearchEngineConfig
@@ -70,8 +70,9 @@ function handleResetDefault() {
 
 async function handleSave() {
   try {
-    const res = await setUserConfig({
-      searchEngine: { engines: localEngines.value, currentIndex: localCurrentIndex.value },
+    const res = await saveSearchEngineConfig({
+      engines: localEngines.value,
+      currentIndex: localCurrentIndex.value,
     })
     if (res.code === 0) {
       emit('update:searchEngineConfig', {

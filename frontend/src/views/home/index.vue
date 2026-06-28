@@ -12,18 +12,20 @@ import { useSiteConfig, SITE_CACHE_KEY } from './composables/useSiteConfig'
 import { useWallpaper } from './composables/useWallpaper'
 import { useDataLoader, type ItemGroup } from './composables/useDataLoader'
 import { getDefaultSearchEngineConfig } from './composables/useSearch'
-import type { SearchEngineConfig } from '@/modules/panel/types'
+import type { SearchEngineConfig } from '@/modules'
 // 首屏必须同步加载的
 import HomeSidebar from './components/HomeSidebar.vue'
 import HomeLogo from './components/HomeLogo.vue'
 import HomeWallpaper from './components/HomeWallpaper.vue'
 import HomeItemCard from './components/HomeItemCard.vue'
 import HomeSearchBar from './components/HomeSearchBar.vue'
+import HomeHitokoto from './components/HomeHitokoto.vue'
 
 // 懒加载的非首屏组件
 const HomeAppStarter = defineAsyncComponent(() => import('./components/HomeAppStarter.vue'))
 const HomeEditIconModal = defineAsyncComponent(() => import('./components/HomeEditIconModal.vue'))
 const HomeIframeModal = defineAsyncComponent(() => import('./components/HomeIframeModal.vue'))
+const HomeMusicPlayer = defineAsyncComponent(() => import('./components/HomeMusicPlayer.vue'))
 // 拖拽组件仅在分组编辑模式下渲染，按需加载避免拖入首屏 chunk
 const VueDraggable = defineAsyncComponent(() =>
   import('vue-draggable-plus').then((m) => m.VueDraggable),
@@ -304,7 +306,7 @@ watch(() => authStore.isLoggedIn, (val) => {
 
   <div
     ref="scrollContainerRef"
-    class="min-h-screen relative transition-all flex flex-col scroll-container pt-14 sm:pt-0"
+    class="min-h-screen relative transition-all flex flex-col scroll-container pt-14 sm:pt-0 home-scroll"
     :class="{ 'bg-gray-900': !effectiveBackgroundImage }"
     :style="glassVars"
   >
@@ -345,6 +347,9 @@ watch(() => authStore.isLoggedIn, (val) => {
         @open-url="openUrl"
       />
 
+      <!-- 随机一言条：搜索框下方、分组列表上方（受 hitokotoShow 用户级开关控制） -->
+      <HomeHitokoto v-if="initialLoaded && panelState.panelConfig.hitokotoShow" />
+
       <!-- 内容区域（始终渲染，loading 结束后图标自动填充） -->
       <div>
         <template v-for="(group, gi) in visibleGroups" :key="group.id || gi">
@@ -373,9 +378,9 @@ watch(() => authStore.isLoggedIn, (val) => {
               </div>
             </div>
             <VueDraggable
-              v-if="editModeGroupId === group.id"
               v-model="group.items"
               :animation="200"
+              :disabled="editModeGroupId !== group.id"
               class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3"
               @end="saveItemSortOrder(group)"
             >
@@ -383,29 +388,14 @@ watch(() => authStore.isLoggedIn, (val) => {
                 v-for="(item, ii) in group.items"
                 :key="item.id || ii"
                 :item="item"
-                :editable="true"
-                :is-edit-mode="true"
+                :editable="editModeGroupId === group.id"
+                :is-edit-mode="editModeGroupId === group.id"
                 :eager-load="eagerKeySet.has(`${gi}-${ii}`)"
                 @click="openUrl"
                 @edit="openEditItem"
                 @delete="handleDeleteItem"
               />
             </VueDraggable>
-            <div v-else class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 sm:gap-3">
-              <div
-                v-for="(item, ii) in group.items"
-                :key="item.id || ii"
-                :title="item.description || undefined"
-              >
-                <HomeItemCard
-                  :item="item"
-                  :editable="false"
-                  :is-edit-mode="false"
-                  :eager-load="eagerKeySet.has(`${gi}-${ii}`)"
-                  @click="openUrl"
-                />
-              </div>
-            </div>
             <div
               v-if="!group.items || group.items.length === 0"
               class="text-center text-gray-400 text-xs sm:text-sm py-2 sm:py-3"
@@ -438,6 +428,12 @@ watch(() => authStore.isLoggedIn, (val) => {
         <span class="text-[10px] font-medium leading-none mt-0.5">{{ scrollPercent }}%</span>
       </button>
     </Transition>
+
+    <!-- 音乐播放器浮窗：右下角，返回顶部按钮上方（受 musicShow 与 musicId 用户级开关控制） -->
+    <HomeMusicPlayer
+      v-if="initialLoaded && panelState.panelConfig.musicShow && panelState.panelConfig.musicId"
+      :back-top-visible="showBackTop"
+    />
 
     <!-- ========== AppStarter 应用启动器 ========== -->
     <HomeAppStarter
@@ -474,14 +470,13 @@ watch(() => authStore.isLoggedIn, (val) => {
 </template>
 
 <style scoped>
-/* 分组容器离屏渲染跳过，提升长列表滚动性能 */
-.group-section {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 300px;
-  /* 纵向 padding：为 hover scale(1.05) 溢出留空间，避免 content-visibility 的 paint containment 裁切卡片 */
-  padding-block: 6px;
+/* 桌面端：外层滚动容器左 padding 40px 避开固定侧边栏，
+   使主内容在剩余空间内由 mx-auto 居中，左右页边距对称 */
+@media (min-width: 768px) {
+  .home-scroll {
+    padding-left: 40px;
+  }
 }
-
 /* 返回顶部按钮：玻璃质感，与公告设置同步 */
 .back-top-btn {
   background-color: rgba(255, 255, 255, var(--ann-opacity, 0.15));

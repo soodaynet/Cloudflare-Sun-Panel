@@ -5,6 +5,7 @@
 ## 目录
 
 - [项目架构](#项目架构)
+- [项目当前状态](#项目当前状态)
 - [环境要求](#环境要求)
 - [前置条件](#前置条件)
 - [快速开始（本地开发）](#快速开始本地开发)
@@ -55,6 +56,48 @@
 - **认证**：JWT HMAC-SHA256（基于 Web Crypto API），Token 有效期 7 天
 - **安全**：CSRF 防护、安全响应头、请求体大小限制（1MB）、登录频率限制；SSRF 合规化（受 `docs/ssrf-policy.md` 约束）、无公开注册
 - **密码**：SHA-256 哈希存储
+
+---
+
+## 项目当前状态
+
+### 已应用的前端优化
+
+- **首屏聚合接口**：`/init` 一次请求返回 `panelData + about + authInfo + searchEngine`，替代 4 次独立请求
+- **请求缓存与去重**：`utils/requestCache.ts` 提供 `cachedRequest`，对 `/init` 60s 内存缓存（与后端 `max-age=60` 对齐），同一请求进行中自动去重
+- **首屏 panelData 秒开**：登录前预取 `/init` 写入 `localStorage`，首页 setup 阶段同步读取缓存立即渲染，网络返回后覆盖
+- **按需加载**：`HomeAppStarter` 8 个设置面板使用 `defineAsyncComponent` 按需加载，首屏仅下载当前 Tab chunk
+- **KeepAlive**：Tab 切换使用 `<KeepAlive>` 缓存已加载面板，避免重复 `onMounted` 请求
+- **v-memo 优化图标列表**：视图模式图标 `v-for` 加 `v-memo="[item.icon?.src, item.title]"`，避免无关 re-render 全量重渲
+- **preconnect 与图片预加载**：`index.html` 内联脚本在 Vue 挂载前预加载 Logo / 壁纸 / 前 12 个图标 / 搜索引擎图标，并对外部域注入 `preconnect`
+- **首屏图标 eager 加载**：前 3 个分组的前 12 个图标使用 `loading="eager" fetchpriority="high"`，其余 `lazy`
+- **滚动节流**：`scroll` 事件用 `requestAnimationFrame` 节流，每帧最多一次
+- **空闲时间预取弹窗 chunk**：`requestIdleCallback` 兜底 `setTimeout` 预取 `HomeAppStarter` / `HomeEditIconModal` / `HomeIframeModal`
+
+### 光标行为
+
+- 全局规则（`frontend/src/styles/global.css` `@layer base`）：所有元素默认 `cursor: default`
+- 文本输入元素（`input[type=text|password|email|number|search|tel|url]`、`textarea`、`[contenteditable]`）保留 `cursor: text`
+- 可点击交互元素（`a[href]`、`button:not(:disabled)`、`[role="button"]`）保留 `cursor: pointer`
+- Tailwind 工具类（`cursor-pointer` / `cursor-move` / `cursor-not-allowed` 等）因位于 `@layer utilities`，优先级高于全局默认，照常生效
+
+### 安全与合规
+
+- D1 为唯一持久化存储，不引入 KV/R2/其他数据库
+- JWT_SECRET 必填，未配置则 Worker 启动失败
+- CSRF 全局中间件已启用，不得绕过
+- SSRF 合规端点：`POST /panel/itemIcon/getSiteFavicon`（受 `isValidUrl` 校验，3s 超时，`cf: { cacheTtl: 3600 }` 边缘缓存；详见 [`docs/ssrf-policy.md`](./docs/ssrf-policy.md)）
+- 无公开注册接口，用户由管理员后台通过 `/panel/users/create` 创建
+- 默认管理员 `admin/admin` 仅用于首次登录，登录后立即修改密码
+
+### 修改记录
+
+- shadcn-vue 生成组件的本地修改（仅视觉样式）登记在 [`MODIFICATIONS.md`](./MODIFICATIONS.md)
+- AI 协作规范见 [`AGENTS.md`](./AGENTS.md)（模块边界、提交规范、PR 检查清单、安全实践）
+- Claude AI 助手的项目指引见 [`CLAUDE.md`](./CLAUDE.md)
+- 模块结构与通信规则见 [`docs/modules.md`](./docs/modules.md)
+- 依赖管理规则见 [`docs/dependencies.md`](./docs/dependencies.md)
+- SSRF 规范见 [`docs/ssrf-policy.md`](./docs/ssrf-policy.md)
 
 ---
 
@@ -331,6 +374,7 @@ Cloudflare-Sun-Panel/
 ├── tsconfig.json
 ├── CLAUDE.md                           # 面向 Claude AI 助手的项目指引
 ├── AGENTS.md                           # 面向通用 AI Agent 的协作规范
+├── MODIFICATIONS.md                    # shadcn-vue 生成组件的本地修改记录
 └── README.md
 ```
 

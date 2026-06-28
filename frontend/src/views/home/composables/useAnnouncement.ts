@@ -48,7 +48,6 @@ export function useAnnouncement() {
     announcementVisible,
     announcementText,
     startAnnouncementTimer,
-    clearAnnouncementTimer,
     dismissAnnouncement,
   }
 }

@@ -3,7 +3,7 @@ import type { useAuthStore, usePanelState } from '@/store'
 import { getAllData, getInit } from '@/modules'
 import { cachedRequest, invalidateCacheByPrefix, invalidateCache, initCacheKey } from '@/utils/requestCache'
 import { PUBLIC_MODE_KEY, panelDataKey } from '@/utils/storageKeys'
-import type { SearchEngineConfig } from '@/modules/panel/types'
+import type { SearchEngineConfig } from '@/modules'
 
 export interface ItemGroup extends Panel.ItemIconGroup {
   hoverStatus?: boolean

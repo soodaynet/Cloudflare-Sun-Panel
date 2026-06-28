@@ -2,7 +2,7 @@
  * 设置模块类型定义
  */
 
-import type { SearchEngineConfig } from '@/modules/panel/types'
+import type { SearchEngineConfig } from '@/modules/search/types'
 
 /** 站点全局设置（键值对集合） */
 export type SiteSettings = Record<string, string>

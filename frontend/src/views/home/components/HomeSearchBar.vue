@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { Search, ChevronDown, Check } from 'lucide-vue-next'
-import type { SearchEngineConfig } from '@/modules/panel/types'
+import type { SearchEngineConfig } from '@/modules'
 import type { ItemGroup } from '../composables/useDataLoader'
 import { useSearch } from '../composables/useSearch'
 
