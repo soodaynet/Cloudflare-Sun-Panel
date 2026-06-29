@@ -352,7 +352,7 @@ Cloudflare-Sun-Panel/
 │   ├── index.ts                        # Hono App 入口：全局中间件 + 模块注册表 + SPA 回退
 │   └── modules/                        # 插件式模块化架构
     │   ├── types.ts                    # AppContext、AppBindings、ModuleDefinition 接口
-    │   ├── registry.ts                 # ModuleRegistry 类（register/install/get/list）
+    │   ├── registry.ts                 # ModuleRegistry 类（register/install）
     │   ├── shared/                     # 共享工具与中间件（模块间唯一通信通道）
     │   │   ├── jwt.ts                  # JWT 签名/验证（Web Crypto API）
     │   │   ├── env.ts                  # 环境变量校验（JWT_SECRET 必填）

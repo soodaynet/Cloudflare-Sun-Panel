@@ -49,17 +49,6 @@ export interface SystemSettingRow {
 
 // ========== API 请求/响应类型 ==========
 
-export interface UserInfo {
-  id: number
-  username: string
-  name: string
-  headImage: string
-  status: number
-  role: number
-  mail: string
-  created_at: string
-}
-
 export interface ApiResponse<T = unknown> {
   code: number
   msg: string

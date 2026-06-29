@@ -1,81 +1,12 @@
 {
   "common": {
-    "appName": "Sun-Panel",
-    "save": "保存",
-    "cancel": "取消",
-    "confirm": "确定",
-    "delete": "删除",
-    "edit": "编辑",
-    "add": "添加",
-    "title": "标题",
-    "description": "描述信息",
-    "icon": "图标",
-    "url": "地址",
-    "action": "操作",
-    "saveSuccess": "保存成功",
-    "deleteSuccess": "删除成功",
-    "addSuccess": "添加成功",
-    "deleteConfirm": "你确定要删除吗？",
     "failed": "操作失败",
     "noData": "暂无数据",
-    "username": "账号",
-    "password": "密码",
-    "nikeName": "昵称",
-    "networkError": "网络错误，请稍后重试",
-    "language": "语言",
-    "yes": "是",
-    "no": "否",
-    "reset": "重置"
-  },
-  "login": {
-    "loginButton": "登录",
-    "passwordPlaceholder": "密码",
-    "usernamePlaceholder": "账号",
-    "welcomeMessage": "欢迎回来！"
-  },
-  "api": {
-    "loginExpires": "登录状态已过期，请重新登录"
-  },
-  "iconItem": {
-    "add": "添加项目",
-    "edit": "修改项目",
-    "inputIconName": "请输入图标名称",
-    "url": "地址",
-    "lanUrl": "内网地址",
-    "openMethod": "打开方式",
-    "currentPageOpen": "当前页面打开",
-    "newWindowOpen": "新窗口打开",
-    "currentPageLayerOpen": "当前页面弹窗打开",
-    "iconGroup": "分组",
-    "getGroupFail": "分组信息获取失败",
-    "geticonFail": "图标获取失败"
-  },
-  "panelHome": {
-    "changeToLanModel": "切换为内网模式",
-    "changeToWanModel": "切换为公网模式",
-    "goToLogin": "前往登录"
-  },
-  "settingUserInfo": {
-    "logout": "退出登录",
-    "confirmLogoutText": "你确定要退出登录吗？",
-    "updatePassword": "修改密码",
-    "oldPassword": "旧密码",
-    "newPassword": "新密码",
-    "confirmPassword": "确认新密码"
+    "save": "保存"
   },
   "deskModule": {
-    "clock": {
-      "mon": "星期一",
-      "tue": "星期二",
-      "wed": "星期三",
-      "thu": "星期四",
-      "fri": "星期五",
-      "sat": "星期六",
-      "sun": "星期日"
-    },
     "searchBox": {
       "inputPlaceholder": "搜索应用或输入关键词...",
-      "openWithNewOpen": "新窗口打开",
       "localIcons": "本地图标",
       "noMatch": "无匹配图标",
       "searchWith": "按回车使用 {engine} 搜索",
@@ -88,110 +19,6 @@
       "currentDefault": "当前默认",
       "resetDefault": "恢复默认",
       "saved": "搜索引擎配置已保存"
-    }
-  },
-  "apps": {
-    "baseSettings": {
-      "appName": "风格设置",
-      "wallpaper": "壁纸",
-      "vague": "模糊",
-      "mask": "遮罩",
-      "contentArea": "内容区域",
-      "topMargin": "上边距",
-      "bottomMargin": "下边距",
-      "leftRightMargin": "左右边距",
-      "maxWidth": "最大宽度",
-      "configSaved": "配置已保存",
-      "resetWarnText": "确定要重置这些样式吗？"
-    },
-    "userInfo": {
-      "appName": "我的信息",
-      "theme": "主题",
-      "themeStyle": {
-        "light": "浅色",
-        "dark": "深色",
-        "auto": "跟随系统"
-      }
-    },
-    "announceSettings": {
-      "appName": "公告设置",
-      "content": "公告内容",
-      "duration": "停留时间",
-      "blur": "背景模糊度",
-      "maskOpacity": "遮罩不透明度",
-      "syncNote": "图标悬浮和侧边栏展开将使用相同的模糊度和不透明度"
-    }
-  },
-  "hitokoto": {
-    "loading": "加载中...",
-    "error": "暂无一言"
-  },
-  "music": {
-    "title": "音乐",
-    "play": "播放",
-    "pause": "暂停",
-    "prev": "上一首",
-    "next": "下一首",
-    "volume": "音量",
-    "playlist": "播放列表",
-    "loopAll": "列表循环",
-    "loopOne": "单曲循环",
-    "loopNone": "不循环",
-    "orderList": "顺序播放",
-    "orderRandom": "随机播放",
-    "noTrack": "暂无曲目",
-    "loadError": "加载失败"
-  },
-  "settings": {
-    "hitokoto": {
-      "title": "一言",
-      "enable": "启用一言",
-      "apiUrl": "一言 API 地址",
-      "category": "一言分类",
-      "align": "文字对齐",
-      "typewriter": "打字机效果",
-      "typewriterDuration": "完整出现时长",
-      "typewriterCursor": "光标样式",
-      "typewriterAnimation": "动画方式",
-      "showFrom": "显示出处",
-      "showFromWho": "显示作者",
-      "autoSwitch": "自动轮播",
-      "autoSwitchInterval": "轮播间隔",
-      "transitionDuration": "切换过渡时长",
-      "categoryAny": "全部",
-      "categoryA": "动画",
-      "categoryB": "漫画",
-      "categoryC": "游戏",
-      "categoryD": "文学",
-      "categoryE": "原创",
-      "categoryF": "来自网络",
-      "categoryG": "其他",
-      "categoryH": "影视",
-      "categoryI": "诗词",
-      "categoryJ": "网易云",
-      "categoryK": "哲学",
-      "categoryL": "抖机灵",
-      "selectAll": "全选",
-      "alignLeft": "左对齐",
-      "alignCenter": "居中",
-      "cursorNone": "无",
-      "cursorBlock": "块状",
-      "cursorBlink": "闪烁",
-      "animationType": "逐字",
-      "animationFade": "淡入",
-      "animationSlide": "滑入"
-    },
-    "music": {
-      "title": "音乐",
-      "enable": "启用音乐播放器",
-      "server": "音乐数据源",
-      "type": "资源类型",
-      "id": "单曲/歌单 ID",
-      "apiUrl": "Meting API 地址",
-      "autoplay": "自动播放",
-      "volume": "默认音量",
-      "loop": "循环模式",
-      "order": "播放顺序"
     }
   }
 }

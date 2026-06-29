@@ -23,9 +23,3 @@ export interface AboutResponse {
   searchEngine?: SearchEngineConfig
   [key: string]: string | number | undefined | SearchEngineConfig
 }
-
-/** 单项系统设置 */
-export interface SystemSetting {
-  configName: string
-  configValue: string
-}

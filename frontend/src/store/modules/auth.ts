@@ -10,6 +10,7 @@ export interface AuthState {
   token: string | null
   userInfo: User.Info | null
   visitMode: VisitMode
+  justLoggedIn: boolean
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -29,6 +30,7 @@ export const useAuthStore = defineStore('auth', {
       token,
       userInfo,
       visitMode,
+      justLoggedIn: false,
     }
   },
 
@@ -59,6 +61,14 @@ export const useAuthStore = defineStore('auth', {
       this.setToken(token)
       this.setUserInfo(userInfo)
       this.setVisitMode(VisitMode.VISIT_MODE_LOGIN)
+      this.justLoggedIn = true
+    },
+
+    // 读取并清除"刚登录"标记，供 Home 挂载期检测一次性消费
+    consumeJustLoggedIn(): boolean {
+      const prev = this.justLoggedIn
+      this.justLoggedIn = false
+      return prev
     },
 
     setGuestMode(userInfo: User.Info | null) {

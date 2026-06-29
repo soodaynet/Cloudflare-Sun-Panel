@@ -7,10 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     name TEXT DEFAULT '',
     head_image TEXT DEFAULT '',
-    status INTEGER DEFAULT 1,       -- 1:启用 2:停用 3:未激活
+    status INTEGER DEFAULT 1,       -- 0:停用 1:启用
     role INTEGER DEFAULT 2,         -- 1:管理员 2:普通用户
     mail TEXT DEFAULT '',
-    token TEXT DEFAULT '',
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -67,7 +66,6 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_users_token ON users(token);
 CREATE INDEX IF NOT EXISTS idx_item_icons_group_id ON item_icons(item_icon_group_id);
 CREATE INDEX IF NOT EXISTS idx_item_icons_user_id ON item_icons(user_id);
 CREATE INDEX IF NOT EXISTS idx_item_icon_groups_user_id ON item_icon_groups(user_id);

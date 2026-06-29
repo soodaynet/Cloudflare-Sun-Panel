@@ -2,11 +2,6 @@
  * 认证模块类型定义
  */
 
-export interface LoginRequest {
-  username: string
-  password: string
-}
-
 export interface UserInfo {
   id: number
   username: string

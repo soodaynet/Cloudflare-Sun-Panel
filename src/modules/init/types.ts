@@ -1,7 +1,4 @@
-// ========== 搜索引擎类型（从 shared 引入并 re-export，供前端与各模块复用） ==========
-
-import type { SearchEngine, SearchEngineConfig } from '../shared/searchEngine'
-export type { SearchEngine, SearchEngineConfig }
+import type { SearchEngineConfig } from '../shared/searchEngine'
 
 // ========== init 接口响应类型 ==========
 

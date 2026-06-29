@@ -1,81 +1,12 @@
 {
   "common": {
-    "appName": "Sun-Panel",
-    "save": "Save",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "delete": "Delete",
-    "edit": "Edit",
-    "add": "Add",
-    "title": "Title",
-    "description": "Description",
-    "icon": "Icon",
-    "url": "URL",
-    "action": "Action",
-    "saveSuccess": "Saved successfully",
-    "deleteSuccess": "Deleted successfully",
-    "addSuccess": "Added successfully",
-    "deleteConfirm": "Are you sure you want to delete?",
     "failed": "Operation failed",
     "noData": "No data",
-    "username": "Username",
-    "password": "Password",
-    "nikeName": "Nickname",
-    "networkError": "Network error, please try again later",
-    "language": "Language",
-    "yes": "Yes",
-    "no": "No",
-    "reset": "Reset"
-  },
-  "login": {
-    "loginButton": "Login",
-    "passwordPlaceholder": "Password",
-    "usernamePlaceholder": "Username",
-    "welcomeMessage": "Welcome back!"
-  },
-  "api": {
-    "loginExpires": "Login expired, please login again"
-  },
-  "iconItem": {
-    "add": "Add Item",
-    "edit": "Edit Item",
-    "inputIconName": "Please enter icon name",
-    "url": "URL",
-    "lanUrl": "LAN URL",
-    "openMethod": "Open Method",
-    "currentPageOpen": "Current Page",
-    "newWindowOpen": "New Window",
-    "currentPageLayerOpen": "Modal Window",
-    "iconGroup": "Group",
-    "getGroupFail": "Failed to get group info",
-    "geticonFail": "Failed to get icon"
-  },
-  "panelHome": {
-    "changeToLanModel": "Switch to LAN mode",
-    "changeToWanModel": "Switch to WAN mode",
-    "goToLogin": "Go to Login"
-  },
-  "settingUserInfo": {
-    "logout": "Logout",
-    "confirmLogoutText": "Are you sure you want to logout?",
-    "updatePassword": "Change Password",
-    "oldPassword": "Old Password",
-    "newPassword": "New Password",
-    "confirmPassword": "Confirm Password"
+    "save": "Save"
   },
   "deskModule": {
-    "clock": {
-      "mon": "Monday",
-      "tue": "Tuesday",
-      "wed": "Wednesday",
-      "thu": "Thursday",
-      "fri": "Friday",
-      "sat": "Saturday",
-      "sun": "Sunday"
-    },
     "searchBox": {
       "inputPlaceholder": "Search apps or enter keywords...",
-      "openWithNewOpen": "Open in new window",
       "localIcons": "Local Icons",
       "noMatch": "No matching icons",
       "searchWith": "Press Enter to search with {engine}",
@@ -88,110 +19,6 @@
       "currentDefault": "Default",
       "resetDefault": "Reset to Default",
       "saved": "Search engine config saved"
-    }
-  },
-  "apps": {
-    "baseSettings": {
-      "appName": "Style Settings",
-      "wallpaper": "Wallpaper",
-      "vague": "Blur",
-      "mask": "Mask",
-      "contentArea": "Content Area",
-      "topMargin": "Top Margin",
-      "bottomMargin": "Bottom Margin",
-      "leftRightMargin": "Left/Right Margin",
-      "maxWidth": "Max Width",
-      "configSaved": "Configuration saved",
-      "resetWarnText": "Are you sure you want to reset these styles?"
-    },
-    "userInfo": {
-      "appName": "My Info",
-      "theme": "Theme",
-      "themeStyle": {
-        "light": "Light",
-        "dark": "Dark",
-        "auto": "System"
-      }
-    },
-    "announceSettings": {
-      "appName": "Announce Settings",
-      "content": "Content",
-      "duration": "Duration",
-      "blur": "Background Blur",
-      "maskOpacity": "Mask Opacity",
-      "syncNote": "Icon hover and sidebar expanded use the same blur and opacity"
-    }
-  },
-  "hitokoto": {
-    "loading": "Loading...",
-    "error": "No quote"
-  },
-  "music": {
-    "title": "Music",
-    "play": "Play",
-    "pause": "Pause",
-    "prev": "Previous",
-    "next": "Next",
-    "volume": "Volume",
-    "playlist": "Playlist",
-    "loopAll": "List Loop",
-    "loopOne": "Single Loop",
-    "loopNone": "No Loop",
-    "orderList": "Sequential",
-    "orderRandom": "Shuffle",
-    "noTrack": "No tracks",
-    "loadError": "Load failed"
-  },
-  "settings": {
-    "hitokoto": {
-      "title": "Hitokoto",
-      "enable": "Enable Hitokoto",
-      "apiUrl": "Hitokoto API URL",
-      "category": "Category",
-      "align": "Text Align",
-      "typewriter": "Typewriter",
-      "typewriterDuration": "Full Duration",
-      "typewriterCursor": "Cursor Style",
-      "typewriterAnimation": "Animation",
-      "showFrom": "Show Source",
-      "showFromWho": "Show Author",
-      "autoSwitch": "Auto Switch",
-      "autoSwitchInterval": "Switch Interval",
-      "transitionDuration": "Transition Duration",
-      "categoryAny": "All",
-      "categoryA": "Anime",
-      "categoryB": "Manga",
-      "categoryC": "Game",
-      "categoryD": "Literature",
-      "categoryE": "Original",
-      "categoryF": "Web",
-      "categoryG": "Other",
-      "categoryH": "Film",
-      "categoryI": "Poetry",
-      "categoryJ": "Netease",
-      "categoryK": "Philosophy",
-      "categoryL": "Joke",
-      "selectAll": "Select All",
-      "alignLeft": "Left",
-      "alignCenter": "Center",
-      "cursorNone": "None",
-      "cursorBlock": "Block",
-      "cursorBlink": "Blink",
-      "animationType": "Type",
-      "animationFade": "Fade",
-      "animationSlide": "Slide"
-    },
-    "music": {
-      "title": "Music",
-      "enable": "Enable Music Player",
-      "server": "Music Source",
-      "type": "Resource Type",
-      "id": "Song/Playlist ID",
-      "apiUrl": "Meting API URL",
-      "autoplay": "Autoplay",
-      "volume": "Default Volume",
-      "loop": "Loop Mode",
-      "order": "Play Order"
     }
   }
 }

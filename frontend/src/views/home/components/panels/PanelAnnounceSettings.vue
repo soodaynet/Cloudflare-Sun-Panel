@@ -25,19 +25,19 @@ const { localConfig, handleSave: saveConfig } = useConfigEditor({
   onSave: (config) => emit('save', config),
 })
 
-// 用户配置保存成功后，同步将毛玻璃效果写入系统设置（login_blur / login_mask_opacity），
-// 使登录卡片与公告/侧边栏共用同一组模糊和透明度配置
+// 用户配置保存与站点毛玻璃设置并行执行，缩短保存总耗时
+// - saveConfig 内部已处理成功/失败 toast（成功显示"配置已保存"，失败显示"保存失败"）
+// - saveSiteSettings 失败仅显示警告，不影响用户配置已保存的结果
 async function handleSave() {
-  const ok = await saveConfig()
-  if (!ok) return
-  try {
-    await saveSiteSettings({
-      login_blur: String(localConfig.value.announcementBlur ?? 12),
-      login_mask_opacity: String(localConfig.value.announcementMaskOpacity ?? 0.15),
-    })
-  } catch {
+  const configPromise = saveConfig()
+  const siteSettingsPromise = saveSiteSettings({
+    login_blur: String(localConfig.value.announcementBlur ?? 12),
+    login_mask_opacity: String(localConfig.value.announcementMaskOpacity ?? 0.15),
+  }).catch(() => {
     toast.error('毛玻璃效果同步失败')
-  }
+  })
+
+  await Promise.all([configPromise, siteSettingsPromise])
 }
 </script>
 

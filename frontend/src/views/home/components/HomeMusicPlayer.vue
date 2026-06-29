@@ -46,6 +46,8 @@ const cardRef = ref<HTMLElement | null>(null)
 let suppressCollapseOnNextPointerDown = false
 const showPlaylist = ref(false)
 const loadError = ref(false)
+// 歌单是否已加载：避免重复请求 Meting API（autoplay 关闭时延迟到首次展开加载）
+const tracksLoaded = ref(false)
 const audioRef = ref<HTMLAudioElement | null>(null)
 
 // ====== 计算属性 ======
@@ -70,9 +72,13 @@ function handleImgError(e: Event) {
 }
 
 // 展开卡片：置 expanded 为 true，并抑制本次 pointerdown 的外部收起检测
+// autoplay 关闭时，歌单延迟到首次展开加载，避免首页挂载期不必要的 Meting API 请求
 function handleExpand() {
   expanded.value = true
   suppressCollapseOnNextPointerDown = true
+  if (!tracksLoaded.value) {
+    loadTracks()
+  }
 }
 
 // document pointerdown 监听：点击卡片外部时收起
@@ -92,6 +98,7 @@ async function loadTracks() {
   if (!config.musicId) {
     tracks.value = []
     loadError.value = false
+    tracksLoaded.value = true
     return
   }
   try {
@@ -112,6 +119,8 @@ async function loadTracks() {
   } catch {
     tracks.value = []
     loadError.value = true
+  } finally {
+    tracksLoaded.value = true
   }
 }
 
@@ -253,7 +262,10 @@ onMounted(() => {
   if (audioRef.value) {
     audioRef.value.volume = volume.value
   }
-  loadTracks()
+  // autoplay 开启时维持挂载期加载以保证自动播放；关闭时延迟到首次展开
+  if (panelState.panelConfig.musicAutoplay) {
+    loadTracks()
+  }
   // 注册 document pointerdown 监听，实现点击卡片外部收起
   document.addEventListener('pointerdown', handleDocumentPointerDown)
 })
@@ -342,7 +354,6 @@ watch(
           :src="currentTrack.pic"
           :alt="currentTrack.name"
           class="size-12 rounded object-cover bg-white/10 flex-shrink-0"
-          loading="lazy"
           @error="handleImgError"
         />
         <div class="flex-1 min-w-0">

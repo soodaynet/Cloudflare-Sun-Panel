@@ -263,6 +263,11 @@ onMounted(async () => {
   buildEagerSet()
   // 一次 /init 调用替代 3 次 API 请求，显著减少首次加载的网络往返
   await initPromise
+  // 公开模式登录后跳转回首页：检测 justLoggedIn 标记，触发一次完整刷新
+  // 替代原 isLoggedIn watcher（该 watcher 在 Home 重新挂载时无法感知已变更的状态）
+  if (authStore.consumeJustLoggedIn()) {
+    refreshAll()
+  }
   // 数据就绪后一次性预连接所有图标 origin（替代 HomeItemCard 每卡片 watch）
   preconnectGroupIcons(groups.value)
   startAnnouncementTimer()
@@ -283,17 +288,23 @@ function handleSidebarExpanded(val: boolean) {
   }
 }
 
-// 监听登录状态变化（退出登录 → 清缓存 + 重新加载 auth + 数据）
-watch(() => authStore.isAuthenticated, () => {
-  refreshAll()
-})
+// 打开设置弹窗：清除当前活跃元素焦点，避免 reka-ui Dialog 焦点陷阱给 #app 设
+// aria-hidden 后仍有触发元素（典型为搜索栏引擎切换按钮）保留焦点触发 a11y 警告
+function openSettings() {
+  ;(document.activeElement as HTMLElement | null)?.blur()
+  starterShow.value = true
+}
 
-// 退出登录时立刻清理所有登录态 UI 状态（编辑模式、设置面板等）
-watch(() => authStore.isLoggedIn, (val) => {
+// 监听认证状态变化：
+// - 退出登录（isAuthenticated true→false）：清缓存 + 重新加载 + 清理登录态 UI
+// - 公开模式登录后刷新由 onMounted 中的 justLoggedIn 检测处理（Home 重新挂载时 watcher 无法感知已变更状态）
+watch(() => authStore.isAuthenticated, (val) => {
   if (!val) {
+    // 退出登录：立刻清理所有登录态 UI 状态（编辑模式、设置面板等）
     editModeGroupId.value = null
     starterShow.value = false
   }
+  refreshAll()
 })
 </script>
 
@@ -311,7 +322,7 @@ watch(() => authStore.isLoggedIn, (val) => {
     :style="glassVars"
   >
     <!-- 侧边栏分组导航 -->
-    <HomeSidebar :groups="visibleGroups" @open-settings="starterShow = true" @sidebar-expanded="handleSidebarExpanded" />
+    <HomeSidebar :groups="visibleGroups" @open-settings="openSettings" @sidebar-expanded="handleSidebarExpanded" />
 
     <!-- 公告 -->
     <Transition name="announce-fade">

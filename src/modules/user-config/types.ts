@@ -17,9 +17,6 @@ export interface UserConfigData {
   searchEngine: Record<string, unknown>
 }
 
-// POST /get 响应
-export type UserConfigResponse = UserConfigData
-
 // POST /set 请求体
 export interface UserConfigSetBody {
   panel?: Record<string, unknown>

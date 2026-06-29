@@ -68,17 +68,23 @@ function handleLogin() {
 }
 
 function handleSettings() {
+  // 清除当前活跃元素焦点：避免 reka-ui Dialog 焦点陷阱给 #app 设 aria-hidden 后，
+  // 仍有触发元素（典型为搜索栏引擎切换按钮）保留焦点触发 aria-hidden a11y 警告
+  ;(document.activeElement as HTMLElement | null)?.blur()
   emit('open-settings')
   expanded.value = false
 }
 
 // 设置面板 chunk 预取（去重，悬停/聚焦时触发，点击时几乎立即可用）
+// 一并预取默认激活标签 PanelUserInfo chunk，消除设置弹窗首次打开的 chunk 往返
 let settingsChunkPrefetched = false
 function prefetchSettingsChunk() {
   if (settingsChunkPrefetched) return
   settingsChunkPrefetched = true
-  // 预取 HomeAppStarter chunk
-  import('./HomeAppStarter.vue').catch(() => {
+  Promise.all([
+    import('./HomeAppStarter.vue'),
+    import('./panels/PanelUserInfo.vue'),
+  ]).catch(() => {
     // 预取失败则重置标记，允许下次重试
     settingsChunkPrefetched = false
   })

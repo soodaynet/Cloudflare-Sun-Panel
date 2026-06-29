@@ -9,10 +9,6 @@ import type {
 } from './types'
 
 // ========== 图标分组 API ==========
-export function getGroupList<T>() {
-  return post<T>({ url: '/panel/itemIconGroup/getList' })
-}
-
 /** 统一获取全部数据（分组 + 所有图标 + 用户配置），一次请求替代 N+1 次 */
 export function getAllData<T = AllDataResponse>() {
   return post<T>({ url: '/panel/getAllData' })

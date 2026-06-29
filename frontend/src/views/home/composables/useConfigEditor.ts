@@ -23,12 +23,14 @@ export function useConfigEditor(options: UseConfigEditorOptions) {
 
   const localConfig = ref<Panel.panelConfig>({})
 
+  // 浅 watch：panelState.updatePanelConfigFromCloud 通过 spread 创建新引用，浅监听足以触发同步
+  // 移除 deep: true 避免对 60+ 字段面板配置的深度追踪开销
   watch(
     () => config.value,
     (val) => {
       localConfig.value = { ...val }
     },
-    { immediate: true, deep: true },
+    { immediate: true },
   )
 
   async function handleSave(): Promise<boolean> {

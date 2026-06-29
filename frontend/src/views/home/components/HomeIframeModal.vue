@@ -41,7 +41,7 @@ const show = computed({
           <div class="h-[180px] w-full mt-5 rounded-lg bg-muted animate-pulse" />
           <div class="h-[180px] w-full mt-5 rounded-lg bg-muted animate-pulse" />
         </div>
-        <iframe v-show="!isLoading" :src="src" class="w-full h-full" frameborder="0" @load="emit('loaded')" />
+        <iframe v-show="!isLoading" :src="src" class="w-full h-full" frameborder="0" referrerpolicy="no-referrer" @load="emit('loaded')" />
       </div>
     </DialogContent>
   </Dialog>

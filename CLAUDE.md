@@ -50,7 +50,6 @@ Cloudflare-Sun-Panel（sun-panel）是一个基于 **Cloudflare Workers + D1 + V
 | vue-i18n | ^11.0.0 |
 | typescript | ^5.8.0 |
 | vue-tsc | ^2.2.0 |
-| tw-animate-css | ^1.0.0 |
 | axios | ^1.7.9 |
 | vue-draggable-plus | ^0.6.0 |
 
@@ -72,7 +71,7 @@ Cloudflare-Sun-Panel（sun-panel）是一个基于 **Cloudflare Workers + D1 + V
 │   ├── index.ts                        # Hono App 入口：全局中间件 + 模块注册表 + SPA 回退
 │   ├── modules/                        # 插件式模块化架构
 │   │   ├── types.ts                    # AppContext、AppBindings、ModuleDefinition 接口
-│   │   ├── registry.ts                 # ModuleRegistry 类（register/install/get/list）
+│   │   ├── registry.ts                 # ModuleRegistry 类（register/install）
 │   │   ├── shared/                     # 共享工具与中间件（模块间唯一通信通道）
 │   │   │   ├── jwt.ts                  # JWT 签名/验证（Web Crypto API）
 │   │   │   ├── env.ts                  # 环境变量校验（JWT_SECRET 必填）
